@@ -1,0 +1,194 @@
+{# ─────────────────────────────────────────────
+   base_user.html — Shell layout for all user pages
+   Blocks available:
+     {% block title %}       — page title
+     {% block page_head %}   — extra <head> content
+     {% block topbar_right %}— extra topbar items
+     {% block page_body %}   — main page content
+     {% block page_scripts %} — page-level JS
+───────────────────────────────────────────── #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}UTHAO{% endblock %} — UTHAO Logistics</title>
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+  <!-- Global styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+
+  {% block page_head %}{% endblock %}
+</head>
+<body>
+
+{# ── Flash messages (rendered invisibly, picked up by JS) ── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <span class="flask-flash" data-message="{{ message }}" data-type="{{ category }}" style="display:none"></span>
+  {% endfor %}
+{% endwith %}
+
+<div class="app-shell">
+
+  <!-- ══ SIDEBAR COMPONENT ══ -->
+  {% include 'components/user/sidebar.html' %}
+
+  <!-- ══ MAIN AREA ══ -->
+  <div class="main-area">
+
+    <!-- ── Topbar ── -->
+    <header class="topbar">
+
+      <!-- Burger (mobile) -->
+      <button class="topbar-burger" id="burgerBtn" aria-label="Toggle menu">
+        <i class="fas fa-bars"></i>
+      </button>
+
+      <!-- Search -->
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text"
+               id="globalSearch"
+               placeholder="Search shipments, tracking IDs…"
+               autocomplete="off" />
+      </div>
+
+      <!-- Right actions -->
+      <div class="topbar-right">
+
+        {% block topbar_right %}{% endblock %}
+
+        <!-- Notifications -->
+        <!-- <div class="icon-btn" title="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="notif-dot"></span>
+        </div> -->
+
+        <!-- Notifications -->
+        <div class="notification-dropdown-container" style="position: relative;">
+          <button class="icon-btn" id="notifBtn" title="Notifications" onclick="toggleNotifDropdown()">
+            <i class="fas fa-bell"></i>
+            <span class="notif-dot" id="notifDot" style="display: none;"></span>
+          </button>
+          
+          <!-- Notification Dropdown -->
+          <div id="notifDropdown" style="
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            width: 380px;
+            max-height: 500px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+          ">
+            <!-- Header -->
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;">Notifications</div>
+              <a href="{{ url_for('user.notifications') }}" style="font-size: 12px; color: var(--orange); font-weight: 600;">View All</a>
+            </div>
+            
+            <!-- List -->
+            <div id="notifList" style="overflow-y: auto; max-height: 360px;">
+              <div style="text-align: center; padding: 40px; color: var(--muted);">
+                <i class="fas fa-spinner fa-spin"></i>
+              </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+              <button class="btn-text" onclick="markAllReadFromDropdown()" style="font-size: 12px; padding: 6px 12px;">
+                <i class="fas fa-check-double" style="margin-right: 4px;"></i>Mark all read
+              </button>
+              <a href="{{ url_for('user.notifications') }}" style="font-size: 12px; color: var(--muted);">
+                Settings <i class="fas fa-cog" style="margin-left: 4px;"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create shipment -->
+        <a href="{{ url_for('user.create_shipment') }}">
+          <button class="btn-primary">
+            <i class="fas fa-plus"></i>
+            <span class="btn-label">Create a Shipment</span>
+          </button>
+        </a>
+
+        <!-- User dropdown -->
+        <div style="position:relative">
+          <div class="topbar-user" id="topbarUser">
+            <div class="avatar">
+              {% if current_user.avatar_url %}
+                <img src="{{ current_user.avatar_url }}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+              {% else %}
+                {{ current_user.full_name[:2].upper() if current_user.full_name else 'UT' }}
+              {% endif %}
+            </div>
+            <span class="topbar-name">{{ current_user.full_name or 'User' }}</span>
+            <i class="fas fa-chevron-down topbar-chevron"></i>
+          </div>
+
+          <!-- Dropdown -->
+          <div id="userDropdown" style="
+            position:absolute; top:calc(100% + 8px); right:0;
+            background:var(--surface2); border:1px solid var(--border2);
+            border-radius:var(--radius); min-width:180px;
+            box-shadow:var(--shadow); z-index:999;
+            display:none; flex-direction:column; padding:6px;
+          " class="dropdown-menu">
+            <a href="{{ url_for('user.settings') }}" class="nav-item" style="border-radius:6px;margin:0">
+              <i class="fas fa-cog nav-icon"></i>
+              <span>Settings</span>
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="border-radius:6px;margin:0;color:#ef4444">
+              <i class="fas fa-sign-out-alt nav-icon" style="color:#ef4444"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ── Page content ── -->
+    <main class="page-body">
+      {% block page_body %}{% endblock %}
+    </main>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Global JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- Dropdown toggle fix -->
+<script>
+  const dd = document.getElementById('userDropdown');
+  if (dd) {
+    document.getElementById('topbarUser')?.addEventListener('click', e => {
+      e.stopPropagation();
+      dd.style.display = dd.style.display === 'flex' ? 'none' : 'flex';
+    });
+    document.addEventListener('click', () => { if(dd) dd.style.display = 'none'; });
+  }
+</script>
+
+{% block page_scripts %}{% endblock %}
+
+</body>
+</html>

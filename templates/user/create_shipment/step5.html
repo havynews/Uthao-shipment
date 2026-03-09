@@ -1,0 +1,209 @@
+{% extends "base_user.html" %}
+{% block title %}Create Shipment — Step 5 (Confirm){% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create_shipment.css') }}" />
+<style>
+  .receipt-upload {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    background: var(--surface);
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .receipt-upload:hover {
+    border-color: var(--orange);
+  }
+  .receipt-upload.has-file {
+    border-color: #22c55e;
+    background: rgba(34,197,94,0.05);
+  }
+  .receipt-preview {
+    max-width: 200px;
+    max-height: 200px;
+    margin: 12px auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .summary-section {
+    margin-bottom: 20px;
+  }
+  .summary-section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .payment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border-radius: 20px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+  }
+</style>
+{% endblock %}
+
+{% block page_body %}
+<div class="cs-page">
+
+  <div class="cs-header">
+    <h1>Review & Confirm</h1>
+    <p>Verify details and upload payment receipt</p>
+  </div>
+
+  <div class="stepper">
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Route</span><div class="step-line"></div></div>
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Packages</span><div class="step-line"></div></div>
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Service</span><div class="step-line"></div></div>
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Payment</span><div class="step-line"></div></div>
+    <div class="step-item active"><div class="step-bubble">5</div><span class="step-label">Confirm</span></div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="cs-card">
+    <div class="cs-card-title">
+      <i class="fas fa-clipboard-check"></i>
+      Shipment Summary
+    </div>
+    
+    <div class="summary-section">
+      <div class="summary-section-title">Route</div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-label">From</div>
+          <div class="summary-value">{{ session.get('origin') }}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">To</div>
+          <div class="summary-value">{{ session.get('destination') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-section">
+      <div class="summary-section-title">Service & Payment</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="payment-badge">
+          <i class="fas fa-shipping-fast" style="color:var(--orange);"></i>
+          {{ service }}
+        </div>
+        {% if payment_method %}
+        <div class="payment-badge">
+          <i class="fas {{ payment_method.icon }}" style="color:var(--orange);"></i>
+          {{ payment_method.display_name }}
+        </div>
+        {% endif %}
+        <div class="payment-badge" style="font-weight:600;">
+          ${{ '{:,}'.format(cost) }}
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-section">
+      <div class="summary-section-title">Packages ({{ session.get('packages', [])|length }})</div>
+      {% for pkg in session.get('packages', []) %}
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:500;">{{ pkg.description or 'Package ' ~ loop.index }}</span>
+          <span style="font-size:12px;color:var(--muted);">{{ pkg.weight }}kg</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+          {{ pkg.length }}×{{ pkg.width }}×{{ pkg.height }} cm
+          {% if pkg.images %}• {{ pkg.images|length }} image(s){% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Receipt Upload -->
+  <form method="POST" action="{{ url_for('user.create_shipment', step='5') }}" id="confirmForm" enctype="multipart/form-data">
+    <div class="cs-card" style="border-color:var(--orange);background:rgba(249,115,22,0.02);">
+      <div class="cs-card-title" style="color:var(--orange);">
+        <i class="fas fa-receipt"></i>
+        Payment Receipt <span style="color:#ef4444;">*</span>
+      </div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">
+        Please upload proof of payment (screenshot, PDF, or photo). Admin will verify before processing your shipment.
+      </p>
+      
+      <div class="receipt-upload" onclick="document.getElementById('receiptInput').click()" id="uploadZone">
+        <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:var(--orange);margin-bottom:8px;"></i>
+        <div style="font-weight:500;color:var(--text);">Click to upload receipt</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">PNG, JPG, PDF up to 5MB</div>
+        <img id="receiptPreview" class="receipt-preview" style="display:none;">
+        <div id="fileName" style="margin-top:8px;font-size:12px;color:var(--orange);display:none;"></div>
+      </div>
+      
+      <input type="file" id="receiptInput" name="payment_receipt" accept="image/*,.pdf" required style="display:none;" onchange="handleReceipt(this)">
+      
+      <div style="margin-top:12px;padding:12px;background:rgba(234,179,8,0.1);border-radius:8px;border:1px solid rgba(234,179,8,0.3);">
+        <i class="fas fa-info-circle" style="color:#eab308;margin-right:6px;"></i>
+        <span style="font-size:12px;color:#eab308;">Your shipment will be processed after payment verification (usually within 2-4 hours).</span>
+      </div>
+    </div>
+
+    <div class="cs-footer">
+      <a href="{{ url_for('user.create_shipment', step='4') }}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <button type="submit" class="btn-next green" id="submitBtn" disabled>
+        <i class="fas fa-check-circle"></i> Confirm & Book Shipment
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function handleReceipt(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const zone = document.getElementById('uploadZone');
+  const preview = document.getElementById('receiptPreview');
+  const fileName = document.getElementById('fileName');
+  const submitBtn = document.getElementById('submitBtn');
+  
+  // Validate size
+  if (file.size > 5 * 1024 * 1024) {
+    alert('File too large. Maximum size is 5MB.');
+    input.value = '';
+    return;
+  }
+  
+  zone.classList.add('has-file');
+  fileName.textContent = file.name;
+  fileName.style.display = 'block';
+  
+  // Show preview for images
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    preview.style.display = 'none';
+    zone.innerHTML = `
+      <i class="fas fa-file-pdf" style="font-size:32px;color:#ef4444;margin-bottom:8px;"></i>
+      <div style="font-weight:500;color:var(--text);">${file.name}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">PDF Document</div>
+    `;
+  }
+  
+  submitBtn.disabled = false;
+}
+</script>
+{% endblock %}

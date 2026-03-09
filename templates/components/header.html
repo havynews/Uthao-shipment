@@ -1,0 +1,172 @@
+<!-- Navigation -->
+<nav class="fixed w-full z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div
+      class="flex justify-between items-center h-20 md:grid md:grid-cols-3 md:items-center"
+    >
+      <!-- Logo -->
+      <div
+        class="flex-shrink-0 flex items-center md:justify-start md:col-start-1"
+      >
+        <a href="{{ url_for('main.index') }}" class="flex items-center">
+          <img
+            src="{{ url_for('static', filename='images/logo.svg') }}"
+            alt="Uthao"
+            class="h-10 w-auto"
+          />
+          <span class="sr-only">Uthao</span>
+        </a>
+      </div>
+      <!-- Desktop Menu -->
+      <div
+        class="hidden md:flex space-x-8 items-center md:justify-center md:col-start-2"
+      >
+        <a
+          href="#"
+          class="text-gray-700 hover:text-orange-500 font-medium transition"
+          >Home
+        </a>
+        <div class="relative group">
+          <button
+            class="text-gray-700 hover:text-orange-500 font-medium flex items-center transition"
+          >
+            Services
+            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+          </button>
+        </div>
+        <div class="relative group">
+          <button
+            class="text-gray-700 hover:text-orange-500 font-medium flex items-center transition"
+          >
+            Resources
+            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+          </button>
+        </div>
+        <a
+          href="#"
+          class="text-gray-700 hover:text-orange-500 font-medium transition"
+          >About
+        </a>
+        <a
+          href="#"
+          class="text-gray-700 hover:text-orange-500 font-medium transition"
+          >Career
+        </a>
+      </div>
+      <!-- CTA Buttons -->
+      <div
+        class="hidden md:flex md:justify-end md:col-start-3 items-center space-x-4"
+      >
+        {% if current_user.is_authenticated %}
+        <a
+          href="{{ url_for('user.dashboard') }}"
+          class="text-gray-700 hover:text-blue-600 font-medium"
+          >Dashboard</a
+        >
+        <a
+          href="{{ url_for('auth.logout') }}"
+          class="text-gray-700 hover:text-blue-600 font-medium"
+          >Logout</a
+        >
+        {% else %}
+        <a
+          href="{{ url_for('auth.login') }}"
+          class="text-gray-700 hover:text-blue-600 font-medium"
+          >Login</a
+        >
+        <a
+          href="{{ url_for('auth.register') }}"
+          class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full font-medium transition shadow-lg hover:shadow-xl"
+          >Sign Up</a
+        >
+        {% endif %}
+      </div>
+      <!-- Mobile menu button -->
+      <div class="md:hidden flex items-center">
+        <button
+          id="mobile-menu-btn"
+          class="text-gray-700 hover:text-orange-500 focus:outline-none"
+        >
+          <i class="fas fa-bars text-2xl"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+    <div class="px-4 pt-2 pb-4 space-y-1">
+      <a
+        href="#"
+        class="block px-3 py-2 text-gray-700 hover:text-orange-500 font-medium"
+        >Home
+      </a>
+      <a
+        href="#"
+        class="block px-3 py-2 text-gray-700 hover:text-orange-500 font-medium"
+        >Services
+      </a>
+      <a
+        href="#"
+        class="block px-3 py-2 text-gray-700 hover:text-orange-500 font-medium"
+        >Resources
+      </a>
+      <a
+        href="#"
+        class="block px-3 py-2 text-gray-700 hover:text-orange-500 font-medium"
+        >About
+      </a>
+      <a
+        href="#"
+        class="block px-3 py-2 text-gray-700 hover:text-orange-500 font-medium"
+        >Career
+      </a>
+      <div class="flex items-center space-x-4">
+        {% if current_user.is_authenticated %}
+        <a
+          href="{{ url_for('user.dashboard') }}"
+          class="text-gray-700 hover:text-blue-600"
+          >Dashboard</a
+        >
+        <a
+          href="{{ url_for('user.create_shipment') }}"
+          class="text-gray-700 hover:text-blue-600"
+          >New Shipment</a
+        >
+        {% if current_user.is_admin %}
+        <a
+          href="{{ url_for('admin.dashboard') }}"
+          class="text-gray-700 hover:text-blue-600"
+          >Admin</a
+        >
+        {% endif %}
+        <a
+          href="{{ url_for('user.settings') }}"
+          class="text-gray-700 hover:text-blue-600"
+          >Settings</a
+        >
+        <a
+          href="{{ url_for('auth.logout') }}"
+          class="text-gray-700 hover:text-blue-600"
+          >Logout</a
+        >
+        {% else %}
+        <a
+          href="{{ url_for('auth.login') }}"
+          class="text-gray-700 hover:text-blue-600"
+          >Login</a
+        >
+        <a
+          href="{{ url_for('auth.register') }}"
+          class="bg-blue-600 text-white px-4 py-2 rounded-md"
+          >Register</a
+        >
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
+<nav class="bg-white shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16"></div>
+  </div>
+</nav>

@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden">
+    <!-- Background Image -->
+    <div class="fixed inset-0 z-0 opacity-20 pointer-events-none">
+        <div class="w-full h-full bg-cover bg-center filter blur-sm" 
+             style="background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80');">
+        </div>
+    </div>
+
+    <div class="layout-container flex h-full grow flex-col z-10">
+        <div class="px-4 md:px-40 flex flex-1 justify-center py-5">
+            <div class="layout-content-container flex flex-col max-w-sm flex-1">
+                
+                <!-- Header -->
+                <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary/20 px-2 py-3">
+                    <div class="flex items-center gap-2">
+                        <div class="size-6 text-primary">
+                            <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <path clip-rule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight">Uthao</h2>
+                    </div>
+                    <button onclick="toggleDarkMode()" class="flex items-center justify-center rounded-lg h-8 w-8 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
+                        <span class="material-symbols-outlined text-sm" id="theme-icon">dark_mode</span>
+                    </button>
+                </header>
+
+                <!-- Progress Indicator -->
+                <div class="flex flex-col gap-1 p-2 mt-2">
+                    <div class="flex gap-6 justify-between items-center">
+                        <p class="text-slate-600 dark:text-slate-300 text-xs font-medium">Account Setup</p>
+                        <p class="text-primary text-xs font-bold" id="step-counter">Step 1 of 3</p>
+                    </div>
+                    <div class="rounded-full bg-primary/10 h-2 overflow-hidden">
+                        <div class="h-full rounded-full bg-primary transition-all duration-700 ease-out" id="progress-bar" style="width: 33.33%;"></div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Account Details -->
+                <div class="step-content" id="step1">
+                    <div class="bg-white dark:bg-background-dark/80 backdrop-blur-md border border-slate-200 dark:border-primary/10 rounded-xl p-3 shadow-2xl mt-2 transform transition-all duration-500">
+                        <h1 class="text-slate-900 dark:text-white tracking-tight text-2xl font-bold leading-tight pb-1">Create your account</h1>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs mb-4">Join the Uthao network to start managing your deliveries.</p>
+                        
+                        <form class="flex flex-col gap-3" id="form-step1" onsubmit="handleStep1(event)">
+                            <div class="flex flex-col gap-1">
+                                <label class="flex flex-col flex-1">
+                                    <span class="text-slate-700 dark:text-slate-200 text-xs font-semibold leading-normal pb-1 px-1">Full Name</span>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-base group-focus-within:text-primary transition-colors">person</span>
+                                        </div>
+                                        <input type="text" name="full_name" required
+                                            class="form-input flex w-full min-w-0 flex-1 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark h-10 placeholder:text-slate-400 dark:placeholder:text-slate-500 pl-10 pr-3 text-sm font-normal transition-all hover:border-primary/30"
+                                            placeholder="John Doe">
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="flex flex-col flex-1">
+                                    <span class="text-slate-700 dark:text-slate-200 text-xs font-semibold leading-normal pb-1 px-1">Email Address</span>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-base group-focus-within:text-primary transition-colors">mail</span>
+                                        </div>
+                                        <input type="email" name="email" required id="email-input"
+                                            class="form-input flex w-full min-w-0 flex-1 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark h-10 placeholder:text-slate-400 dark:placeholder:text-slate-500 pl-10 pr-3 text-sm font-normal transition-all hover:border-primary/30"
+                                            placeholder="john@example.com">
+                                    </div>
+                                    <p class="text-red-500 text-xs mt-1 hidden" id="email-error">Please enter a valid email</p>
+                                </label>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="flex flex-col flex-1">
+                                    <span class="text-slate-700 dark:text-slate-200 text-xs font-semibold leading-normal pb-1 px-1">Password</span>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-base group-focus-within:text-primary transition-colors">lock</span>
+                                        </div>
+                                        <input type="password" name="password" required id="password-input" minlength="8"
+                                            class="form-input flex w-full min-w-0 flex-1 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark h-10 placeholder:text-slate-400 dark:placeholder:text-slate-500 pl-10 pr-10 text-sm font-normal transition-all hover:border-primary/30"
+                                            placeholder="Min. 8 characters">
+                                        <button type="button" onclick="togglePassword('password-input')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-primary transition-colors">
+                                            <span class="material-symbols-outlined text-base" id="password-icon">visibility_off</span>
+                                        </button>
+                                    </div>
+                                </label>
+                                <!-- Password Strength -->
+                                <div class="flex gap-1 h-1 mt-1 px-1">
+                                    <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full transition-all duration-300" id="strength-1"></div>
+                                    <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full transition-all duration-300" id="strength-2"></div>
+                                    <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full transition-all duration-300" id="strength-3"></div>
+                                    <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full transition-all duration-300" id="strength-4"></div>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" id="password-hint">Use 8+ characters with mix of letters, numbers & symbols</p>
+                            </div>
+
+                            <div class="pt-2">
+                                <button type="submit" id="btn-step1"
+                                    class="w-full flex cursor-pointer items-center justify-center rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-wide transition-all hover:bg-primary/90 active:scale-[0.98] shadow-lg shadow-primary/20 hover:shadow-primary/30">
+                                    <span>Next Step</span>
+                                    <span class="material-symbols-outlined animate-pulse text-sm">arrow_forward</span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-primary/10 flex justify-center">
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">
+                                Already have an account? 
+                                <a href="{{ url_for('auth.login') }}" class="text-primary font-semibold hover:underline decoration-2 underline-offset-4 ml-1 transition-all hover:text-primary/80">Sign in</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Email Verification -->
+                <div class="step-content hidden" id="step2">
+                    <div class="bg-white dark:bg-background-dark/80 backdrop-blur-md border border-slate-200 dark:border-primary/10 rounded-xl p-3 shadow-2xl mt-2 transform transition-all duration-500">
+                        <div class="text-center mb-4">
+                            <div class="w-12 h-12 mx-auto mb-2 bg-primary/10 rounded-full flex items-center justify-center animate-bounce">
+                                <span class="material-symbols-outlined text-2xl text-primary">mark_email_unread</span>
+                            </div>
+                            <h1 class="text-slate-900 dark:text-white tracking-tight text-xl font-bold leading-tight pb-1">Verify your email</h1>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs">We sent a code to <span class="text-primary font-semibold" id="display-email"></span></p>
+                        </div>
+
+                        <!-- OTP Input -->
+                        <div class="flex flex-col gap-3">
+                            <div class="flex justify-center gap-2" id="otp-container">
+                                <input type="text" maxlength="1" class="otp-input w-10 h-12 text-center text-xl font-bold rounded-lg border-2 border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" data-index="0">
+                                <input type="text" maxlength="1" class="otp-input w-10 h-12 text-center text-xl font-bold rounded-lg border-2 border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" data-index="1">
+                                <input type="text" maxlength="1" class="otp-input w-10 h-12 text-center text-xl font-bold rounded-lg border-2 border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" data-index="2">
+                                <input type="text" maxlength="1" class="otp-input w-10 h-12 text-center text-xl font-bold rounded-lg border-2 border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" data-index="3">
+                                <input type="text" maxlength="1" class="otp-input w-10 h-12 text-center text-xl font-bold rounded-lg border-2 border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" data-index="4">
+                                <input type="text" maxlength="1" class="otp-input w-10 h-12 text-center text-xl font-bold rounded-lg border-2 border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" data-index="5">
+                            </div>
+                            <p class="text-red-500 text-xs text-center hidden" id="otp-error">Invalid code. Please try again.</p>
+
+                            <!-- Magic Link Option -->
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center">
+                                    <div class="w-full border-t border-slate-200 dark:border-primary/10"></div>
+                                </div>
+                                <div class="relative flex justify-center text-xs">
+                                    <span class="px-2 bg-white dark:bg-background-dark text-slate-500">or</span>
+                                </div>
+                            </div>
+
+                            <button onclick="sendMagicLink()" id="magic-link-btn" 
+                                class="w-full flex items-center justify-center gap-2 py-2 px-3 border-2 border-primary/20 rounded-lg text-primary font-semibold hover:bg-primary/5 transition-all active:scale-[0.98] text-xs">
+                                <span class="material-symbols-outlined text-sm">link</span>
+                                <span id="magic-link-text">Send Magic Link Instead</span>
+                            </button>
+                            <p class="text-green-600 text-xs text-center hidden" id="magic-link-success">Magic link sent! Check your inbox.</p>
+
+                            <div class="flex gap-2 pt-1">
+                                <button onclick="goToStep(1)" 
+                                    class="flex-1 flex items-center justify-center gap-2 py-2 px-3 border border-slate-200 dark:border-primary/20 rounded-lg text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-primary/5 transition-all active:scale-[0.98] text-xs">
+                                    <span class="material-symbols-outlined text-xs">arrow_back</span>
+                                    Back
+                                </button>
+                                <button onclick="verifyOTP()" id="verify-btn"
+                                    class="flex-[2] flex items-center justify-center gap-2 py-2 px-3 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20 text-xs">
+                                    Verify Email
+                                    <span class="material-symbols-outlined text-xs">check</span>
+                                </button>
+                            </div>
+
+                            <p class="text-center text-slate-500 dark:text-slate-400 text-xs">
+                                Didn't receive it? 
+                                <button onclick="resendOTP()" id="resend-btn" class="text-primary font-semibold hover:underline ml-1">Resend code</button>
+                                <span id="resend-timer" class="hidden text-slate-400"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Company Details -->
+                <div class="step-content hidden" id="step3">
+                    <div class="bg-white dark:bg-background-dark/80 backdrop-blur-md border border-slate-200 dark:border-primary/10 rounded-xl p-3 shadow-2xl mt-2 transform transition-all duration-500">
+                        <h1 class="text-slate-900 dark:text-white tracking-tight text-2xl font-bold leading-tight pb-1">Company details</h1>
+                        <p class="text-slate-500 dark:text-slate-400 text-xs mb-4">Tell us about your business to customize your experience.</p>
+                        
+                        <form class="flex flex-col gap-3" id="form-step3" onsubmit="handleStep3(event)">
+                            <div class="flex flex-col gap-1">
+                                <label class="flex flex-col flex-1">
+                                    <span class="text-slate-700 dark:text-slate-200 text-xs font-semibold leading-normal pb-1 px-1">Company Name</span>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-base group-focus-within:text-primary transition-colors">business</span>
+                                        </div>
+                                        <input type="text" name="company"
+                                            class="form-input flex w-full min-w-0 flex-1 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark h-10 placeholder:text-slate-400 dark:placeholder:text-slate-500 pl-10 pr-3 text-sm font-normal transition-all hover:border-primary/30"
+                                            placeholder="Acme Logistics Inc.">
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="flex flex-col flex-1">
+                                    <span class="text-slate-700 dark:text-slate-200 text-xs font-semibold leading-normal pb-1 px-1">Phone Number</span>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-base group-focus-within:text-primary transition-colors">phone</span>
+                                        </div>
+                                        <input type="tel" name="phone"
+                                            class="form-input flex w-full min-w-0 flex-1 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark h-10 placeholder:text-slate-400 dark:placeholder:text-slate-500 pl-10 pr-3 text-sm font-normal transition-all hover:border-primary/30"
+                                            placeholder="+1 (555) 000-0000">
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="flex flex-col gap-1">
+                                <label class="flex flex-col flex-1">
+                                    <span class="text-slate-700 dark:text-slate-200 text-xs font-semibold leading-normal pb-1 px-1">Preferred Currency</span>
+                                    <div class="relative group">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-base group-focus-within:text-primary transition-colors">payments</span>
+                                        </div>
+                                        <select name="currency" 
+                                            class="form-input flex w-full min-w-0 flex-1 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark h-10 pl-10 pr-8 text-sm font-normal transition-all hover:border-primary/30 appearance-none cursor-pointer">
+                                            <option value="USD">USD ($) - US Dollar</option>
+                                            <option value="EUR">EUR (€) - Euro</option>
+                                            <option value="GBP">GBP (£) - British Pound</option>
+                                            <option value="USDT">USDT (₮) - Tether</option>
+                                        </select>
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="material-symbols-outlined text-slate-400 text-sm">expand_more</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-start gap-2 pt-1">
+                                <input type="checkbox" id="terms" required 
+                                    class="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-primary/20 text-primary focus:ring-primary/20 bg-slate-50 dark:bg-background-dark cursor-pointer">
+                                <label for="terms" class="text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none leading-relaxed">
+                                    I agree to the <a href="#" class="text-primary font-semibold hover:underline">Terms</a> and <a href="#" class="text-primary font-semibold hover:underline">Privacy Policy</a>
+                                </label>
+                            </div>
+
+                            <div class="pt-2 flex gap-2">
+                                <button type="button" onclick="goToStep(2)" 
+                                    class="flex-1 flex items-center justify-center gap-2 py-2 px-3 border border-slate-200 dark:border-primary/20 rounded-lg text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-primary/5 transition-all active:scale-[0.98] text-xs">
+                                    <span class="material-symbols-outlined text-xs">arrow_back</span>
+                                    Back
+                                </button>
+                                <button type="submit" id="btn-step3"
+                                    class="flex-[2] flex items-center justify-center gap-2 py-2 px-3 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20 hover:shadow-primary/30 text-xs">
+                                    <span>Complete</span>
+                                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Success State -->
+                <div class="step-content hidden" id="success">
+                    <div class="bg-white dark:bg-background-dark/80 backdrop-blur-md border border-slate-200 dark:border-primary/10 rounded-xl p-6 shadow-2xl mt-2 text-center transform transition-all duration-500 scale-100">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30 animate-bounce">
+                            <span class="material-symbols-outlined text-3xl text-white">check</span>
+                        </div>
+                        <h1 class="text-slate-900 dark:text-white text-2xl font-bold mb-1">Welcome aboard!</h1>
+                        <p class="text-slate-500 dark:text-slate-400 mb-4 text-sm">Your account has been created successfully.</p>
+                        <div class="flex items-center justify-center gap-2 text-primary animate-pulse">
+                            <span class="material-symbols-outlined text-sm">progress_activity</span>
+                            <span class="text-xs font-medium">Redirecting...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="mt-auto py-6 text-center">
+                    <p class="text-slate-400 text-xs font-medium">© 2024 Uthao Logistics. All rights reserved.</p>
+                </footer>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom animations */
+    @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    
+    .animate-slide-in-right { animation: slideInRight 0.4s ease-out; }
+    .animate-slide-in-left { animation: slideInLeft 0.4s ease-out; }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+    
+    .otp-input:focus {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 4px rgba(242, 127, 13, 0.1);
+    }
+</style>
+
+<script>
+    let currentStep = 1;
+    let formData = {
+        full_name: '',
+        email: '',
+        password: '',
+        company: '',
+        phone: '',
+        currency: 'USD'
+    };
+    let resendTimer = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initOTPInputs();
+        initPasswordStrength();
+        
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    });
+
+    function toggleDarkMode() {
+        const html = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        
+        if (html.classList.contains('dark')) {
+            html.classList.remove('dark');
+            icon.textContent = 'dark_mode';
+        } else {
+            html.classList.add('dark');
+            icon.textContent = 'light_mode';
+        }
+    }
+
+    function goToStep(step) {
+        document.getElementById(`step${currentStep}`).classList.add('hidden');
+        
+        const newStepEl = document.getElementById(step === 4 ? 'success' : `step${step}`);
+        newStepEl.classList.remove('hidden');
+        newStepEl.classList.add(step > currentStep ? 'animate-slide-in-right' : 'animate-slide-in-left');
+        
+        currentStep = step;
+        updateProgress();
+        
+        setTimeout(() => {
+            newStepEl.classList.remove('animate-slide-in-right', 'animate-slide-in-left');
+        }, 400);
+    }
+
+    function updateProgress() {
+        const progress = currentStep === 4 ? 100 : (currentStep / 3) * 100;
+        document.getElementById('progress-bar').style.width = `${progress}%`;
+        document.getElementById('step-counter').textContent = currentStep === 4 ? 'Complete' : `Step ${currentStep} of 3`;
+    }
+
+    async function handleStep1(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-step1');
+        const originalContent = btn.innerHTML;
+        
+        const email = e.target.email.value.trim().toLowerCase();
+        const password = e.target.password.value;
+        
+        if (password.length < 8) {
+            showError('Password must be at least 8 characters');
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Processing...`;
+        
+        try {
+            const checkRes = await fetch('/auth/check-email', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email})
+            });
+            const checkData = await checkRes.json();
+            
+            if (checkData.exists) {
+                showError('Email already registered');
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+                return;
+            }
+            
+            const otpRes = await fetch('/auth/send-otp', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email})
+            });
+            
+            if (otpRes.ok) {
+                formData.full_name = e.target.full_name.value.trim();
+                formData.email = email;
+                formData.password = password;
+                
+                document.getElementById('display-email').textContent = email;
+                goToStep(2);
+                startResendTimer();
+            } else {
+                showError('Failed to send verification code');
+            }
+        } catch (error) {
+            showError('Network error. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    }
+
+    function initOTPInputs() {
+        const inputs = document.querySelectorAll('.otp-input');
+        
+        inputs.forEach((input, index) => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key >= '0' && e.key <= '9') {
+                    input.value = '';
+                    setTimeout(() => {
+                        if (index < 5) inputs[index + 1].focus();
+                    }, 10);
+                } else if (e.key === 'Backspace') {
+                    setTimeout(() => {
+                        if (index > 0) inputs[index - 1].focus();
+                    }, 10);
+                } else if (e.key === 'Enter') {
+                    verifyOTP();
+                }
+            });
+            
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pasteData = e.clipboardData.getData('text').slice(0, 6);
+                pasteData.split('').forEach((char, i) => {
+                    if (inputs[i]) inputs[i].value = char;
+                });
+                if (pasteData.length === 6) verifyOTP();
+            });
+        });
+    }
+
+    async function verifyOTP() {
+        const inputs = document.querySelectorAll('.otp-input');
+        const otp = Array.from(inputs).map(i => i.value).join('');
+        
+        if (otp.length !== 6) {
+            showOTPError('Please enter all 6 digits');
+            return;
+        }
+        
+        const btn = document.getElementById('verify-btn');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Verifying...`;
+        
+        try {
+            const res = await fetch('/auth/verify-otp', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: formData.email, otp})
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                goToStep(3);
+            } else {
+                showOTPError('Invalid code. Please try again.');
+                shakeElement(document.getElementById('otp-container'));
+            }
+        } catch (error) {
+            showOTPError('Verification failed');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `Verify Email<span class="material-symbols-outlined text-xs">check</span>`;
+        }
+    }
+
+    async function sendMagicLink() {
+        const btn = document.getElementById('magic-link-btn');
+        const text = document.getElementById('magic-link-text');
+        const originalText = text.textContent;
+        
+        btn.disabled = true;
+        text.textContent = 'Sending...';
+        
+        try {
+            const res = await fetch('/auth/send-magic-link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: formData.email, type: 'registration'})
+            });
+            
+            if (res.ok) {
+                document.getElementById('magic-link-success').classList.remove('hidden');
+                text.textContent = 'Sent!';
+                setTimeout(() => {
+                    text.textContent = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            }
+        } catch (error) {
+            text.textContent = 'Failed';
+            setTimeout(() => {
+                text.textContent = originalText;
+                btn.disabled = false;
+            }, 2000);
+        }
+    }
+
+    function resendOTP() {
+        if (resendTimer) return;
+        
+        fetch('/auth/send-otp', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: formData.email})
+        });
+        
+        startResendTimer();
+    }
+
+    function startResendTimer() {
+        let seconds = 60;
+        const btn = document.getElementById('resend-btn');
+        const timer = document.getElementById('resend-timer');
+        
+        btn.classList.add('hidden');
+        timer.classList.remove('hidden');
+        timer.textContent = `(${seconds}s)`;
+        
+        resendTimer = setInterval(() => {
+            seconds--;
+            timer.textContent = `(${seconds}s)`;
+            if (seconds <= 0) {
+                clearInterval(resendTimer);
+                resendTimer = null;
+                btn.classList.remove('hidden');
+                timer.classList.add('hidden');
+            }
+        }, 1000);
+    }
+
+    async function handleStep3(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-step3');
+        const originalContent = btn.innerHTML;
+        
+        formData.company = e.target.company.value.trim();
+        formData.phone = e.target.phone.value.trim();
+        formData.currency = e.target.currency.value;
+        
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> Creating...`;
+        
+        try {
+            const res = await fetch('/auth/register-complete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(formData)
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                goToStep(4);
+                setTimeout(() => {
+                    window.location.href = data.redirect || '/dashboard';
+                }, 2000);
+            } else {
+                showError(data.message || 'Registration failed');
+            }
+        } catch (error) {
+            showError('Network error. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    }
+
+    function initPasswordStrength() {
+        const input = document.getElementById('password-input');
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (val.match(/[0-9]/)) score++;
+            if (val.match(/[^A-Za-z0-9]/)) score++;
+            if (val.length >= 12) score++;
+            
+            const colors = ['bg-slate-200 dark:bg-slate-700', 'bg-red-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+            for (let i = 1; i <= 4; i++) {
+                const bar = document.getElementById(`strength-${i}`);
+                bar.className = `flex-1 rounded-full transition-all duration-300 ${i <= score ? colors[score] : 'bg-slate-200 dark:bg-slate-700'}`;
+            }
+        });
+    }
+
+    function togglePassword(id) {
+        const input = document.getElementById(id);
+        const icon = document.getElementById('password-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = 'visibility';
+        } else {
+            input.type = 'password';
+            icon.textContent = 'visibility_off';
+        }
+    }
+
+    function showError(msg) {
+        const div = document.createElement('div');
+        div.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-in-right text-sm';
+        div.textContent = msg;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 3000);
+    }
+
+    function showOTPError(msg) {
+        const el = document.getElementById('otp-error');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+
+    function shakeElement(el) {
+        el.classList.add('animate-shake');
+        setTimeout(() => el.classList.remove('animate-shake'), 400);
+    }
+</script>
+{% endblock %}

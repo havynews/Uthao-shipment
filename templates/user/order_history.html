@@ -1,0 +1,518 @@
+{% extends "base_user.html" %}
+{% block title %}Order History{% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/order_history.css') }}" />
+{% endblock %}
+
+{% block page_body %}
+
+{# ── Status helpers ── #}
+{% macro status_class(s) %}{% if s == 'Delivered' %}delivered{% elif s == 'Out for Delivery' %}delivery{% elif s == 'In Transit' %}transit{% elif s == 'Picked Up' %}picked{% else %}booking{% endif %}{% endmacro %}
+{% macro status_icon(s) %}{% if s == 'Delivered' %}fa-check-circle{% elif s in ['Out for Delivery','In Transit'] %}fa-truck{% elif s == 'Picked Up' %}fa-box-open{% else %}fa-clock{% endif %}{% endmacro %}
+{% macro cargo_icon(c) %}{% set c = (c or '') | lower %}{% if 'food' in c %}fa-utensils{% elif 'elec' in c %}fa-microchip{% elif 'pharm' in c %}fa-pills{% elif 'raw' in c %}fa-cubes{% else %}fa-box{% endif %}{% endmacro %}
+
+{# ── Aggregate stats ── #}
+{% set total      = shipments | length %}
+{% set delivered  = shipments | selectattr('status','eq','Delivered')     | list | length %}
+{% set active     = shipments | rejectattr('status','eq','Delivered')
+                              | rejectattr('status','eq','Booking Created')| list | length %}
+{% set total_cost = shipments | sum(attribute='cost') %}
+
+<div class="oh-page">
+
+  {# ══ Top bar ══ #}
+  <div class="oh-topbar">
+    <div>
+      <div class="oh-title">Order History</div>
+      <div class="oh-subtitle">All your shipments in one place</div>
+    </div>
+
+    <div class="oh-stats">
+      <div class="stat-pill">
+        <i class="fas fa-box"></i>
+        {{ total }} total
+      </div>
+      <div class="stat-pill orange">
+        <i class="fas fa-truck"></i>
+        {{ active }} active
+      </div>
+      <div class="stat-pill green">
+        <i class="fas fa-check-circle"></i>
+        {{ delivered }} delivered
+      </div>
+      {% if total_cost %}
+      <div class="stat-pill">
+        <i class="fas fa-dollar-sign"></i>
+        {{ '{:,.0f}'.format(total_cost) }} spent
+      </div>
+      {% endif %}
+    </div>
+
+    <a href="{{ url_for('user.create_shipment') }}">
+      <button class="btn-primary" style="flex-shrink:0">
+        <i class="fas fa-plus"></i>
+        <span class="btn-label">New Shipment</span>
+      </button>
+    </a>
+  </div>
+
+  {# ══ Controls ══ #}
+  <div class="oh-controls">
+
+    {# Search #}
+    <div class="oh-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="ohSearch" placeholder="Search tracking ID, route, receiver…" autocomplete="off" />
+    </div>
+
+    {# Status filter tabs #}
+    <div class="oh-filters">
+      <button class="oh-filter-btn active" data-filter="all">All</button>
+      <button class="oh-filter-btn" data-filter="Booking Created">Booked</button>
+      <button class="oh-filter-btn" data-filter="In Transit">In Transit</button>
+      <button class="oh-filter-btn" data-filter="Out for Delivery">Out for Delivery</button>
+      <button class="oh-filter-btn" data-filter="Delivered">Delivered</button>
+    </div>
+
+    {# Sort #}
+    <select class="oh-sort" id="ohSort">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="cost_high">Cost: High → Low</option>
+      <option value="cost_low">Cost: Low → High</option>
+      <option value="status">Status</option>
+    </select>
+
+  </div>
+
+  {# ══ Table body ══ #}
+  <div class="oh-body">
+
+    {% if shipments %}
+    <div class="oh-table-wrap">
+      <table class="oh-table" id="ohTable">
+        <thead>
+          <tr>
+            <th></th>{# chevron #}
+            <th class="sortable" data-col="tracking">Shipment <i class="fas fa-sort sort-icon"></i></th>
+            <th class="sortable col-date" data-col="date">Date <i class="fas fa-sort sort-icon"></i></th>
+            <th>Route</th>
+            <th class="col-weight">Weight</th>
+            <th class="col-packages">Packages</th>
+            <th class="col-service">Service</th>
+            <th class="sortable col-cost" data-col="cost">Cost <i class="fas fa-sort sort-icon"></i></th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ohTbody">
+          {% for s in shipments %}
+          {% set sc = status_class(s.status) %}
+          {# Main row #}
+          <tr class="oh-row"
+              data-tracking="{{ s.tracking_number | lower }}"
+              data-status="{{ s.status }}"
+              data-date="{{ s.created_at.timestamp() if s.created_at else 0 }}"
+              data-cost="{{ s.cost or 0 }}"
+              data-id="{{ s.id }}">
+
+            {# Expand toggle #}
+            <td style="width:36px;padding-left:12px">
+              <button class="chevron-btn" onclick="toggleRow(this, {{ s.id }})" title="Show details">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </td>
+
+            {# Tracking + commodity #}
+            <td>
+              <div class="td-tracking">
+                <div class="td-icon"><i class="fas {{ cargo_icon(s.commodity) }}"></i></div>
+                <div>
+                  <div class="td-track-num">{{ s.tracking_number }}</div>
+                  <div class="td-commodity">{{ s.commodity or 'General Cargo' }}</div>
+                </div>
+              </div>
+            </td>
+
+            {# Date #}
+            <td class="col-date" style="white-space:nowrap">
+              {% if s.created_at %}
+                <div style="font-size:13px;color:var(--text)">{{ s.created_at.strftime('%d %b %Y') }}</div>
+                <div style="font-size:11px;color:var(--muted)">{{ s.created_at.strftime('%I:%M %p') }}</div>
+              {% else %}—{% endif %}
+            </td>
+
+            {# Route #}
+            <td>
+              <div class="td-route">
+                <div class="td-route-from">{{ (s.origin or '').split(',')[0] }}</div>
+                <div class="td-route-to">
+                  <i class="fas fa-long-arrow-alt-right"></i>
+                  {{ (s.destination or '').split(',')[0] }}
+                </div>
+              </div>
+            </td>
+
+            {# Weight #}
+            <td class="col-weight" style="font-size:13px;color:var(--text2)">
+              {{ '%.1f' | format(s.weight or 0) }} kg
+            </td>
+
+            {# Packages count #}
+            <td class="col-packages" style="text-align:center">
+              <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text)">
+                {{ s.packages | length }}
+              </span>
+              <span style="font-size:11px;color:var(--muted)"> pkg</span>
+            </td>
+
+            {# Service level #}
+            <td class="col-service">
+              <span style="font-size:12px;font-weight:600;color:var(--text2)">{{ s.service_level or '—' }}</span>
+            </td>
+
+            {# Cost #}
+            <td class="col-cost td-cost">
+              {% if s.cost %}${{ '{:,.0f}'.format(s.cost) }}{% else %}—{% endif %}
+            </td>
+
+            {# Status #}
+            <td>
+              <span class="status-dot {{ sc }}">{{ s.status }}</span>
+            </td>
+
+            {# Actions #}
+            <td>
+              <div class="td-actions">
+                <a href="{{ url_for('user.tracking') }}?t={{ s.tracking_number }}"
+                   class="action-btn" title="Track shipment">
+                  <i class="fas fa-map-marker-alt"></i>
+                </a>
+                <button class="action-btn" title="Copy tracking number"
+                        onclick="copyTracking(event, '{{ s.tracking_number }}')">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          {# Expanded detail row (hidden by default) #}
+          <tr class="oh-expand-row" id="expand-{{ s.id }}" style="display:none">
+            <td colspan="10">
+              <div class="oh-expand-inner">
+
+                {# Sender / receiver #}
+                <div class="expand-section">
+                  <div class="expand-label">Contacts</div>
+                  <div class="expand-kv">
+                    <span class="expand-k">Sender</span>
+                    <span class="expand-v">{{ s.sender_name or '—' }}</span>
+                  </div>
+                  {% if s.sender_phone %}
+                  <div class="expand-kv">
+                    <span class="expand-k">Sender phone</span>
+                    <span class="expand-v">{{ s.sender_phone }}</span>
+                  </div>
+                  {% endif %}
+                  <div class="expand-kv" style="margin-top:6px">
+                    <span class="expand-k">Receiver</span>
+                    <span class="expand-v">{{ s.receiver_name or '—' }}</span>
+                  </div>
+                  {% if s.receiver_phone %}
+                  <div class="expand-kv">
+                    <span class="expand-k">Receiver phone</span>
+                    <span class="expand-v">{{ s.receiver_phone }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+
+                {# Shipment details #}
+                <div class="expand-section">
+                  <div class="expand-label">Shipment Details</div>
+                  <div class="expand-kv">
+                    <span class="expand-k">Full origin</span>
+                    <span class="expand-v">{{ s.origin }}</span>
+                  </div>
+                  <div class="expand-kv">
+                    <span class="expand-k">Full destination</span>
+                    <span class="expand-v">{{ s.destination }}</span>
+                  </div>
+                  <div class="expand-kv">
+                    <span class="expand-k">Est. delivery</span>
+                    <span class="expand-v">
+                      {% if s.estimated_delivery %}
+                        {{ s.estimated_delivery.strftime('%d %b %Y') }}
+                      {% else %}—{% endif %}
+                    </span>
+                  </div>
+                  <div class="expand-kv">
+                    <span class="expand-k">Dimensions</span>
+                    <span class="expand-v">{{ s.dimensions or '—' }}</span>
+                  </div>
+                </div>
+
+                {# Packages #}
+                <div class="expand-section">
+                  <div class="expand-label">
+                    Packages ({{ s.packages | length }})
+                  </div>
+                  {% for p in s.packages %}
+                  <div class="pkg-mini">
+                    <i class="fas fa-box"></i>
+                    <div class="pkg-mini-info">
+                      <div class="pkg-mini-desc">{{ p.description or 'Package ' ~ loop.index }}</div>
+                      <div class="pkg-mini-dims">
+                        {{ p.length }}×{{ p.width }}×{{ p.height }} cm · {{ p.weight }} kg
+                      </div>
+                    </div>
+                    <div class="pkg-mini-flags">
+                      {% if p.fragile %}
+                        <span class="pkg-flag fragile">Fragile</span>
+                      {% endif %}
+                      {% if p.stackable %}
+                        <span class="pkg-flag stackable">Stack</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% else %}
+                  <span style="font-size:12px;color:var(--muted)">No package details recorded.</span>
+                  {% endfor %}
+                </div>
+
+              </div>
+            </td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# ── No results state (shown when filter/search yields nothing) ── #}
+    <div class="oh-empty" id="ohNoResults" style="display:none">
+      <div class="oh-empty-icon"><i class="fas fa-search"></i></div>
+      <h3>No shipments found</h3>
+      <p>Try a different search term or clear the active filter.</p>
+    </div>
+
+    {% else %}
+    {# ── True empty state (user has zero shipments) ── #}
+    <div class="oh-empty">
+      <div class="oh-empty-icon"><i class="fas fa-box-open"></i></div>
+      <h3>No shipments yet</h3>
+      <p>You haven't booked any shipments. Create your first one to get started.</p>
+      <a href="{{ url_for('user.create_shipment') }}">
+        <button class="btn-primary" style="margin-top:8px">
+          <i class="fas fa-plus"></i> Create Shipment
+        </button>
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ══ Pagination ══ #}
+  {% if shipments %}
+  <div class="oh-pagination">
+    <div class="oh-page-info">
+      Showing <strong id="pageRangeStart">1</strong>–<strong id="pageRangeEnd">{{ [shipments|length, 20]|min }}</strong>
+      of <strong id="pageTotalVisible">{{ shipments | length }}</strong> shipments
+    </div>
+    <div class="oh-page-btns" id="pageBtns"></div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const PER_PAGE   = 20;
+  let   currentPage = 1;
+  let   activeFilter = 'all';
+  let   activeSort   = 'newest';
+  let   searchQuery  = '';
+
+  // ── Collect all rows once ──
+  const allRows = Array.from(document.querySelectorAll('.oh-row'));
+
+  // ── Status filter buttons ──
+  document.querySelectorAll('.oh-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.oh-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter  = btn.dataset.filter;
+      currentPage   = 1;
+      render();
+    });
+  });
+
+  // ── Search ──
+  document.getElementById('ohSearch')?.addEventListener('input', e => {
+    searchQuery = e.target.value.toLowerCase().trim();
+    currentPage = 1;
+    render();
+  });
+
+  // ── Sort ──
+  document.getElementById('ohSort')?.addEventListener('change', e => {
+    activeSort  = e.target.value;
+    currentPage = 1;
+    render();
+  });
+
+  // ── Column header sort ──
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      // Toggle asc/desc
+      if (th.classList.contains('sort-asc')) {
+        th.classList.replace('sort-asc', 'sort-desc');
+        activeSort = col + '_desc';
+      } else {
+        document.querySelectorAll('th').forEach(t => t.classList.remove('sort-asc','sort-desc'));
+        th.classList.add('sort-asc');
+        activeSort = col + '_asc';
+      }
+      document.getElementById('ohSort').value = activeSort;
+      currentPage = 1;
+      render();
+    });
+  });
+
+  // ── Expand / collapse row ──
+  window.toggleRow = function (btn, id) {
+    const expRow = document.getElementById('expand-' + id);
+    if (!expRow) return;
+    const isOpen = expRow.style.display !== 'none';
+    expRow.style.display = isOpen ? 'none' : 'table-row';
+    btn.classList.toggle('open', !isOpen);
+  };
+
+  // ── Copy tracking number ──
+  window.copyTracking = function (e, tracking) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(tracking).then(() => {
+      window.uthaoToast?.('Tracking number copied!', 'success', 2000);
+    });
+  };
+
+  // ── Main render loop ──
+  function render() {
+    const tbody = document.getElementById('ohTbody');
+    const noRes = document.getElementById('ohNoResults');
+
+    // 1. Filter
+    let visible = allRows.filter(row => {
+      const matchFilter = activeFilter === 'all' || row.dataset.status === activeFilter;
+      const matchSearch = !searchQuery || row.dataset.tracking.includes(searchQuery)
+        || row.innerText.toLowerCase().includes(searchQuery);
+      return matchFilter && matchSearch;
+    });
+
+    // 2. Sort
+    visible.sort((a, b) => {
+      switch (activeSort) {
+        case 'oldest':    return +a.dataset.date   - +b.dataset.date;
+        case 'cost_high': return +b.dataset.cost   - +a.dataset.cost;
+        case 'cost_low':  return +a.dataset.cost   - +b.dataset.cost;
+        case 'status':    return a.dataset.status.localeCompare(b.dataset.status);
+        case 'tracking_asc':  return a.dataset.tracking.localeCompare(b.dataset.tracking);
+        case 'tracking_desc': return b.dataset.tracking.localeCompare(a.dataset.tracking);
+        case 'date_asc':  return +a.dataset.date - +b.dataset.date;
+        case 'date_desc': return +b.dataset.date - +a.dataset.date;
+        case 'cost_asc':  return +a.dataset.cost - +b.dataset.cost;
+        case 'cost_desc': return +b.dataset.cost - +a.dataset.cost;
+        default: return +b.dataset.date - +a.dataset.date; // newest
+      }
+    });
+
+    // 3. Paginate
+    const total     = visible.length;
+    const totalPages = Math.ceil(total / PER_PAGE) || 1;
+    currentPage = Math.min(currentPage, totalPages);
+    const start = (currentPage - 1) * PER_PAGE;
+    const end   = start + PER_PAGE;
+    const page  = visible.slice(start, end);
+
+    // 4. Hide all, show page slice
+    allRows.forEach(row => {
+      row.style.display = 'none';
+      // also hide its expand row
+      const exp = document.getElementById('expand-' + row.dataset.id);
+      if (exp) exp.style.display = 'none';
+      // reset chevron
+      const btn = row.querySelector('.chevron-btn');
+      if (btn) btn.classList.remove('open');
+    });
+
+    page.forEach(row => { row.style.display = ''; });
+
+    // 5. Empty state
+    if (noRes) noRes.style.display = total === 0 ? 'flex' : 'none';
+    const tableWrap = document.querySelector('.oh-table-wrap');
+    if (tableWrap) tableWrap.style.display = total === 0 ? 'none' : '';
+
+    // 6. Pagination info
+    const rs = document.getElementById('pageRangeStart');
+    const re = document.getElementById('pageRangeEnd');
+    const rt = document.getElementById('pageTotalVisible');
+    if (rs) rs.textContent = total === 0 ? 0 : start + 1;
+    if (re) re.textContent = Math.min(end, total);
+    if (rt) rt.textContent = total;
+
+    // 7. Page buttons
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    const container = document.getElementById('pageBtns');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const mkBtn = (label, page, disabled = false, isActive = false) => {
+      const b = document.createElement('button');
+      b.className = 'page-btn' + (isActive ? ' active' : '');
+      b.innerHTML = label;
+      b.disabled  = disabled;
+      b.onclick   = () => { currentPage = page; render(); };
+      return b;
+    };
+
+    container.appendChild(mkBtn('<i class="fas fa-chevron-left"></i>', currentPage - 1, currentPage === 1));
+
+    // Show max 5 page buttons with ellipsis
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('…');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push('…');
+      pages.push(totalPages);
+    }
+
+    pages.forEach(p => {
+      if (p === '…') {
+        const s = document.createElement('button');
+        s.className = 'page-btn'; s.textContent = '…'; s.disabled = true;
+        container.appendChild(s);
+      } else {
+        container.appendChild(mkBtn(p, p, false, p === currentPage));
+      }
+    });
+
+    container.appendChild(mkBtn('<i class="fas fa-chevron-right"></i>', currentPage + 1, currentPage === totalPages));
+  }
+
+  // ── Initial render ──
+  render();
+
+})();
+</script>
+{% endblock %}

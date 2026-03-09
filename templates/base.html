@@ -1,0 +1,309 @@
+<!-- base.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uthao Global Logistics</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Optional custom font/icon (Font Awesome via CDN for icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Smooth hover transitions */
+        a, button { transition: all 0.2s ease; }
+        .service-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+    </style>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+{% block head %}
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#f27f0d",
+                        "background-light": "#f8f7f5",
+                        "background-dark": "#221910",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+{% endblock %}
+</head>
+<body class="bg-gray-50">
+    
+
+    <main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <span class="flask-flash" data-message="{{ message }}" data-type="{{ category }}" style="display:none"></span>
+            {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        let socket = null;
+        let currentSessionId = null;
+        let isChatOpen = false;
+        let typingTimer = null;
+        let unreadCount = 0;
+
+        // Initialize Socket.IO connection
+        function initSocket() {
+        if (socket) return;
+        
+        // Connect to Socket.IO server
+        socket = io();
+        
+        // ────────────────────────────────────────────
+        // Connection Events
+        // ────────────────────────────────────────────
+        
+        socket.on('connect', function() {
+            console.log('✅ Connected to chat server');
+            updateConnectionState('connected');
+            
+            // Check for existing session from URL or localStorage
+            checkExistingSession();
+        });
+        
+        socket.on('disconnect', function(reason) {
+            console.log('❌ Disconnected:', reason);
+            updateConnectionState('error', 'Disconnected. Trying to reconnect...');
+        });
+        
+        socket.on('connect_error', function(error) {
+            console.error('Connection error:', error);
+            updateConnectionState('error', 'Connection failed. Please refresh.');
+        });
+        
+        socket.on('reconnect', function(attemptNumber) {
+            console.log('🔄 Reconnected after', attemptNumber, 'attempts');
+            updateConnectionState('connected');
+            
+            // Rejoin chat if was in one
+            if (currentSessionId) {
+            socket.emit('user_rejoin_chat', { session_id: currentSessionId });
+            }
+        });
+        
+        // ────────────────────────────────────────────
+        // Chat Session Events
+        // ────────────────────────────────────────────
+        
+        // New chat created, waiting in queue
+        socket.on('chat_created', function(data) {
+            console.log('Chat created:', data);
+            currentSessionId = data.session_id;
+            showWaitingState(data.position);
+            
+            // Save to localStorage for persistence
+            localStorage.setItem('uthao_chat_session', currentSessionId);
+        });
+        
+        // Successfully joined/rejoined a chat
+        socket.on('chat_joined', function(data) {
+            console.log('Chat joined:', data);
+            currentSessionId = data.session_id;
+            
+            if (data.status === 'active') {
+            showActiveChat(data.messages);
+            } else if (data.status === 'waiting') {
+            showWaitingState();
+            } else if (data.status === 'closed') {
+            showClosedState('This chat session has ended.');
+            }
+        });
+        
+        // Admin joined the chat
+        socket.on('admin_joined', function(data) {
+            console.log('Admin joined:', data);
+            showActiveChat(data.messages);
+            addSystemMessage('🎉 ' + (data.admin.name || 'Support Agent') + ' has joined the chat');
+            updateChatStatus('Active', 'online');
+            
+            // Play notification sound
+            playNotificationSound();
+        });
+        
+        // Another admin claimed this chat
+        socket.on('chat_claimed', function(data) {
+            if (currentSessionId === data.session_id && !isChatOpen) {
+            showNotification('This chat has been assigned to another agent', 'info');
+            }
+        });
+        
+        // ────────────────────────────────────────────
+        // Message Events
+        // ────────────────────────────────────────────
+        
+        // New message received
+        socket.on('new_message', function(data) {
+            console.log('New message:', data);
+            addMessage(data);
+            scrollToBottom();
+            
+            // If chat is minimized, increment badge and play sound
+            if (!isChatOpen) {
+            unreadCount++;
+            updateBadge();
+            playNotificationSound();
+            
+            // Browser notification if permitted
+            showBrowserNotification(data.sender_name || 'Support', data.message);
+            } else {
+            // Mark as read immediately if chat is open
+            markMessagesRead();
+            }
+        });
+        
+        // Notification of new chat message (when not in room)
+        socket.on('new_chat_message', function(data) {
+            if (data.session_id === currentSessionId && !isChatOpen) {
+            unreadCount++;
+            updateBadge();
+            playNotificationSound();
+            }
+        });
+        
+        // Messages marked as read
+        socket.on('messages_read', function(data) {
+            document.querySelectorAll('.chat-message.agent.unread').forEach(msg => {
+            msg.classList.remove('unread');
+            });
+        });
+        
+        // ────────────────────────────────────────────
+        // Typing Indicators
+        // ────────────────────────────────────────────
+        
+        socket.on('admin_typing', function(data) {
+            if (data.session_id === currentSessionId) {
+            if (data.typing) {
+                showTypingIndicator();
+            } else {
+                hideTypingIndicator();
+            }
+            }
+        });
+        
+        // ────────────────────────────────────────────
+        // Chat Lifecycle Events
+        // ────────────────────────────────────────────
+        
+        // Chat was closed by admin
+        socket.on('chat_closed', function(data) {
+            console.log('Chat closed:', data);
+            showClosedState(data.message || 'This chat has been closed.');
+            currentSessionId = null;
+            localStorage.removeItem('uthao_chat_session');
+            
+            // Final message
+            addSystemMessage('🔒 Chat ' + data.status);
+        });
+        
+        // Chat cancelled
+        socket.on('chat_cancelled', function(data) {
+            console.log('Chat cancelled:', data);
+            resetChat();
+            currentSessionId = null;
+            localStorage.removeItem('uthao_chat_session');
+        });
+        
+        // ────────────────────────────────────────────
+        // Error Handling
+        // ────────────────────────────────────────────
+        
+        socket.on('error', function(data) {
+            console.error('Socket error:', data);
+            showNotification(data.message || 'An error occurred', 'error');
+        });
+        
+        // Admin status update (online/offline)
+        socket.on('admin_status', function(data) {
+            console.log('Admin status:', data);
+            // Could show "Support online" indicator
+            const statusEl = document.getElementById('supportOnlineStatus');
+            if (statusEl) {
+            statusEl.style.display = data.online ? 'block' : 'none';
+            }
+        });
+        }
+
+        // ────────────────────────────────────────────
+        // Helper Functions
+        // ────────────────────────────────────────────
+
+        function checkExistingSession() {
+        // Check URL params first
+        const params = new URLSearchParams(window.location.search);
+        const chatId = params.get('chat');
+        
+        if (chatId) {
+            socket.emit('user_rejoin_chat', { session_id: parseInt(chatId) });
+            return;
+        }
+        
+        // Check localStorage for persisted session
+        const savedSession = localStorage.getItem('uthao_chat_session');
+        if (savedSession) {
+            socket.emit('user_rejoin_chat', { session_id: parseInt(savedSession) });
+        }
+        }
+
+        function updateConnectionState(state, message) {
+        const el = document.getElementById('connectionState');
+        if (!el) return;
+        
+        el.className = 'connection-state ' + state;
+        
+        switch(state) {
+            case 'connecting':
+            el.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+            el.style.display = 'flex';
+            break;
+            case 'connected':
+            el.innerHTML = '<i class="fas fa-check-circle"></i> Connected';
+            setTimeout(() => el.style.display = 'none', 2000);
+            break;
+            case 'error':
+            el.style.display = 'flex';
+            el.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + (message || 'Connection error');
+            break;
+        }
+        }
+
+        function showBrowserNotification(title, body) {
+        if (!("Notification" in window)) return;
+        if (Notification.permission === "granted") {
+            new Notification(title, { body, icon: '/static/img/logo.png' });
+        } else if (Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+        }
+
+        // Request notification permission on first interaction
+        document.addEventListener('click', function requestNotifPermission() {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+        document.removeEventListener('click', requestNotifPermission);
+        }, { once: true });
+    </script>
+
+</body>
+</html>

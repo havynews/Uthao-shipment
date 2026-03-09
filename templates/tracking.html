@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="tracking-wrapper">
+
+  <div class="tracking-search">
+    <input type="text" id="trackInput" placeholder="Enter tracking number">
+    <button id="trackBtn">Track Shipment</button>
+  </div>
+
+  <div id="trackingResult"></div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/public-tracking.js') }}"></script>
+
+{% endblock %}

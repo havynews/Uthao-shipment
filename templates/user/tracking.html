@@ -1,0 +1,42 @@
+{% extends "base_user.html" %}
+
+{% block title %}Tracking{% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+{% endblock %}
+
+{% block page_body %}
+<div class="tracking-layout">
+
+  <!-- ══ LEFT — Shipment list ══ -->
+  <div class="list-panel">
+    <div class="list-header">
+      <h2>Shipment</h2>
+      <p>Confirm and track shipping orders</p>
+    </div>
+
+    <div class="list-filters">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="intransit">In Transit</button>
+      <button class="filter-chip" data-filter="outfordelivery">Out for Delivery</button>
+      <button class="filter-chip" data-filter="delivered">Delivered</button>
+    </div>
+
+    <div class="shipment-list" id="shipmentList"></div>
+  </div>
+
+  <!-- ══ RIGHT — Detail panel ══ -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="no-selection">
+      <i class="fas fa-map-marker-alt"></i>
+      <p>Select a shipment to view tracking details</p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

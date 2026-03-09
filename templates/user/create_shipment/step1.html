@@ -1,0 +1,131 @@
+<!-- create shipment step 1 -->
+
+{% extends "base_user.html" %}
+{% block title %}Create Shipment — Step 1{% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create_shipment.css') }}" />
+{% endblock %}
+
+{% block page_body %}
+<div class="cs-page">
+
+  <!-- Header -->
+  <div class="cs-header">
+    <h1>Create Shipment</h1>
+    <p>Fill in the details below to book your shipment</p>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step-item active">
+      <div class="step-bubble">1</div>
+      <span class="step-label">Route & Contacts</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">2</div>
+      <span class="step-label">Package Details</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">3</div>
+      <span class="step-label">Service Level</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">4</div>
+      <span class="step-label">Review & Confirm</span>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="POST" action="{{ url_for('user.create_shipment', step='1') }}" id="step1Form">
+
+    <!-- Route -->
+    <div class="cs-card">
+      <div class="cs-card-title">
+        <i class="fas fa-route"></i>
+        Shipment Route
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="origin">Origin <span>*</span></label>
+          <input class="form-input" type="text" id="origin" name="origin"
+                 placeholder="e.g. Lagos, Nigeria"
+                 value="{{ session.get('origin', '') }}" required />
+          <span class="form-hint">City, state or full address of pickup</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="destination">Destination <span>*</span></label>
+          <input class="form-input" type="text" id="destination" name="destination"
+                 placeholder="e.g. Abuja, Nigeria"
+                 value="{{ session.get('destination', '') }}" required />
+          <span class="form-hint">City, state or full address of delivery</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sender -->
+    <div class="cs-card">
+      <div class="cs-card-title">
+        <i class="fas fa-user-circle"></i>
+        Sender Details
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="sender_name">Full Name <span>*</span></label>
+          <input class="form-input" type="text" id="sender_name" name="sender_name"
+                 placeholder="John Doe"
+                 value="{{ session.get('sender_name', '') }}" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sender_phone">Phone Number <span>*</span></label>
+          <input class="form-input" type="tel" id="sender_phone" name="sender_phone"
+                 placeholder="+234 800 000 0000"
+                 value="{{ session.get('sender_phone', '') }}" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- Receiver -->
+    <div class="cs-card">
+      <div class="cs-card-title">
+        <i class="fas fa-user-check"></i>
+        Receiver Details
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="receiver_name">Full Name <span>*</span></label>
+          <input class="form-input" type="text" id="receiver_name" name="receiver_name"
+                 placeholder="Jane Smith"
+                 value="{{ session.get('receiver_name', '') }}" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="receiver_phone">Phone Number <span>*</span></label>
+          <input class="form-input" type="tel" id="receiver_phone" name="receiver_phone"
+                 placeholder="+234 800 000 0000"
+                 value="{{ session.get('receiver_phone', '') }}" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="cs-footer">
+      <a href="{{ url_for('user.dashboard') }}" class="btn-back">
+        <i class="fas fa-times"></i> Cancel
+      </a>
+      <button type="submit" class="btn-next">
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

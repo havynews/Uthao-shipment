@@ -1,0 +1,852 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Edit User: {{ user.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --orange:       #f97316;
+    --orange-dark:  #ea6200;
+    --orange-light: #fff7ed;
+    --orange-mid:   #ffedd5;
+    --surface:      #ffffff;
+    --surface2:     #f9fafb;
+    --surface3:     #f3f4f6;
+    --border:       #e5e7eb;
+    --border2:      #d1d5db;
+    --text:         #111827;
+    --text2:        #374151;
+    --text3:        #6b7280;
+    --text4:        #9ca3af;
+    --red:          #ef4444;
+    --green:        #22c55e;
+    --blue:         #3b82f6;
+    --shadow-sm:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:    0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --shadow-lg:    0 10px 30px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.06);
+    --radius:       12px;
+    --radius-sm:    8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  .eu-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+  }
+
+  /* ── Breadcrumb ── */
+  .eu-breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text3); margin-bottom: 20px;
+  }
+  .eu-breadcrumb a { color: var(--text3); text-decoration: none; transition: color .15s; }
+  .eu-breadcrumb a:hover { color: var(--orange); }
+  .eu-breadcrumb .sep { font-size: 10px; color: var(--text4); }
+
+  /* ── Header ── */
+  .eu-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .eu-header-left { display: flex; align-items: center; gap: 16px; }
+  .eu-avatar {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: #fff; flex-shrink: 0;
+    box-shadow: 0 0 0 3px var(--orange-mid); overflow: hidden;
+  }
+  .eu-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .eu-header-meta h1 { font-size: 20px; font-weight: 700; color: var(--text); margin: 0 0 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .eu-header-meta p  { font-size: 13px; color: var(--text3); margin: 0; }
+  .eu-status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+  }
+  .eu-status-badge.active   { background: #dcfce7; color: #16a34a; }
+  .eu-status-badge.inactive { background: #fee2e2; color: #dc2626; }
+  .eu-status-badge::before  { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .plan-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    background: var(--orange-light); color: var(--orange); border: 1px solid var(--orange-mid);
+  }
+
+  /* ── Stats ── */
+  .eu-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+  @media(max-width:640px){ .eu-stats{grid-template-columns:repeat(2,1fr);} }
+  .eu-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow-sm);
+  }
+  .eu-stat.accent { border-color: var(--orange-mid); background: var(--orange-light); }
+  .eu-stat-label { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 4px; }
+  .eu-stat-val   { font-size: 22px; font-weight: 700; color: var(--text); }
+  .eu-stat.accent .eu-stat-val { color: var(--orange); }
+  .eu-stat-sub   { font-size: 11px; color: var(--text4); margin-top: 2px; }
+
+  /* ── Tabs ── */
+  .eu-tabs {
+    display: flex; gap: 2px; border-bottom: 2px solid var(--border);
+    margin-bottom: 24px; overflow-x: auto; scrollbar-width: none;
+  }
+  .eu-tabs::-webkit-scrollbar { display: none; }
+  .eu-tab {
+    padding: 10px 18px; font-size: 14px; font-weight: 500;
+    color: var(--text3); border: none; background: none; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s; white-space: nowrap;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .eu-tab i { font-size: 13px; }
+  .eu-tab:hover { color: var(--orange); }
+  .eu-tab.active { color: var(--orange); border-bottom-color: var(--orange); font-weight: 600; }
+
+  /* ── Panels ── */
+  .eu-panel { display: none; }
+  .eu-panel.active { display: block; }
+
+  /* ── Card ── */
+  .eu-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .eu-card-head {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .eu-card-head h3 {
+    font-size: 15px; font-weight: 600; color: var(--text); margin: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eu-card-head h3 i { color: var(--orange); font-size: 14px; }
+  .eu-card-head-sub { font-size: 12px; color: var(--text3); }
+  .eu-card-body { padding: 20px; }
+
+  /* ── Grid ── */
+  .eu-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+  .eu-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  @media(max-width:600px){ .eu-grid-2,.eu-grid-3{grid-template-columns:1fr;} }
+
+  /* ── Form fields ── */
+  .eu-field { display: flex; flex-direction: column; gap: 6px; }
+  .eu-field label { font-size: 13px; font-weight: 500; color: var(--text2); }
+  .eu-field input, .eu-field select, .eu-field textarea {
+    width: 100%; padding: 9px 12px;
+    border: 1.5px solid var(--border2); border-radius: var(--radius-sm);
+    font-size: 14px; color: var(--text); background: var(--surface);
+    transition: border-color .15s, box-shadow .15s; outline: none; font-family: inherit;
+  }
+  .eu-field input:focus, .eu-field select:focus, .eu-field textarea:focus {
+    border-color: var(--orange); box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+  }
+  .eu-field textarea { resize: vertical; min-height: 90px; }
+  .eu-field-hint { font-size: 12px; color: var(--text4); }
+  .eu-chars { font-size: 11px; color: var(--text4); text-align: right; }
+
+  /* ── Toggle ── */
+  .eu-toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .eu-toggle-row:last-child { border-bottom: none; }
+  .eu-toggle-info h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
+  .eu-toggle-info p  { font-size: 12px; color: var(--text3); margin: 0; }
+  .eu-toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+  .eu-toggle input { opacity:0; width:0; height:0; }
+  .eu-toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--border2); border-radius: 22px;
+    cursor: pointer; transition: background .2s;
+  }
+  .eu-toggle-slider::before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; top: 3px; left: 3px;
+    transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  }
+  .eu-toggle input:checked + .eu-toggle-slider { background: var(--orange); }
+  .eu-toggle input:checked + .eu-toggle-slider::before { transform: translateX(18px); }
+
+  /* ── Buttons ── */
+  .eu-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    border: none; transition: all .15s; white-space: nowrap; font-family: inherit;
+  }
+  .eu-btn-primary { background: var(--orange); color: #fff; box-shadow: 0 2px 6px rgba(249,115,22,.35); }
+  .eu-btn-primary:hover { background: var(--orange-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(249,115,22,.45); }
+  .eu-btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .eu-btn-ghost:hover { border-color: var(--orange); color: var(--orange); }
+  .eu-btn-danger { background: #fee2e2; color: var(--red); border: 1.5px solid #fecaca; }
+  .eu-btn-danger:hover { background: var(--red); color: #fff; }
+  .eu-btn-sm { padding: 6px 12px; font-size: 13px; }
+
+  /* ── Form footer ── */
+  .eu-form-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding-top: 20px; border-top: 1px solid var(--border); flex-wrap: wrap;
+  }
+
+  /* ── Notification composer ── */
+  .notif-type-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+  @media(max-width:500px){ .notif-type-grid{grid-template-columns:repeat(2,1fr);} }
+  .notif-type-btn {
+    padding: 12px 8px; border: 1.5px solid var(--border2); border-radius: var(--radius-sm);
+    cursor: pointer; text-align: center; font-size: 12px; font-weight: 600; color: var(--text3);
+    transition: all .15s; background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .notif-type-btn i { font-size: 20px; }
+  .notif-type-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .notif-type-btn.selected { border-color: var(--orange); background: var(--orange-light); color: var(--orange); box-shadow: 0 0 0 2px rgba(249,115,22,.12); }
+  .notif-priority-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .notif-priority-opt {
+    flex: 1; padding: 8px 6px; text-align: center;
+    border: 1.5px solid var(--border2); border-radius: 6px;
+    font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text3); transition: all .15s;
+  }
+  .notif-priority-opt[data-p="low"].sel    { border-color:#6b7280; background:#f3f4f6; color:#6b7280; }
+  .notif-priority-opt[data-p="normal"].sel { border-color:var(--blue); background:#eff6ff; color:var(--blue); }
+  .notif-priority-opt[data-p="high"].sel   { border-color:var(--orange); background:var(--orange-light); color:var(--orange); }
+  .notif-priority-opt[data-p="urgent"].sel { border-color:var(--red); background:#fee2e2; color:var(--red); }
+
+  /* ── Quick actions ── */
+  .eu-qa-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+  @media(max-width:500px){ .eu-qa-grid{grid-template-columns:1fr;} }
+  .eu-qa-btn {
+    width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); background: var(--surface); cursor: pointer;
+    font-family: inherit; display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--text2); transition: all .15s; text-align: left;
+  }
+  .eu-qa-btn i { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+  .eu-qa-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-light); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .eu-qa-btn.danger:hover { border-color: var(--red); color: var(--red); background: #fee2e2; }
+  .eu-qa-sub { font-size: 11px; color: var(--text4); margin-top: 1px; }
+
+  /* ── Table ── */
+  .eu-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .eu-table th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; padding: 9px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .eu-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  .eu-table tr:last-child td { border-bottom: none; }
+  .eu-table tr:hover td { background: var(--orange-light); }
+  .eu-badge { display: inline-flex; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .eu-badge.pending  { background: #fef3c7; color: #d97706; }
+  .eu-badge.approved { background: #dcfce7; color: #16a34a; }
+  .eu-badge.rejected { background: #fee2e2; color: var(--red); }
+  .eu-badge.cancelled{ background: var(--surface3); color: var(--text3); }
+
+  /* ── Danger zone ── */
+  .eu-danger-zone { border: 1.5px solid #fecaca; border-radius: var(--radius); background: #fff5f5; padding: 20px; }
+  .eu-danger-zone h4 { font-size: 14px; font-weight: 700; color: var(--red); margin: 0 0 4px; display:flex;align-items:center;gap:6px; }
+  .eu-danger-zone p  { font-size: 13px; color: #6b7280; margin: 0 0 16px; }
+  .eu-danger-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  /* ── Check row ── */
+  .eu-check-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    cursor: pointer; transition: all .15s; user-select: none;
+  }
+  .eu-check-row:hover { border-color: var(--orange); background: var(--orange-light); }
+  .eu-check-row input[type="checkbox"] { accent-color: var(--orange); margin-top: 2px; }
+  .eu-check-row-label { font-size: 14px; font-weight: 500; color: var(--text2); }
+  .eu-check-row-desc  { font-size: 12px; color: var(--text4); }
+
+  /* ── Divider ── */
+  .eu-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+  /* ── Toast ── */
+  .eu-toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .eu-toast {
+    background: var(--text); color: #fff; padding: 12px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500; box-shadow: var(--shadow-lg);
+    display: flex; align-items: center; gap: 8px; pointer-events: all; max-width: 320px;
+    animation: toastIn .25s ease;
+  }
+  .eu-toast.success { background: #16a34a; }
+  .eu-toast.error   { background: var(--red); }
+  .eu-toast.info    { background: var(--blue); }
+  @keyframes toastIn { from{opacity:0;transform:translateX(20px);} to{opacity:1;transform:translateX(0);} }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="eu-wrap">
+  <div class="eu-toast-container" id="toastContainer"></div>
+
+  <!-- Breadcrumb -->
+  <div class="eu-breadcrumb">
+    <a href="{{ url_for('admin.users') }}"><i class="fas fa-users"></i> Users</a>
+    <span class="sep"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin.user_detail', user_id=user.id) }}">{{ user.full_name or user.email }}</a>
+    <span class="sep"><i class="fas fa-chevron-right"></i></span>
+    <span>Edit</span>
+  </div>
+
+  <!-- Header -->
+  <div class="eu-header">
+    <div class="eu-header-left">
+      <div class="eu-avatar">
+        {% if user.avatar_url %}<img src="{{ user.avatar_url }}" alt="{{ user.full_name }}">
+        {% else %}{{ (user.full_name or user.email)[0].upper() }}{% endif %}
+      </div>
+      <div class="eu-header-meta">
+        <h1>
+          {{ user.full_name or 'Unnamed User' }}
+          <span class="eu-status-badge {{ 'active' if user.is_active else 'inactive' }}">
+            {{ 'Active' if user.is_active else 'Inactive' }}
+          </span>
+          {% if user.is_admin %}<span style="font-size:12px;color:var(--orange);font-weight:600;"><i class="fas fa-shield-alt"></i> Admin</span>{% endif %}
+        </h1>
+        <p>
+          {{ user.email }}
+          {% if user.subscription %}&nbsp;·&nbsp;
+            <span class="plan-badge"><i class="fas fa-crown"></i> {{ user.subscription.plan_id | title }}</span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="eu-btn eu-btn-ghost eu-btn-sm">
+      <i class="fas fa-eye"></i> View Profile
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="eu-stats">
+    <div class="eu-stat accent">
+      <div class="eu-stat-label">Shipments</div>
+      <div class="eu-stat-val">{{ user.shipments | length }}</div>
+      <div class="eu-stat-sub">Total booked</div>
+    </div>
+    <div class="eu-stat">
+      <div class="eu-stat-label">Member Since</div>
+      <div class="eu-stat-val" style="font-size:16px;">{{ user.created_at.strftime('%d %b %Y') }}</div>
+      <div class="eu-stat-sub">Account age</div>
+    </div>
+    <div class="eu-stat">
+      <div class="eu-stat-label">Currency</div>
+      <div class="eu-stat-val" style="font-size:18px;">{{ user.currency }}</div>
+      <div class="eu-stat-sub">Preferred</div>
+    </div>
+    <div class="eu-stat">
+      <div class="eu-stat-label">Tickets</div>
+      <div class="eu-stat-val">{{ user.support_tickets | length if user.support_tickets else 0 }}</div>
+      <div class="eu-stat-sub">Support raised</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="eu-tabs">
+    <button class="eu-tab active" onclick="switchTab('profile',this)"><i class="fas fa-user"></i> Profile</button>
+    <button class="eu-tab" onclick="switchTab('account',this)"><i class="fas fa-shield-alt"></i> Account &amp; Access</button>
+    <button class="eu-tab" onclick="switchTab('notify',this)"><i class="fas fa-bell"></i> Send Notification</button>
+    <button class="eu-tab" onclick="switchTab('billing',this)"><i class="fas fa-credit-card"></i> Billing &amp; Plan</button>
+    <button class="eu-tab" onclick="switchTab('notes',this)"><i class="fas fa-sticky-note"></i> Admin Notes</button>
+    <button class="eu-tab" onclick="switchTab('danger',this)"><i class="fas fa-exclamation-triangle"></i> Actions</button>
+  </div>
+
+  <!-- ══════════ TAB: Profile ══════════ -->
+  <div class="eu-panel active" id="tab-profile">
+    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+      <input type="hidden" name="form_type" value="profile">
+
+      <div class="eu-card">
+        <div class="eu-card-head"><h3><i class="fas fa-user"></i> Personal Information</h3></div>
+        <div class="eu-card-body">
+          <div class="eu-grid-2" style="margin-bottom:16px;">
+            <div class="eu-field">
+              <label>Full Name</label>
+              <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="John Doe">
+            </div>
+            <div class="eu-field">
+              <label>Email Address <span style="color:var(--red)">*</span></label>
+              <input type="email" name="email" value="{{ user.email }}" required>
+            </div>
+            <div class="eu-field">
+              <label>Company</label>
+              <input type="text" name="company" value="{{ user.company or '' }}" placeholder="Acme Ltd.">
+            </div>
+            <div class="eu-field">
+              <label>Phone Number</label>
+              <input type="tel" name="phone" value="{{ user.phone or '' }}" placeholder="+234 800 000 0000">
+            </div>
+            <div class="eu-field">
+              <label>Preferred Currency</label>
+              <select name="currency">
+                {% for curr in currencies %}
+                <option value="{{ curr }}" {% if user.currency == curr %}selected{% endif %}>{{ curr }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="eu-field">
+              <label>Subscription Plan</label>
+              <select name="plan_id">
+                <option value="">Free (No Plan)</option>
+                {% for plan_id, plan in plans.items() %}
+                <option value="{{ plan_id }}"
+                  {% if user.subscription and user.subscription.plan_id == plan_id %}selected{% endif %}>
+                  {{ plan.name }} — ${{ plan.price_usd or 0 }}/mo
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="eu-field">
+            <label>Bio</label>
+            <textarea name="bio" placeholder="Short bio visible to the user…">{{ user.bio or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="eu-form-footer">
+        <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="eu-btn eu-btn-ghost"><i class="fas fa-times"></i> Cancel</a>
+        <button type="submit" class="eu-btn eu-btn-primary"><i class="fas fa-save"></i> Save Profile</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════ TAB: Account & Access ══════════ -->
+  <div class="eu-panel" id="tab-account">
+    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+      <input type="hidden" name="form_type" value="account">
+
+      <div class="eu-card">
+        <div class="eu-card-head"><h3><i class="fas fa-key"></i> Permissions &amp; Status</h3></div>
+        <div class="eu-card-body">
+          <div class="eu-toggle-row">
+            <div class="eu-toggle-info">
+              <h4>Administrator Access</h4>
+              <p>Can access admin dashboard, manage users, and approve payments.</p>
+            </div>
+            <label class="eu-toggle">
+              <input type="checkbox" name="is_admin" {% if user.is_admin %}checked{% endif %}>
+              <span class="eu-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="eu-toggle-row">
+            <div class="eu-toggle-info">
+              <h4>Account Active</h4>
+              <p>Inactive accounts cannot log in or create shipments.</p>
+            </div>
+            <label class="eu-toggle">
+              <input type="checkbox" name="is_active" {% if user.is_active %}checked{% endif %}>
+              <span class="eu-toggle-slider"></span>
+            </label>
+          </div>
+          <div class="eu-toggle-row">
+            <div class="eu-toggle-info">
+              <h4>Two-Factor Authentication</h4>
+              <p>User currently has 2FA <strong>{{ 'enabled' if user.two_fa_enabled else 'disabled' }}</strong>.</p>
+            </div>
+            <label class="eu-toggle">
+              <input type="checkbox" name="two_fa_enabled" {% if user.two_fa_enabled %}checked{% endif %}>
+              <span class="eu-toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="eu-card">
+        <div class="eu-card-head"><h3><i class="fas fa-lock"></i> Password Override</h3></div>
+        <div class="eu-card-body">
+          <div class="eu-grid-2" style="margin-bottom:14px;">
+            <div class="eu-field">
+              <label>New Password</label>
+              <input type="password" name="new_password" placeholder="Leave blank to keep current" autocomplete="new-password">
+              <span class="eu-field-hint">Minimum 8 characters</span>
+            </div>
+            <div class="eu-field">
+              <label>Confirm Password</label>
+              <input type="password" name="confirm_password" placeholder="Repeat password" autocomplete="new-password">
+            </div>
+          </div>
+          <label class="eu-check-row" style="display:flex;max-width:380px;">
+            <input type="checkbox" name="force_password_change">
+            <div>
+              <div class="eu-check-row-label">Force password change on next login</div>
+              <div class="eu-check-row-desc">User will be prompted to set a new password.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="eu-form-footer">
+        <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="eu-btn eu-btn-ghost"><i class="fas fa-times"></i> Cancel</a>
+        <button type="submit" class="eu-btn eu-btn-primary"><i class="fas fa-save"></i> Save Access Settings</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════ TAB: Send Notification ══════════ -->
+  <div class="eu-panel" id="tab-notify">
+    <form method="POST" action="{{ url_for('admin.send_user_notification', user_id=user.id) }}">
+      <div class="eu-card">
+        <div class="eu-card-head">
+          <h3><i class="fas fa-paper-plane"></i> Compose Notification</h3>
+          <span class="eu-card-head-sub">Delivered to {{ user.full_name or user.email }}'s notification centre</span>
+        </div>
+        <div class="eu-card-body">
+
+          <!-- Type -->
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:500;color:var(--text2);display:block;margin-bottom:10px;">Notification Type</label>
+            <div class="notif-type-grid">
+              <div class="notif-type-btn selected" onclick="selectNotifType('system',this)">
+                <i class="fas fa-cog" style="color:#6b7280;"></i>System
+              </div>
+              <div class="notif-type-btn" onclick="selectNotifType('billing',this)">
+                <i class="fas fa-credit-card" style="color:#8b5cf6;"></i>Billing
+              </div>
+              <div class="notif-type-btn" onclick="selectNotifType('shipment',this)">
+                <i class="fas fa-box" style="color:var(--blue);"></i>Shipment
+              </div>
+              <div class="notif-type-btn" onclick="selectNotifType('promotional',this)">
+                <i class="fas fa-bullhorn" style="color:var(--orange);"></i>Promo
+              </div>
+              <div class="notif-type-btn" onclick="selectNotifType('security',this)">
+                <i class="fas fa-shield-alt" style="color:var(--red);"></i>Security
+              </div>
+              <div class="notif-type-btn" onclick="selectNotifType('support',this)">
+                <i class="fas fa-headset" style="color:var(--green);"></i>Support
+              </div>
+            </div>
+            <input type="hidden" name="notification_type" id="notifType" value="system">
+          </div>
+
+          <!-- Priority -->
+          <div style="margin-bottom:18px;">
+            <label style="font-size:13px;font-weight:500;color:var(--text2);display:block;margin-bottom:8px;">Priority</label>
+            <div class="notif-priority-row">
+              <div class="notif-priority-opt" data-p="low"    onclick="selectPriority('low',this)">Low</div>
+              <div class="notif-priority-opt sel" data-p="normal" onclick="selectPriority('normal',this)">Normal</div>
+              <div class="notif-priority-opt" data-p="high"   onclick="selectPriority('high',this)">High</div>
+              <div class="notif-priority-opt" data-p="urgent" onclick="selectPriority('urgent',this)">Urgent</div>
+            </div>
+            <input type="hidden" name="priority" id="notifPriority" value="normal">
+          </div>
+
+          <hr class="eu-divider">
+
+          <div class="eu-field" style="margin-bottom:14px;">
+            <label>Title <span style="color:var(--red)">*</span></label>
+            <input type="text" name="title" id="notifTitle" maxlength="120"
+                   placeholder="e.g. Your plan has been upgraded" required
+                   oninput="updateChars('notifTitle','titleChars'); if(previewOpen) updatePreview();">
+            <span class="eu-chars" id="titleChars">0 / 120</span>
+          </div>
+
+          <div class="eu-field" style="margin-bottom:14px;">
+            <label>Message <span style="color:var(--red)">*</span></label>
+            <textarea name="message" id="notifMsg" rows="4" maxlength="500"
+                      placeholder="Write your notification message here…" required
+                      oninput="updateChars('notifMsg','msgChars'); if(previewOpen) updatePreview();"></textarea>
+            <span class="eu-chars" id="msgChars">0 / 500</span>
+          </div>
+
+          <div class="eu-field" style="margin-bottom:14px;">
+            <label>Action Link <span style="color:var(--text4);font-weight:400;">(optional)</span></label>
+            <input type="text" name="link" placeholder="/dashboard or https://… — clicking the notification opens this URL">
+          </div>
+
+          <!-- Preview -->
+          <div id="notifPreview" style="display:none;margin-top:16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Preview</div>
+            <div style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;background:var(--surface2);display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:38px;height:38px;border-radius:50%;background:var(--orange-light);border:1.5px solid var(--orange-mid);display:flex;align-items:center;justify-content:center;color:var(--orange);flex-shrink:0;font-size:15px;">
+                <i id="previewIcon" class="fas fa-bell"></i>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:600;color:var(--text);" id="previewTitle">—</div>
+                <div style="font-size:13px;color:var(--text3);margin-top:3px;line-height:1.4;" id="previewMsg">—</div>
+                <div style="font-size:11px;color:var(--text4);margin-top:5px;">Just now</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="eu-form-footer">
+        <button type="button" class="eu-btn eu-btn-ghost" onclick="togglePreview()">
+          <i class="fas fa-eye"></i> <span id="previewToggleLabel">Preview</span>
+        </button>
+        <button type="submit" class="eu-btn eu-btn-primary">
+          <i class="fas fa-paper-plane"></i> Send Notification
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════ TAB: Billing & Plan ══════════ -->
+  <div class="eu-panel" id="tab-billing">
+    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+      <input type="hidden" name="form_type" value="billing">
+
+      <div class="eu-card">
+        <div class="eu-card-head"><h3><i class="fas fa-crown"></i> Subscription Management</h3></div>
+        <div class="eu-card-body">
+          <div class="eu-grid-2">
+            <div class="eu-field">
+              <label>Plan</label>
+              <select name="plan_id">
+                <option value="">Free (No Plan)</option>
+                {% for plan_id, plan in plans.items() %}
+                <option value="{{ plan_id }}" {% if user.subscription and user.subscription.plan_id == plan_id %}selected{% endif %}>
+                  {{ plan.name }} — ${{ plan.price_usd or 0 }}/mo
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="eu-field">
+              <label>Subscription Status</label>
+              <select name="subscription_status">
+                <option value="active"    {% if user.subscription and user.subscription.status == 'active'    %}selected{% endif %}>Active</option>
+                <option value="paused"    {% if user.subscription and user.subscription.status == 'paused'    %}selected{% endif %}>Paused</option>
+                <option value="cancelled" {% if user.subscription and user.subscription.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                <option value="expired"   {% if user.subscription and user.subscription.status == 'expired'   %}selected{% endif %}>Expired</option>
+              </select>
+            </div>
+          </div>
+
+          {% if user.subscription %}
+          <div style="margin-top:16px;padding:14px;background:var(--orange-light);border:1px solid var(--orange-mid);border-radius:var(--radius-sm);display:flex;gap:24px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;">Started</div>
+              <div style="font-size:14px;color:var(--text);margin-top:2px;">{{ user.subscription.started_at.strftime('%d %b %Y') }}</div>
+            </div>
+            {% if user.subscription.renews_at %}
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;">Renews</div>
+              <div style="font-size:14px;color:var(--text);margin-top:2px;">{{ user.subscription.renews_at.strftime('%d %b %Y') }}</div>
+            </div>
+            {% endif %}
+            {% if user.subscription.previous_plan_id %}
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;">Previous Plan</div>
+              <div style="font-size:14px;color:var(--text);margin-top:2px;">{{ user.subscription.previous_plan_id | title }}</div>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if user.payment_requests %}
+      <div class="eu-card">
+        <div class="eu-card-head"><h3><i class="fas fa-history"></i> Payment History</h3></div>
+        <div style="padding:0;">
+          <table class="eu-table">
+            <thead>
+              <tr><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              {% for pr in user.payment_requests[:8] %}
+              <tr>
+                <td>{{ pr.requested_plan_name }}</td>
+                <td>{{ pr.amount_display }}</td>
+                <td>{{ pr.payment_method.display_name if pr.payment_method else '—' }}</td>
+                <td><span class="eu-badge {{ pr.status }}">{{ pr.status | title }}</span></td>
+                <td>{{ pr.created_at.strftime('%d %b %Y') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="eu-form-footer">
+        <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="eu-btn eu-btn-ghost"><i class="fas fa-times"></i> Cancel</a>
+        <button type="submit" class="eu-btn eu-btn-primary"><i class="fas fa-save"></i> Save Billing</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════ TAB: Admin Notes ══════════ -->
+  <div class="eu-panel" id="tab-notes">
+    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+      <input type="hidden" name="form_type" value="notes">
+      <div class="eu-card">
+        <div class="eu-card-head">
+          <h3><i class="fas fa-sticky-note"></i> Internal Admin Notes</h3>
+          <span class="eu-card-head-sub"><i class="fas fa-eye-slash"></i> Never visible to the user</span>
+        </div>
+        <div class="eu-card-body">
+          <div class="eu-field" style="margin-bottom:16px;">
+            <label>Notes</label>
+            <textarea name="admin_notes" rows="8"
+                      placeholder="Internal notes: flags, special arrangements, escalations, fraud signals…">{{ user.admin_notes if user.admin_notes is defined else '' }}</textarea>
+          </div>
+          <div class="eu-grid-2">
+            <div class="eu-field">
+              <label>Risk Level</label>
+              <select name="risk_level">
+                <option value="normal">Normal</option>
+                <option value="watch">Under Watch</option>
+                <option value="high">High Risk</option>
+                <option value="blocked">Blocked</option>
+              </select>
+            </div>
+            <div class="eu-field" style="justify-content:flex-end;">
+              <label style="visibility:hidden;">.</label>
+              <label class="eu-check-row">
+                <input type="checkbox" name="flag_for_review">
+                <div>
+                  <div class="eu-check-row-label">Flag for Admin Review</div>
+                  <div class="eu-check-row-desc">Add to the review queue.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="eu-form-footer">
+        <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="eu-btn eu-btn-ghost"><i class="fas fa-times"></i> Cancel</a>
+        <button type="submit" class="eu-btn eu-btn-primary"><i class="fas fa-save"></i> Save Notes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════ TAB: Actions ══════════ -->
+  <div class="eu-panel" id="tab-danger">
+
+    <div class="eu-card">
+      <div class="eu-card-head"><h3><i class="fas fa-bolt"></i> Quick Actions</h3></div>
+      <div class="eu-card-body">
+        <div class="eu-qa-grid">
+          <form method="POST" action="#">
+            <button type="submit" class="eu-qa-btn">
+              <i class="fas fa-user-secret" style="color:var(--orange);"></i>
+              <div><div>Impersonate User</div><div class="eu-qa-sub">Log in as this user</div></div>
+            </button>
+          </form>
+          <form method="POST" action="#">
+            <button type="submit" class="eu-qa-btn">
+              <i class="fas fa-envelope" style="color:var(--blue);"></i>
+              <div><div>Send Password Reset</div><div class="eu-qa-sub">Email a reset link</div></div>
+            </button>
+          </form>
+          <form method="POST" action="#">
+            <button type="submit" class="eu-qa-btn">
+              <i class="fas fa-check-circle" style="color:var(--green);"></i>
+              <div><div>Verify Email</div><div class="eu-qa-sub">Mark as verified manually</div></div>
+            </button>
+          </form>
+          <form method="POST" action="#">
+            <button type="submit" class="eu-qa-btn">
+              <i class="fas fa-sign-out-alt" style="color:var(--text3);"></i>
+              <div><div>Terminate Sessions</div><div class="eu-qa-sub">Log out from all devices</div></div>
+            </button>
+          </form>
+          <form method="POST" action="#">
+            <button type="submit" class="eu-qa-btn">
+              <i class="fas fa-download" style="color:var(--blue);"></i>
+              <div><div>Export User Data</div><div class="eu-qa-sub">Download JSON / CSV</div></div>
+            </button>
+          </form>
+          <form method="POST" action="#">
+            <button type="submit" class="eu-qa-btn">
+              <i class="fas fa-ban" style="color:var(--orange);"></i>
+              <div><div>Cancel Subscription</div><div class="eu-qa-sub">Revert to Free plan</div></div>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="eu-danger-zone">
+      <h4><i class="fas fa-skull-crossbones"></i> Danger Zone</h4>
+      <p>These actions are irreversible or have major consequences. Proceed with extreme caution.</p>
+      <div class="eu-danger-actions">
+        <form method="POST" action="#" onsubmit="return confirm('Suspend this user? They will not be able to log in.')">
+          <button type="submit" class="eu-btn eu-btn-danger">
+            <i class="fas fa-user-slash"></i> Suspend Account
+          </button>
+        </form>
+        <form method="POST" action="#" onsubmit="return confirmDelete()">
+          <button type="submit" class="eu-btn eu-btn-danger">
+            <i class="fas fa-trash-alt"></i> Delete User Permanently
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /eu-wrap -->
+
+<script>
+/* ── Tabs ── */
+function switchTab(name, el) {
+  document.querySelectorAll('.eu-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.eu-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ── Notification type ── */
+const typeIcons = {system:'fa-cog',billing:'fa-credit-card',shipment:'fa-box',promotional:'fa-bullhorn',security:'fa-shield-alt',support:'fa-headset'};
+function selectNotifType(type, el) {
+  document.querySelectorAll('.notif-type-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('notifType').value = type;
+  const icon = document.getElementById('previewIcon');
+  if (icon) icon.className = 'fas ' + (typeIcons[type] || 'fa-bell');
+}
+
+/* ── Priority ── */
+function selectPriority(p, el) {
+  document.querySelectorAll('.notif-priority-opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('notifPriority').value = p;
+}
+
+/* ── Preview ── */
+let previewOpen = false;
+function togglePreview() {
+  previewOpen = !previewOpen;
+  document.getElementById('notifPreview').style.display = previewOpen ? 'block' : 'none';
+  document.getElementById('previewToggleLabel').textContent = previewOpen ? 'Hide Preview' : 'Preview';
+  if (previewOpen) updatePreview();
+}
+function updatePreview() {
+  const t = document.getElementById('notifTitle');
+  const m = document.getElementById('notifMsg');
+  document.getElementById('previewTitle').textContent = t && t.value ? t.value : '—';
+  document.getElementById('previewMsg').textContent   = m && m.value ? m.value : '—';
+}
+
+/* ── Char counters ── */
+function updateChars(inputId, counterId) {
+  const inp = document.getElementById(inputId);
+  const ctr = document.getElementById(counterId);
+  if (inp && ctr) ctr.textContent = inp.value.length + ' / ' + inp.maxLength;
+}
+
+/* ── Toasts ── */
+function showToast(msg, type) {
+  type = type || 'success';
+  const icons = {success:'check-circle',error:'times-circle',info:'info-circle'};
+  const t = document.createElement('div');
+  t.className = 'eu-toast ' + type;
+  t.innerHTML = '<i class="fas fa-' + (icons[type]||'bell') + '"></i> ' + msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
+{% for cat, msg in messages %}
+document.addEventListener('DOMContentLoaded', () => showToast('{{ msg | e }}', '{{ cat if cat in ["success","error","info"] else "info" }}'));
+{% endfor %}{% endif %}{% endwith %}
+
+/* ── Delete confirm ── */
+function confirmDelete() {
+  return confirm('⚠️ Permanently delete this user and ALL their data?\n\nThis CANNOT be undone.');
+}
+</script>
+{% endblock %}

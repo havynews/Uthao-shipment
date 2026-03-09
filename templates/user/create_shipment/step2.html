@@ -1,0 +1,309 @@
+{% extends "base_user.html" %}
+{% block title %}Create Shipment — Step 2{% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create_shipment.css') }}" />
+<style>
+  .image-upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    background: var(--surface);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .image-upload-zone:hover, .image-upload-zone.dragover {
+    border-color: var(--orange);
+    background: rgba(249,115,22,0.05);
+  }
+  .image-upload-zone i {
+    font-size: 24px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .image-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .image-preview {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .image-preview .remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    background: rgba(239,68,68,0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pkg-image-input {
+    display: none;
+  }
+</style>
+{% endblock %}
+
+{% block page_body %}
+<div class="cs-page">
+
+  <div class="cs-header">
+    <h1>Package Details</h1>
+    <p>Add one or more packages with item images</p>
+  </div>
+
+  <div class="stepper">
+    <div class="step-item done">
+      <div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div>
+      <span class="step-label">Route & Contacts</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item active">
+      <div class="step-bubble">2</div>
+      <span class="step-label">Package Details</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">3</div>
+      <span class="step-label">Service Level</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">4</div>
+      <span class="step-label">Payment</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">5</div>
+      <span class="step-label">Review & Confirm</span>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('user.create_shipment', step='2') }}" id="step2Form" enctype="multipart/form-data">
+
+    <div id="packageContainer" style="display:flex;flex-direction:column;gap:14px">
+    </div>
+
+    <button type="button" class="btn-add-pkg" id="addPkgBtn">
+      <i class="fas fa-plus"></i> Add Another Package
+    </button>
+
+    <div class="cs-footer">
+      <a href="{{ url_for('user.create_shipment', step='1') }}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <button type="submit" class="btn-next">
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+(function () {
+  const container = document.getElementById('packageContainer');
+  let count = 0;
+  const maxImages = {{ max_images|default(5) }};
+
+  function addPackage() {
+    count++;
+    const n = count;
+    const block = document.createElement('div');
+    block.className = 'cs-card pkg-block';
+    block.id = `pkg-${n}`;
+    block.innerHTML = `
+      <div class="pkg-block-header">
+        <div class="pkg-block-title">
+          <span>${n}</span> Package ${n}
+        </div>
+        ${n > 1 ? `<button type="button" class="pkg-remove" onclick="removePkg(${n})" title="Remove package">
+          <i class="fas fa-trash-alt"></i>
+        </button>` : ''}
+      </div>
+
+      <!-- Item Images -->
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">
+          <i class="fas fa-camera" style="color:var(--orange);margin-right:5px;"></i>
+          Item Images <span style="font-weight:400;color:var(--muted);font-size:12px;">(Required - Max ${maxImages})</span>
+        </label>
+        
+        <div class="image-upload-zone" onclick="document.getElementById('pkg-images-${n}').click()" 
+             ondrop="handleDrop(event, ${n})" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <div style="font-size:13px;color:var(--text);font-weight:500;">Click or drag images here</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">PNG, JPG, WEBP up to 5MB each</div>
+        </div>
+        
+        <input type="file" id="pkg-images-${n}" name="package_images_${n}" class="pkg-image-input" 
+               accept="image/*" multiple onchange="handleFiles(this, ${n})">
+        
+        <div class="image-preview-grid" id="preview-${n}"></div>
+        <input type="hidden" id="image-count-${n}" value="0">
+        <div id="error-${n}" style="color:#ef4444;font-size:12px;margin-top:5px;display:none;"></div>
+      </div>
+
+      <div class="form-grid cols-3">
+        <div class="form-group">
+          <label class="form-label">Length (cm) <span>*</span></label>
+          <input class="form-input" type="number" name="length_${n}" min="1" step="0.1" placeholder="0.0" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Width (cm) <span>*</span></label>
+          <input class="form-input" type="number" name="width_${n}" min="1" step="0.1" placeholder="0.0" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Height (cm) <span>*</span></label>
+          <input class="form-input" type="number" name="height_${n}" min="1" step="0.1" placeholder="0.0" required />
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Weight (kg) <span>*</span></label>
+          <input class="form-input" type="number" name="weight_${n}" min="0.1" step="0.01" placeholder="0.00" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input class="form-input" type="text" name="desc_${n}" placeholder="e.g. Electronic components, Documents…" />
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="check-row">
+          <input type="checkbox" name="stackable_${n}" />
+          <div>
+            <div class="check-label">Stackable</div>
+            <div class="check-sub">Package can be placed under other items</div>
+          </div>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" name="fragile_${n}" />
+          <div>
+            <div class="check-label"><i class="fas fa-wine-glass-alt" style="color:var(--orange);margin-right:5px;font-size:11px"></i>Fragile</div>
+            <div class="check-sub">Handle with extra care</div>
+          </div>
+        </label>
+      </div>
+    `;
+    container.appendChild(block);
+  }
+
+  window.removePkg = function (n) {
+    document.getElementById(`pkg-${n}`)?.remove();
+  };
+
+  window.handleDragOver = function(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('dragover');
+  };
+
+  window.handleDragLeave = function(e) {
+    e.currentTarget.classList.remove('dragover');
+  };
+
+  window.handleDrop = function(e, pkgNum) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    processFiles(files, pkgNum);
+  };
+
+  window.handleFiles = function(input, pkgNum) {
+    processFiles(input.files, pkgNum);
+  };
+
+  function processFiles(files, pkgNum) {
+    const preview = document.getElementById(`preview-${pkgNum}`);
+    const countInput = document.getElementById(`image-count-${pkgNum}`);
+    const errorDiv = document.getElementById(`error-${pkgNum}`);
+    let currentCount = parseInt(countInput.value);
+    
+    errorDiv.style.display = 'none';
+    errorDiv.textContent = '';
+
+    if (currentCount + files.length > maxImages) {
+      errorDiv.textContent = `Maximum ${maxImages} images allowed per package`;
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        errorDiv.textContent = 'Only image files allowed';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        errorDiv.textContent = 'File too large (max 5MB)';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const div = document.createElement('div');
+        div.className = 'image-preview';
+        div.innerHTML = `
+          <img src="${e.target.result}" alt="Preview">
+          <button type="button" class="remove" onclick="this.parentElement.remove(); updateCount(${pkgNum}, -1)">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+        preview.appendChild(div);
+        updateCount(pkgNum, 1);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  window.updateCount = function(pkgNum, delta) {
+    const input = document.getElementById(`image-count-${pkgNum}`);
+    input.value = parseInt(input.value) + delta;
+  };
+
+  document.getElementById('addPkgBtn').addEventListener('click', addPackage);
+
+  // Validate before submit
+  document.getElementById('step2Form').addEventListener('submit', function(e) {
+    let valid = true;
+    for (let i = 1; i <= count; i++) {
+      const pkg = document.getElementById(`pkg-${i}`);
+      if (!pkg) continue;
+      
+      const imgCount = document.getElementById(`image-count-${i}`).value;
+      if (parseInt(imgCount) === 0) {
+        const errorDiv = document.getElementById(`error-${i}`);
+        errorDiv.textContent = 'At least one item image is required';
+        errorDiv.style.display = 'block';
+        valid = false;
+      }
+    }
+    if (!valid) e.preventDefault();
+  });
+
+  addPackage();
+})();
+</script>
+{% endblock %}

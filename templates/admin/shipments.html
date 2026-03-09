@@ -1,0 +1,496 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Shipments{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card styles */
+    @media (max-width: 1023px) {
+        .desktop-table {
+            display: none !important;
+        }
+        .mobile-cards {
+            display: block;
+        }
+    }
+    
+    @media (min-width: 1024px) {
+        .desktop-table {
+            display: block;
+        }
+        .mobile-cards {
+            display: none;
+        }
+    }
+    
+    .shipment-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .shipment-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        gap: 12px;
+    }
+    
+    .shipment-card-tracking {
+        font-family: monospace;
+        font-weight: 600;
+        color: #111827;
+        font-size: 15px;
+    }
+    
+    .shipment-card-route {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .route-point {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .route-city {
+        font-weight: 600;
+        color: #111827;
+        font-size: 14px;
+    }
+    
+    .route-label {
+        font-size: 11px;
+        color: #6b7280;
+    }
+    
+    .route-arrow {
+        color: #f59e0b;
+        font-size: 14px;
+    }
+    
+    .shipment-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        align-items: center;
+    }
+    
+    .shipment-card-customer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #f9fafb;
+        border-radius: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .customer-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(to bottom right, #d97706, #9333ea);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+    
+    .customer-info {
+        min-width: 0;
+    }
+    
+    .customer-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .customer-email {
+        font-size: 11px;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .shipment-card-date {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        padding: 6px 10px;
+        background: #f3f4f6;
+        border-radius: 6px;
+    }
+    
+    .shipment-card-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .shipment-card-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: #fff7ed;
+        color: #d97706;
+    }
+    
+    .shipment-card-btn:hover {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    /* Status badge colors */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-delivered {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    
+    .status-in-transit {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    .status-pending {
+        background: #fef3c7;
+        color: #b45309;
+    }
+    
+    .status-cancelled {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    
+    .status-default {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    /* Service type tag */
+    .service-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        font-size: 11px;
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    /* Pagination mobile */
+    .pagination-mobile {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+    }
+    
+    .pagination-mobile a, .pagination-mobile span {
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+    }
+    
+    .pagination-mobile .current {
+        background: #f59e0b;
+        color: white;
+        border-color: #f59e0b;
+    }
+    
+    /* Filter pills scroll on mobile */
+    @media (max-width: 640px) {
+        .filter-pills {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 4px;
+        }
+        
+        .filter-pills::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .filter-pills a {
+            white-space: nowrap;
+        }
+    }
+    
+    /* Tablet optimizations */
+    @media (min-width: 768px) and (max-width: 1023px) {
+        .shipment-card {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: center;
+        }
+        
+        .shipment-card-main {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .shipment-card-actions {
+            flex-direction: column;
+            min-width: 120px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Shipment Management</h1>
+        <p class="text-gray-500 mt-1">Track and manage all shipments</p>
+    </div>
+
+    <!-- Status Filter Pills -->
+    <div class="filter-pills flex flex-wrap gap-2 mb-6">
+        <a href="{{ url_for('admin.shipments') }}" class="px-4 py-2 rounded-full text-sm font-medium transition {% if not status_filter %}bg-[#f59e0b] text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+            All ({{ status_counts.values()|sum }})
+        </a>
+        {% for status, count in status_counts|dictsort %}
+        <a href="{{ url_for('admin.shipments', status=status) }}" class="px-4 py-2 rounded-full text-sm font-medium transition {% if status_filter == status %}bg-[#f59e0b] text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+            {{ status }} ({{ count }})
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Search -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-200">
+        <form method="GET" class="flex flex-col sm:flex-row gap-3">
+            <input type="hidden" name="status" value="{{ status_filter }}">
+            <div class="flex-1">
+                <input type="text" name="q" value="{{ search }}" placeholder="Search tracking number, origin, or destination..." 
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b] focus:border-[#f59e0b] text-sm lg:text-base">
+            </div>
+            <button type="submit" class="px-6 py-2.5 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706] transition font-medium">
+                <i class="fas fa-search mr-2"></i>Search
+            </button>
+            {% if search %}
+            <a href="{{ url_for('admin.shipments', status=status_filter) }}" class="px-4 py-2.5 text-gray-600 hover:text-gray-800 text-center">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Desktop Table (lg and up) -->
+    <div class="desktop-table bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Tracking #</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Route</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for shipment in shipments.items %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4 font-mono font-medium text-gray-900">
+                        {{ shipment.tracking_number }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm">
+                            <span class="font-medium">{{ shipment.origin }}</span>
+                            <i class="fas fa-arrow-right mx-2 text-gray-400 text-xs"></i>
+                            <span class="font-medium">{{ shipment.destination }}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">{{ shipment.service_type or 'Standard' }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium
+                            {% if shipment.status == 'Delivered' %}bg-green-100 text-green-800
+                            {% elif shipment.status == 'In Transit' %}bg-[#f59e0b] text-white
+                            {% elif shipment.status == 'Pending' %}bg-yellow-100 text-yellow-800
+                            {% elif shipment.status == 'Cancelled' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ shipment.status }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                {{ shipment.customer.full_name[:2].upper() if shipment.customer.full_name else 'U' }}
+                            </div>
+                            <span class="text-sm text-gray-700">{{ shipment.customer.full_name or shipment.customer.email }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ shipment.created_at.strftime('%d %b %Y') }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="{{ url_for('admin.shipment_detail', shipment_id=shipment.id) }}" class="px-4 py-2 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706] transition text-sm font-medium">
+                            Manage
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-box-open text-4xl mb-3 text-gray-300"></i>
+                        <p>No shipments found</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Desktop Pagination -->
+        {% if shipments.pages > 1 %}
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+            <span class="text-sm text-gray-500">Page {{ shipments.page }} of {{ shipments.pages }}</span>
+            <div class="flex gap-2">
+                {% if shipments.has_prev %}
+                <a href="{{ url_for('admin.shipments', page=shipments.prev_num, status=status_filter, q=search) }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 transition">
+                    <i class="fas fa-chevron-left mr-1"></i> Prev
+                </a>
+                {% endif %}
+                {% if shipments.has_next %}
+                <a href="{{ url_for('admin.shipments', page=shipments.next_num, status=status_filter, q=search) }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 transition">
+                    Next <i class="fas fa-chevron-right ml-1"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Mobile Cards (sm and down) -->
+    <div class="mobile-cards">
+        {% for shipment in shipments.items %}
+        <div class="shipment-card">
+            <div class="shipment-card-header">
+                <div>
+                    <div class="shipment-card-tracking">
+                        <i class="fas fa-barcode mr-2 text-[#f59e0b]"></i>
+                        {{ shipment.tracking_number }}
+                    </div>
+                    <div class="mt-1">
+                        <span class="service-tag">
+                            {{ shipment.service_type or 'Standard' }}
+                        </span>
+                    </div>
+                </div>
+                <span class="status-badge 
+                    {% if shipment.status == 'Delivered' %}status-delivered
+                    {% elif shipment.status == 'In Transit' %}status-in-transit
+                    {% elif shipment.status == 'Pending' %}status-pending
+                    {% elif shipment.status == 'Cancelled' %}status-cancelled
+                    {% else %}status-default{% endif %}">
+                    {{ shipment.status }}
+                </span>
+            </div>
+            
+            <div class="shipment-card-route">
+                <div class="route-point">
+                    <span class="route-city">{{ shipment.origin }}</span>
+                    <span class="route-label">Origin</span>
+                </div>
+                <i class="fas fa-arrow-right route-arrow"></i>
+                <div class="route-point">
+                    <span class="route-city">{{ shipment.destination }}</span>
+                    <span class="route-label">Destination</span>
+                </div>
+            </div>
+            
+            <div class="shipment-card-meta">
+                <div class="shipment-card-customer">
+                    <div class="customer-avatar">
+                        {{ shipment.customer.full_name[:2].upper() if shipment.customer.full_name else 'U' }}
+                    </div>
+                    <div class="customer-info">
+                        <div class="customer-name">{{ shipment.customer.full_name or 'Unknown' }}</div>
+                        <div class="customer-email">{{ shipment.customer.email }}</div>
+                    </div>
+                </div>
+                
+                <div class="shipment-card-date">
+                    <i class="far fa-calendar-alt"></i>
+                    {{ shipment.created_at.strftime('%d %b %Y') }}
+                </div>
+            </div>
+            
+            <div class="shipment-card-actions">
+                <a href="{{ url_for('admin.shipment_detail', shipment_id=shipment.id) }}" class="shipment-card-btn">
+                    <i class="fas fa-cog"></i>
+                    Manage Shipment
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
+            <i class="fas fa-box-open text-4xl mb-3 text-gray-300"></i>
+            <p>No shipments found</p>
+        </div>
+        {% endfor %}
+
+        <!-- Mobile Pagination -->
+        {% if shipments.pages > 1 %}
+        <div class="pagination-mobile">
+            {% if shipments.has_prev %}
+            <a href="{{ url_for('admin.shipments', page=shipments.prev_num, status=status_filter, q=search) }}">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            <span class="current">
+                {{ shipments.page }} / {{ shipments.pages }}
+            </span>
+            
+            {% if shipments.has_next %}
+            <a href="{{ url_for('admin.shipments', page=shipments.next_num, status=status_filter, q=search) }}">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

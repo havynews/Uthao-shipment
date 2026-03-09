@@ -1,0 +1,553 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Payment Methods{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --orange:#f97316; --orange-dk:#ea6200; --orange-lt:#fff7ed; --orange-mid:#ffedd5;
+    --surface:#fff; --surface2:#f9fafb; --surface3:#f3f4f6;
+    --border:#e5e7eb; --border2:#d1d5db;
+    --text:#111827; --text2:#374151; --text3:#6b7280; --text4:#9ca3af;
+    --green:#22c55e; --red:#ef4444; --blue:#3b82f6;
+    --r:12px; --r-sm:8px;
+  }
+  .pm-wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* ── Method cards grid ── */
+  .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+
+  .pm-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06); transition: box-shadow .2s;
+  }
+  .pm-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+  .pm-card.inactive { opacity: .65; }
+
+  .pm-card-top {
+    padding: 16px 18px; display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+  }
+  .pm-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: var(--orange-lt); border: 1px solid var(--orange-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: var(--orange); flex-shrink: 0;
+  }
+  .pm-icon.crypto   { background:#fffbeb; border-color:#fde68a; color:#d97706; }
+  .pm-icon.bank     { background:#eff6ff; border-color:#bfdbfe; color:#2563eb; }
+  .pm-icon.paypal   { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+  .pm-card-name { font-size:16px; font-weight:700; color:var(--text); }
+  .pm-card-code { font-size:12px; color:var(--text3); font-family:monospace; }
+
+  .pm-card-body { padding: 14px 18px; }
+  .pm-config-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .pm-config-row:last-child { border-bottom: none; }
+  .pm-config-key { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+  .pm-config-val { font-size: 13px; color: var(--text); font-family: monospace; text-align: right; max-width: 180px; word-break: break-all; }
+
+  .pm-card-foot {
+    padding: 12px 18px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center; justify-content: space-between;
+  }
+  .pm-status { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+  .pm-status.active { color: #16a34a; }
+  .pm-status.inactive { color: var(--text4); }
+  .pm-status::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--r-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; font-family: inherit; text-decoration: none; white-space: nowrap; }
+  .btn-primary { background: var(--orange); color: white; }
+  .btn-primary:hover { background: var(--orange-dk); }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--orange); color: var(--orange); }
+  .btn-danger { background: #fee2e2; color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: white; }
+  .btn-success { background: #dcfce7; color: #15803d; }
+  .btn-success:hover { background: #16a34a; color: white; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+  /* ── Add method card ── */
+  .pm-add-card {
+    background: var(--surface); border: 2px dashed var(--border2);
+    border-radius: var(--r); padding: 40px 20px; text-align: center;
+    cursor: pointer; transition: all .2s; color: var(--text3);
+  }
+  .pm-add-card:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-lt); }
+  .pm-add-card i { font-size: 32px; display: block; margin-bottom: 10px; }
+  .pm-add-card span { font-size: 14px; font-weight: 600; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: white; border-radius: var(--r); width: 100%; max-width: 600px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    transform: translateY(20px); transition: transform .2s;
+  }
+  .modal-overlay.open .modal-box { transform: translateY(0); }
+  .modal-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 1; }
+  .modal-head h3 { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
+  .modal-body { padding: 22px; }
+  .modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; position: sticky; bottom: 0; background: white; }
+
+  /* ── Form fields ── */
+  .sf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:500px){ .sf-row { grid-template-columns: 1fr; } }
+  .sf-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .sf-field label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+  .sf-field input, .sf-field select, .sf-field textarea {
+    padding: 10px 12px; border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+    font-size: 14px; color: var(--text); outline: none; font-family: inherit;
+    background: var(--surface); transition: border-color .15s, box-shadow .15s;
+  }
+  .sf-field input:focus, .sf-field select:focus, .sf-field textarea:focus {
+    border-color: var(--orange); box-shadow: 0 0 0 3px rgba(249,115,22,.1);
+  }
+  .sf-field textarea { resize: vertical; min-height: 100px; font-family: 'Courier New', monospace; font-size: 13px; }
+  .sf-field .hint { font-size: 11px; color: var(--text4); }
+
+  /* ── Toggle ── */
+  .toggle-wrap { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 16px; }
+  .toggle-label { font-size: 14px; font-weight: 600; color: var(--text); }
+  .toggle-sub   { font-size: 12px; color: var(--text3); }
+  .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: #d1d5db; border-radius: 24px; cursor: pointer; transition: background .2s; }
+  .toggle-slider::after { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:white; top:3px; left:3px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .toggle-switch input:checked + .toggle-slider { background: var(--orange); }
+  .toggle-switch input:checked + .toggle-slider::after { transform: translateX(20px); }
+
+  /* ── Config preview ── */
+  .config-preview {
+    padding: 12px 14px; background: #1e293b; color: #e2e8f0;
+    border-radius: var(--r-sm); font-family: 'Courier New', monospace;
+    font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+    max-height: 160px; overflow-y: auto;
+  }
+
+  /* ── Delete confirm ── */
+  .delete-confirm {
+    background: #fef2f2; border: 1.5px solid #fecaca;
+    border-radius: var(--r-sm); padding: 14px; margin-bottom: 16px;
+  }
+  .delete-confirm p { font-size: 14px; color: #b91c1c; margin: 0; }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="pm-wrap">
+
+  <!-- Header -->
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+    <div>
+      <h1 style="font-size:24px; font-weight:800; color:var(--text); margin:0 0 4px;">Payment Methods</h1>
+      <p style="font-size:14px; color:var(--text3); margin:0;">Configure the payment methods users see when making payments</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="{{ url_for('admin.all_payments') }}" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> All Payments</a>
+      <button class="btn btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Add Method</button>
+    </div>
+  </div>
+
+  <!-- Summary bar -->
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px;">
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.06);">
+      <div style="font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Total Methods</div>
+      <div style="font-size:22px; font-weight:800; color:var(--text);">{{ methods|length }}</div>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.06);">
+      <div style="font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Active</div>
+      <div style="font-size:22px; font-weight:800; color:#16a34a;">{{ methods|selectattr('is_active')|list|length }}</div>
+    </div>
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,.06);">
+      <div style="font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Inactive</div>
+      <div style="font-size:22px; font-weight:800; color:var(--text4);">{{ methods|rejectattr('is_active')|list|length }}</div>
+    </div>
+  </div>
+
+  <!-- Method cards -->
+  <div class="pm-grid">
+    {% for method in methods %}
+    <div class="pm-card {% if not method.is_active %}inactive{% endif %}">
+      <div class="pm-card-top">
+        <div class="pm-icon {% if method.method_type == 'crypto' %}crypto{% elif method.method_type == 'bank_transfer' %}bank{% elif method.method_type == 'paypal' %}paypal{% endif %}">
+          <i class="fas {{ method.icon or 'fa-money-bill' }}"></i>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div class="pm-card-name">{{ method.display_name or method.name }}</div>
+          <div class="pm-card-code">{{ method.code }} · {{ method.method_type|replace('_',' ')|title }}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <span style="font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px;
+            {% if method.is_active %}background:#dcfce7; color:#15803d;{% else %}background:var(--surface3); color:var(--text4);{% endif %}">
+            {{ 'Active' if method.is_active else 'Inactive' }}
+          </span>
+          <span style="font-size:11px; color:var(--text4);">Order: {{ method.sort_order }}</span>
+        </div>
+      </div>
+
+        <div class="pm-card-body">
+            {% if method.config %}
+                {% for key, val in method.config.items() %}
+                {% if key == 'qr_code_url' %}
+                    {# Skip — shown below as image #}
+                {% elif val %}
+                <div class="pm-config-row">
+                    <span class="pm-config-key">{{ key|replace('_',' ')|title }}</span>
+                    <span class="pm-config-val">
+                    {% if 'address' in key.lower() or 'account' in key.lower() %}
+                        {{ val[:20] }}{% if val|length > 20 %}…{% endif %}
+                    {% else %}
+                        {{ val }}
+                    {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                {# Show QR image separately if it exists #}
+                {% if method.method_type == 'crypto' and method.config.get('qr_code_url') %}
+                <div style="text-align:center; padding: 12px 0 4px;">
+                <img src="{{ method.config.get('qr_code_url') }}"
+                    alt="QR Code"
+                    style="width:100px; height:100px; border-radius:8px; border:1px solid var(--border); object-fit:contain;">
+                <div style="font-size:11px; color:var(--text4); margin-top:4px;">Wallet QR Code</div>
+                </div>
+                {% endif %}
+
+            {% else %}
+            <div style="text-align:center; padding:16px; color:var(--text4); font-size:13px;">
+                <i class="fas fa-cog" style="margin-bottom:4px; display:block;"></i>
+                No configuration set
+            </div>
+            {% endif %}
+        </div>
+
+      <div class="pm-card-foot">
+        <div class="pm-status {% if method.is_active %}active{% else %}inactive{% endif %}">
+          {{ 'Active' if method.is_active else 'Inactive' }}
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn btn-ghost btn-sm edit-btn"
+                    data-method='{{ method.to_dict()|tojson }}'>
+                <i class="fas fa-edit"></i> Edit
+            </button>
+          <button class="btn btn-danger btn-sm" onclick="openDeleteModal({{ method.id }}, '{{ method.display_name or method.name }}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Add new card -->
+    <div class="pm-add-card" onclick="openAddModal()">
+      <i class="fas fa-plus-circle"></i>
+      <span>Add Payment Method</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════ ADD / EDIT MODAL ═══════════════ -->
+<div class="modal-overlay" id="methodModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle"><i class="fas fa-credit-card" style="color:var(--orange);margin-right:8px;"></i>Add Payment Method</h3>
+      <button onclick="closeModal('methodModal')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);">&times;</button>
+    </div>
+    <form id="methodForm" method="POST">
+      <div class="modal-body">
+
+        <div class="sf-row">
+          <div class="sf-field">
+            <label>Name <span style="color:var(--red)">*</span></label>
+            <input type="text" name="name" id="f_name" placeholder="e.g. Bitcoin" required>
+          </div>
+          <div class="sf-field">
+            <label>Code <span style="color:var(--red)">*</span></label>
+            <input type="text" name="code" id="f_code" placeholder="e.g. btc" required>
+            <span class="hint">Unique lowercase identifier, no spaces</span>
+          </div>
+        </div>
+
+        <div class="sf-field">
+          <label>Display Name</label>
+          <input type="text" name="display_name" id="f_display_name" placeholder="e.g. Pay with Bitcoin (USDT TRC20)">
+        </div>
+
+        <div class="sf-row">
+          <div class="sf-field">
+            <label>Method Type</label>
+            <select name="method_type" id="f_method_type" onchange="onTypeChange()">
+              <option value="crypto">Cryptocurrency</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="paypal">PayPal</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+            <div class="sf-field">
+                <label>Icon Class</label>
+                <input type="text" name="icon" id="f_icon" placeholder="fa-brands fa-bitcoin">
+                <span class="hint"> 
+                    for Bitcoin use <span style="color: orange !important;">fa-brands fa-bitcoin</span><br>
+                    for Usdt use<span style="color: orange !important;"> fa-coins</span><br>
+                    for Transfer use<span style="color: orange !important;"> fa-university</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="sf-field">
+          <label>Sort Order</label>
+          <input type="number" name="sort_order" id="f_sort_order" value="0" min="0">
+          <span class="hint">Lower numbers appear first</span>
+        </div>
+
+        <!-- Dynamic config builder -->
+        <div id="configBuilder">
+          <div style="font-size:12px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px;">
+            Payment Details Configuration
+          </div>
+
+          <!-- Crypto fields -->
+          <div id="cfg_crypto">
+            <div class="sf-field"><label>Wallet Address</label><input type="text" id="cfg_address" placeholder="e.g. TYourWalletAddressHere"></div>
+            <div class="sf-row">
+                <div class="sf-field"><label>Network</label><input type="text" id="cfg_network" placeholder="e.g. TRC20, ERC20, BEP20"></div>
+                    <div class="sf-field">
+                        <label>QR Code Image (optional)</label>
+                        <input type="text" id="cfg_qr_code_url" placeholder="https://… or upload below">
+                        <input type="file" id="cfg_qr_file" accept="image/*" onchange="handleQrUpload(this)"
+                                style="margin-top:6px; font-size:12px;">
+                        <span class="hint">Paste a URL or upload an image (will be converted to base64)</span>
+                        <div id="qr_preview" style="display:none; margin-top:8px; text-align:center;">
+                            <img id="qr_preview_img" style="width:80px; height:80px; border-radius:6px; border:1px solid var(--border); object-fit:contain;">
+                        </div>
+                    </div>           
+                </div>
+          </div>
+
+          <!-- Bank fields -->
+          <div id="cfg_bank" style="display:none;">
+            <div class="sf-row">
+              <div class="sf-field"><label>Account Name</label><input type="text" id="cfg_account_name" placeholder="John Doe / Company Ltd"></div>
+              <div class="sf-field"><label>Account Number</label><input type="text" id="cfg_account_number" placeholder="00000000"></div>
+            </div>
+            <div class="sf-row">
+              <div class="sf-field"><label>Bank Name</label><input type="text" id="cfg_bank_name" placeholder="Barclays Bank"></div>
+              <div class="sf-field"><label>SWIFT / BIC (optional)</label><input type="text" id="cfg_swift" placeholder="BARCGB22"></div>
+            </div>
+            <div class="sf-field"><label>IBAN / Routing (optional)</label><input type="text" id="cfg_iban" placeholder="GB29NWBK60161331926819"></div>
+          </div>
+
+          <!-- PayPal fields -->
+          <div id="cfg_paypal" style="display:none;">
+            <div class="sf-field"><label>PayPal Email</label><input type="email" id="cfg_paypal_email" placeholder="payments@yourcompany.com"></div>
+            <div class="sf-field"><label>Payment Link (optional)</label><input type="text" id="cfg_paypal_link" placeholder="https://paypal.me/…"></div>
+          </div>
+
+          <!-- Other: raw JSON -->
+          <div id="cfg_other" style="display:none;">
+            <div class="sf-field">
+              <label>Raw JSON Config</label>
+              <textarea id="cfg_raw_json" placeholder='{"key": "value"}'>{}</textarea>
+            </div>
+          </div>
+
+          <!-- Hidden config field sent with form -->
+          <input type="hidden" name="config" id="f_config" value="{}">
+        </div>
+
+        <!-- Active toggle -->
+        <div class="toggle-wrap">
+          <div>
+            <div class="toggle-label">Active</div>
+            <div class="toggle-sub">Show this method to users during payment</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" name="is_active" id="f_is_active" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('methodModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" onclick="buildConfig()"><i class="fas fa-save"></i> Save Method</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════ DELETE MODAL ═══════════════ -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 style="color:var(--red);"><i class="fas fa-trash" style="margin-right:8px;"></i>Delete Method</h3>
+      <button onclick="closeModal('deleteModal')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);">&times;</button>
+    </div>
+    <form id="deleteForm" method="POST">
+      <div class="modal-body">
+        <div class="delete-confirm">
+          <p><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>
+          Are you sure you want to delete <strong id="deleteMethodName"></strong>? This cannot be undone.</p>
+        </div>
+        <p style="font-size:13px; color:var(--text3);">Any pending payments using this method will not be affected, but users will no longer be able to select it.</p>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+    // ── Type-to-config mapping ──────────────────────────
+    function onTypeChange() {
+        const t = document.getElementById('f_method_type').value;
+        document.getElementById('cfg_crypto').style.display = t === 'crypto' ? 'block' : 'none';
+        document.getElementById('cfg_bank').style.display   = t === 'bank_transfer' ? 'block' : 'none';
+        document.getElementById('cfg_paypal').style.display = t === 'paypal' ? 'block' : 'none';
+        document.getElementById('cfg_other').style.display  = t === 'other' ? 'block' : 'none';
+
+        // Auto-fill icon
+        const icons = { crypto: 'fa-brands fa-bitcoin', bank_transfer: 'fa-university', paypal: 'fa-paypal', other: 'fa-money-bill' };
+        if (!document.getElementById('f_icon').value || Object.values(icons).includes(document.getElementById('f_icon').value)) {
+        document.getElementById('f_icon').value = icons[t] || 'fa-money-bill';
+        }
+    }
+
+    // ── Build JSON config from visible fields ───────────
+    function buildConfig() {
+        const t = document.getElementById('f_method_type').value;
+        let cfg = {};
+        if (t === 'crypto') {
+        cfg = {
+            address: document.getElementById('cfg_address').value,
+            network: document.getElementById('cfg_network').value,
+            qr_code_url: document.getElementById('cfg_qr_code_url').value,
+        };
+        } else if (t === 'bank_transfer') {
+        cfg = {
+            account_name:   document.getElementById('cfg_account_name').value,
+            account_number: document.getElementById('cfg_account_number').value,
+            bank_name:      document.getElementById('cfg_bank_name').value,
+            swift:          document.getElementById('cfg_swift').value,
+            iban:           document.getElementById('cfg_iban').value,
+        };
+        } else if (t === 'paypal') {
+        cfg = {
+            email: document.getElementById('cfg_paypal_email').value,
+            link:  document.getElementById('cfg_paypal_link').value,
+        };
+        } else {
+        try { cfg = JSON.parse(document.getElementById('cfg_raw_json').value || '{}'); } catch(e) { cfg = {}; }
+        }
+        // Remove empty values
+        Object.keys(cfg).forEach(k => { if (!cfg[k]) delete cfg[k]; });
+        document.getElementById('f_config').value = JSON.stringify(cfg);
+    }
+
+    // ── Populate edit modal ─────────────────────────────
+    function openEditModal(method) {
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color:var(--orange);margin-right:8px;"></i>Edit Payment Method';
+        document.getElementById('methodForm').action = `/admin/payment-methods/${method.id}/edit`;
+
+        document.getElementById('f_name').value         = method.name || '';
+        document.getElementById('f_code').value         = method.code || '';
+        document.getElementById('f_display_name').value = method.display_name || '';
+        document.getElementById('f_method_type').value  = method.method_type || 'crypto';
+        document.getElementById('f_icon').value         = method.icon || '';
+        document.getElementById('f_sort_order').value   = method.sort_order || 0;
+        document.getElementById('f_is_active').checked  = method.is_active;
+
+        // Populate config fields
+        const cfg = method.config || {};
+        if (method.method_type === 'crypto') {
+        document.getElementById('cfg_address').value     = cfg.address || '';
+        document.getElementById('cfg_network').value     = cfg.network || '';
+        document.getElementById('cfg_qr_code_url').value = cfg.qr_code_url || '';
+        } else if (method.method_type === 'bank_transfer') {
+        document.getElementById('cfg_account_name').value   = cfg.account_name || '';
+        document.getElementById('cfg_account_number').value = cfg.account_number || '';
+        document.getElementById('cfg_bank_name').value      = cfg.bank_name || '';
+        document.getElementById('cfg_swift').value          = cfg.swift || '';
+        document.getElementById('cfg_iban').value           = cfg.iban || '';
+        } else if (method.method_type === 'paypal') {
+        document.getElementById('cfg_paypal_email').value = cfg.email || '';
+        document.getElementById('cfg_paypal_link').value  = cfg.link || '';
+        } else {
+        document.getElementById('cfg_raw_json').value = JSON.stringify(cfg, null, 2);
+        }
+
+        const qrUrl = cfg.qr_code_url || '';
+        document.getElementById('cfg_qr_code_url').value = qrUrl;
+        if (qrUrl) {
+            document.getElementById('qr_preview_img').src = qrUrl;
+            document.getElementById('qr_preview').style.display = 'block';
+        } else {
+            document.getElementById('qr_preview').style.display = 'none';
+        }
+
+        onTypeChange();
+        document.getElementById('methodModal').classList.add('open');
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color:var(--orange);margin-right:8px;"></i>Add Payment Method';
+        document.getElementById('methodForm').action = '{{ url_for("admin.add_payment_method") }}';
+        document.getElementById('methodForm').reset();
+        document.getElementById('f_is_active').checked = true;
+        onTypeChange();
+        document.getElementById('methodModal').classList.add('open');
+    }
+
+    function openDeleteModal(id, name) {
+        document.getElementById('deleteMethodName').textContent = name;
+        document.getElementById('deleteForm').action = `/admin/payment-methods/${id}/delete`;
+        document.getElementById('deleteModal').classList.add('open');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+    }
+
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+        el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            try {
+                const method = JSON.parse(this.getAttribute('data-method'));
+                openEditModal(method);
+            } catch(e) {
+                console.error('Failed to parse method data:', e);
+            }
+        });
+    });
+
+    function handleQrUpload(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            document.getElementById('cfg_qr_code_url').value = dataUrl;
+            document.getElementById('qr_preview_img').src = dataUrl;
+            document.getElementById('qr_preview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+  // Init
+  onTypeChange();
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{# ─────────────────────────────────────────────
+   components/sidebar.html
+
+#}
+{% macro nav_link(endpoint, icon, label, disabled=False, badge=None) %}
+  {% if disabled %}
+    <span class="nav-item disabled" title="Coming soon">
+      <i class="fas {{ icon }} nav-icon"></i>
+      <span class="nav-label">{{ label }}</span>
+      <span class="nav-coming">Soon</span>
+    </span>
+  {% else %}
+    <a href="{{ url_for(endpoint) }}"
+       class="nav-item{% if request.endpoint == endpoint %} active{% endif %}">
+      <i class="fas {{ icon }} nav-icon"></i>
+      <span class="nav-label">{{ label }}</span>
+      {% if badge %}<span class="nav-badge">{{ badge }}</span>{% endif %}
+    </a>
+  {% endif %}
+{% endmacro %}
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+
+  <!-- Logo -->
+  <a href="{{ url_for('user.dashboard') }}" class="sidebar-logo">
+    <div class="logo-icon">
+      <i class="fas fa-cube"></i>
+    </div>
+    <span class="logo-text">UTHAO</span>
+  </a>
+
+  <!-- Primary navigation -->
+  <nav class="sidebar-nav">
+
+    <span class="nav-section-label">Main</span>
+
+    {{ nav_link('user.dashboard',      'fa-th-large',       'Dashboard') }}
+    {{ nav_link('user.tracking',       'fa-map-marker-alt', 'Tracking') }}
+    {{ nav_link('user.create_shipment','fa-box',            'Create Shipment') }}
+    {{ nav_link('user.order_history',  'fa-clock',          'Order History') }}
+    {{ nav_link('user.analytics', 'fa-chart-bar', 'Analytics') }}
+
+    <span class="nav-section-label">Operations</span>
+
+    {{ nav_link('user.fleet',     'fa-truck',     'Fleet',     disabled=True) }}
+    {{ nav_link('user.drivers',   'fa-users',     'Drivers',   disabled=True) }}
+
+  </nav>
+
+  <!-- Footer -->
+  <div class="sidebar-footer">
+
+    {{ nav_link('user.settings', 'fa-cog',            'Settings') }}
+    {{ nav_link('user.support',     'fa-question-circle','support') }}
+
+    <a href="{{ url_for('auth.logout') }}"
+       class="nav-item nav-item--logout{% if request.endpoint == 'auth.logout' %} active{% endif %}">
+      <i class="fas fa-sign-out-alt nav-icon"></i>
+      <span class="nav-label">Logout</span>
+    </a>
+
+    <!-- User identity card -->
+    <div class="user-card">
+      <div class="avatar">
+        {% if current_user.avatar_url %}
+          <img src="{{ current_user.avatar_url }}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+        {% else %}
+          {{ current_user.full_name[:2].upper() if current_user.full_name else 'UT' }}
+        {% endif %}
+      </div>
+      <div class="user-info">
+        <div class="user-name">{{ current_user.full_name or 'User' }}</div>
+        <div class="user-role">{{ current_user.company or 'UTHAO User' }}</div>
+      </div>
+    </div>
+
+  </div>
+</aside>

@@ -1,0 +1,430 @@
+<!-- templates/tracking_details.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 pt-20 pb-12">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center text-sm text-gray-500 mb-6">
+      <a href="/" class="hover:text-orange-500 transition">Home</a>
+      <i class="fas fa-chevron-right mx-2 text-xs"></i>
+      <a href="/tracking" class="hover:text-orange-500 transition">Tracking</a>
+      <i class="fas fa-chevron-right mx-2 text-xs"></i>
+      <span class="text-gray-900 font-medium">{{ shipment.tracking_number }}</span>
+    </nav>
+
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center">
+            <i class="fas fa-box text-orange-500 text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 mb-1">Tracking Number</p>
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">{{ shipment.tracking_number }}</h1>
+            <p class="text-sm text-gray-500 mt-1">Created {{ shipment.created_at.strftime('%B %d, %Y') }}</p>
+          </div>
+        </div>
+        <div class="flex flex-col items-start md:items-end gap-2">
+          <span class="px-4 py-2 rounded-full text-sm font-semibold 
+            {% if shipment.status == 'Delivered' %}bg-green-100 text-green-800
+            {% elif shipment.status == 'In Transit' %}bg-blue-100 text-blue-800
+            {% elif shipment.status == 'At Port' %}bg-yellow-100 text-yellow-800
+            {% elif shipment.status == 'Customs Hold' %}bg-red-100 text-red-800
+            {% elif shipment.status == 'Booking Created' %}bg-purple-100 text-purple-800
+            {% else %}bg-gray-100 text-gray-800{% endif %}">
+            <i class="fas fa-circle text-xs mr-2"></i>{{ shipment.status }}
+          </span>
+          {% if shipment.estimated_delivery %}
+          <p class="text-sm text-gray-600">
+            <i class="far fa-calendar-alt mr-1"></i>
+            Est. Delivery: <span class="font-medium">{{ shipment.estimated_delivery.strftime('%b %d, %Y') }}</span>
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-gray-900 text-lg">Shipment Progress</h3>
+        <span class="text-sm font-semibold text-orange-500">{{ shipment.progress_percent or 0 }}% Complete</span>
+      </div>
+      
+      <!-- Progress Bar -->
+      <div class="relative mb-6">
+        <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+          <div class="bg-gradient-to-r from-orange-400 to-orange-600 h-4 rounded-full transition-all duration-1000 ease-out" 
+               style="width: {{ shipment.progress_percent or 0 }}%"></div>
+        </div>
+        <!-- Milestone markers -->
+        <div class="flex justify-between mt-2 text-xs text-gray-500">
+          <span class="flex flex-col items-center">
+            <i class="fas fa-box text-lg mb-1 {% if (shipment.progress_percent or 0) >= 0 %}text-orange-500{% else %}text-gray-300{% endif %}"></i>
+            Booked
+          </span>
+          <span class="flex flex-col items-center">
+            <i class="fas fa-warehouse text-lg mb-1 {% if (shipment.progress_percent or 0) >= 25 %}text-orange-500{% else %}text-gray-300{% endif %}"></i>
+            Picked Up
+          </span>
+          <span class="flex flex-col items-center">
+            <i class="fas fa-ship text-lg mb-1 {% if (shipment.progress_percent or 0) >= 50 %}text-orange-500{% else %}text-gray-300{% endif %}"></i>
+            In Transit
+          </span>
+          <span class="flex flex-col items-center">
+            <i class="fas fa-anchor text-lg mb-1 {% if (shipment.progress_percent or 0) >= 75 %}text-orange-500{% else %}text-gray-300{% endif %}"></i>
+            At Port
+          </span>
+          <span class="flex flex-col items-center">
+            <i class="fas fa-check-circle text-lg mb-1 {% if (shipment.progress_percent or 0) >= 100 %}text-green-500{% else %}text-gray-300{% endif %}"></i>
+            Delivered
+          </span>
+        </div>
+      </div>
+
+      <!-- Route Info -->
+      <div class="flex items-center justify-between bg-gray-50 rounded-xl p-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-map-marker-alt text-blue-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Origin</p>
+            <p class="font-semibold text-gray-900">{{ shipment.origin }}</p>
+          </div>
+        </div>
+        
+        <div class="flex-1 mx-4 md:mx-8">
+          <div class="border-t-2 border-dashed border-gray-300 relative">
+            <i class="fas fa-arrow-right absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white text-gray-400 px-2"></i>
+          </div>
+          {% if shipment.service_level %}
+          <p class="text-xs text-center text-gray-500 mt-2">{{ shipment.service_level }} Service</p>
+          {% endif %}
+        </div>
+
+        <div class="flex items-center gap-3 text-right">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <i class="fas fa-flag-checkered text-green-600"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Destination</p>
+            <p class="font-semibold text-gray-900">{{ shipment.destination }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      
+      <!-- Left Column: Contact Info -->
+      <div class="lg:col-span-1 space-y-6">
+        
+        <!-- Sender Information -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-paper-plane text-blue-600"></i>
+            </div>
+            <h3 class="font-bold text-gray-900">Sender</h3>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <p class="text-sm text-gray-500">Name</p>
+              <p class="font-medium text-gray-900">{{ shipment.sender_name or 'Not specified' }}</p>
+            </div>
+            {% if shipment.sender_phone %}
+            <div>
+              <p class="text-sm text-gray-500">Phone</p>
+              <p class="font-medium text-gray-900">{{ shipment.sender_phone }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Receiver Information -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-user-check text-green-600"></i>
+            </div>
+            <h3 class="font-bold text-gray-900">Receiver</h3>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <p class="text-sm text-gray-500">Name</p>
+              <p class="font-medium text-gray-900">{{ shipment.receiver_name or 'Not specified' }}</p>
+            </div>
+            {% if shipment.receiver_company %}
+            <div>
+              <p class="text-sm text-gray-500">Company</p>
+              <p class="font-medium text-gray-900">{{ shipment.receiver_company }}</p>
+            </div>
+            {% endif %}
+            {% if shipment.receiver_phone %}
+            <div>
+              <p class="text-sm text-gray-500">Phone</p>
+              <p class="font-medium text-gray-900">{{ shipment.receiver_phone }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Package Summary -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-cubes text-purple-600"></i>
+            </div>
+            <h3 class="font-bold text-gray-900">Packages</h3>
+            <span class="ml-auto bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+              {{ shipment.packages|length }}
+            </span>
+          </div>
+          
+          {% if shipment.packages %}
+          <div class="space-y-3">
+            {% for package in shipment.packages %}
+            <div class="border border-gray-100 rounded-lg p-3 {% if not loop.last %}mb-2{% endif %}">
+              <div class="flex justify-between items-start mb-2">
+                <span class="text-sm font-medium text-gray-900">Package #{{ loop.index }}</span>
+                {% if package.fragile %}
+                <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                  <i class="fas fa-exclamation-triangle mr-1"></i>Fragile
+                </span>
+                {% endif %}
+                {% if package.stackable %}
+                <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  <i class="fas fa-layer-group mr-1"></i>Stackable
+                </span>
+                {% endif %}
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p class="text-gray-500 text-xs">Dimensions</p>
+                  <p class="font-medium text-gray-900">{{ package.dimensions_str or 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-xs">Weight</p>
+                  <p class="font-medium text-gray-900">{{ package.weight }} kg</p>
+                </div>
+                {% if package.volume_cbm %}
+                <div class="col-span-2">
+                  <p class="text-gray-500 text-xs">Volume</p>
+                  <p class="font-medium text-gray-900">{{ "%.3f"|format(package.volume_cbm) }} CBM</p>
+                </div>
+                {% endif %}
+                {% if package.description %}
+                <div class="col-span-2 mt-1">
+                  <p class="text-gray-500 text-xs">Description</p>
+                  <p class="text-sm text-gray-700">{{ package.description }}</p>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm text-gray-500 italic">No package details available</p>
+          {% endif %}
+
+          <!-- Shipment Totals -->
+          {% if shipment.weight %}
+          <div class="border-t border-gray-100 mt-4 pt-4">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Total Weight</span>
+              <span class="font-semibold text-gray-900">{{ shipment.weight }} kg</span>
+            </div>
+          </div>
+          {% endif %}
+          {% if shipment.dimensions %}
+          <div class="flex justify-between text-sm mt-2">
+            <span class="text-gray-500">Total Dimensions</span>
+            <span class="font-semibold text-gray-900">{{ shipment.dimensions }}</span>
+          </div>
+          {% endif %}
+          {% if shipment.commodity %}
+          <div class="flex justify-between text-sm mt-2">
+            <span class="text-gray-500">Commodity</span>
+            <span class="font-semibold text-gray-900">{{ shipment.commodity }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Cost Info (if applicable) -->
+        {% if shipment.cost %}
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-receipt text-yellow-600"></i>
+            </div>
+            <h3 class="font-bold text-gray-900">Shipping Cost</h3>
+          </div>
+          <p class="text-3xl font-bold text-gray-900">${{ "%.2f"|format(shipment.cost) }}</p>
+          <p class="text-sm text-gray-500 mt-1">{{ shipment.service_level or 'Standard' }} Service</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Right Column: Timeline -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-lg p-6 h-full">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-history text-orange-600"></i>
+              </div>
+              <h3 class="font-bold text-gray-900 text-lg">Shipment Timeline</h3>
+            </div>
+            <button onclick="refreshTimeline()" class="text-sm text-orange-500 hover:text-orange-600 font-medium">
+              <i class="fas fa-sync-alt mr-1"></i>Refresh
+            </button>
+          </div>
+
+          {% if shipment.events %}
+          <div class="relative">
+            <!-- Vertical line -->
+            <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+            
+            <div class="space-y-0">
+              {% for event in shipment.events %}
+              <div class="relative flex gap-4 pb-8 {% if loop.last %}pb-0{% endif %}">
+                <!-- Timeline dot -->
+                <div class="flex-shrink-0 relative z-10">
+                  <div class="w-12 h-12 rounded-full flex items-center justify-center border-4 border-white shadow-md
+                    {% if loop.first %}
+                      {% if event.status == 'Delivered' %}bg-green-500 text-white
+                      {% elif event.status == 'Exception' or 'Hold' in event.status %}bg-red-500 text-white
+                      {% else %}bg-orange-500 text-white{% endif %}
+                    {% else %}bg-white text-gray-400 border-gray-200{% endif %}">
+                    {% if event.status == 'Delivered' %}
+                      <i class="fas fa-check"></i>
+                    {% elif 'Pickup' in event.status or 'Picked' in event.status %}
+                      <i class="fas fa-truck"></i>
+                    {% elif 'Transit' in event.status or 'Shipped' in event.status %}
+                      <i class="fas fa-ship"></i>
+                    {% elif 'Port' in event.status or 'Customs' in event.status %}
+                      <i class="fas fa-warehouse"></i>
+                    {% elif 'Exception' in event.status or 'Hold' in event.status %}
+                      <i class="fas fa-exclamation"></i>
+                    {% else %}
+                      <i class="fas fa-circle text-xs"></i>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-grow pt-1">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
+                    <h4 class="font-semibold text-gray-900 {% if loop.first %}text-lg{% endif %}">
+                      {{ event.status }}
+                    </h4>
+                    <span class="text-sm text-gray-500 whitespace-nowrap">
+                      {{ event.timestamp.strftime('%b %d, %Y at %I:%M %p') }}
+                    </span>
+                  </div>
+                  
+                  <p class="text-gray-600 mb-2">{{ event.description }}</p>
+                  
+                  {% if event.location %}
+                  <div class="flex items-center gap-2 text-sm">
+                    <i class="fas fa-map-marker-alt text-orange-500"></i>
+                    <span class="text-gray-700 font-medium">{{ event.location }}</span>
+                  </div>
+                  {% endif %}
+
+                  <!-- Current status indicator -->
+                  {% if loop.first %}
+                  <span class="inline-block mt-2 px-3 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                    Current Status
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-12">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-clock text-gray-400 text-2xl"></i>
+            </div>
+            <p class="text-gray-500">No events recorded yet</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+      <a href="/" class="inline-flex items-center justify-center px-6 py-3 bg-white border-2 border-orange-500 text-orange-500 rounded-xl font-semibold hover:bg-orange-50 transition">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Track Another
+      </a>
+      <button onclick="printDetails()" class="inline-flex items-center justify-center px-6 py-3 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-900 transition">
+        <i class="fas fa-print mr-2"></i>
+        Print Details
+      </button>
+      <button onclick="shareTracking()" class="inline-flex items-center justify-center px-6 py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition">
+        <i class="fas fa-share-alt mr-2"></i>
+        Share
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function refreshTimeline() {
+  location.reload();
+}
+
+function printDetails() {
+  window.print();
+}
+
+function shareTracking() {
+  const trackingNum = '{{ shipment.tracking_number }}';
+  const url = window.location.href;
+  
+  if (navigator.share) {
+    navigator.share({
+      title: `Track Shipment ${trackingNum}`,
+      text: `Track my shipment ${trackingNum} on Uthao Logistics`,
+      url: url
+    });
+  } else {
+    // Fallback: copy to clipboard
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Tracking link copied to clipboard!');
+    });
+  }
+}
+
+// Auto-refresh every 5 minutes if status is not delivered
+{% if shipment.status != 'Delivered' %}
+setTimeout(() => {
+  location.reload();
+}, 300000);
+{% endif %}
+</script>
+
+<style>
+@media print {
+  nav, .no-print, button, a[href="/"] {
+    display: none !important;
+  }
+  .bg-gray-50 {
+    background: white !important;
+  }
+  .shadow-lg {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb;
+  }
+}
+</style>
+{% endblock %}

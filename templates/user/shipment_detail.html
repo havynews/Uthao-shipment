@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-blue-600 text-white px-6 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold">Shipment #{{ shipment.tracking_number }}</h1>
+                <span class="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm font-semibold">{{ shipment.status }}</span>
+            </div>
+        </div>
+
+        <!-- Live Telemetry (if in transit) -->
+        {% if shipment.status == 'In Transit' %}
+        <div class="bg-gray-50 px-6 py-4 border-b">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <div class="text-sm text-gray-500">LATITUDE</div>
+                    <div class="font-mono">34° 05' 22" N</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">LONGITUDE</div>
+                    <div class="font-mono">118° 24' 37" W</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">SPEED</div>
+                    <div>18.4 knots</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500">HEADING</div>
+                    <div>248° SW</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Timeline -->
+        <div class="px-6 py-4">
+            <h2 class="text-lg font-semibold mb-4">Event History</h2>
+            <div class="space-y-4">
+                {% for event in shipment.events %}
+                <div class="flex">
+                    <div class="flex-shrink-0 w-24 text-sm text-gray-500">{{ event.timestamp.strftime('%b %d, %H:%M') }}</div>
+                    <div class="flex-grow">
+                        <div class="font-medium">{{ event.status }}</div>
+                        <div class="text-sm text-gray-600">{{ event.description }}</div>
+                        <div class="text-xs text-gray-400">{{ event.location }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-gray-500">No events yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Shipment Overview -->
+        <div class="border-t px-6 py-4">
+            <h2 class="text-lg font-semibold mb-4">Shipment Overview</h2>
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Origin</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ shipment.origin }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Destination</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ shipment.destination }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Weight</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ shipment.weight }} kg</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Service Level</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ shipment.service_level }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Estimated Delivery</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ shipment.estimated_delivery.strftime('%b %d, %Y') }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

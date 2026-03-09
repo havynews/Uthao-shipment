@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Access — UTHAO</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  
+  <style>
+    /* CSS Reset & Base */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-weight: 400;
+      line-height: 1.5;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #020617;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated Background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .gradient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.8) 0%, transparent 70%);
+      top: -150px;
+      right: -150px;
+      animation: float1 15s infinite ease-in-out;
+    }
+
+    .orb-2 {
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, transparent 70%);
+      bottom: -100px;
+      left: -100px;
+      animation: float2 18s infinite ease-in-out;
+    }
+
+    .orb-3 {
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.6) 0%, transparent 70%);
+      top: 50%;
+      left: 30%;
+      animation: float3 20s infinite ease-in-out;
+    }
+
+    @keyframes float1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(30px, 20px) scale(1.1); }
+    }
+
+    @keyframes float2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-20px, -30px) scale(0.9); }
+    }
+
+    @keyframes float3 {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-40%, -60%) scale(1.2); }
+    }
+
+    /* Grid Pattern */
+    .grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 1;
+      pointer-events: none;
+      mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+    }
+
+    /* Main Container */
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 16px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Glass Card */
+    .login-card {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px 16px;
+      box-shadow: 
+        0 20px 40px -10px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      position: relative;
+      overflow: hidden;
+      animation: cardEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes cardEntry {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Shimmer Effect */
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        transparent 100%
+      );
+      animation: shimmer 6s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      50%, 100% { left: 100%; }
+    }
+
+    /* Header Section */
+    .login-header {
+      text-align: center;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 16px;
+      box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4); }
+      50% { box-shadow: 0 8px 32px rgba(249, 115, 22, 0.5), 0 0 12px rgba(249, 115, 22, 0.3); }
+    }
+
+    .brand-text {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+
+    .login-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+
+    .login-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+
+    /* Flash Messages */
+    .flash-messages {
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .flash-message {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      border: 1px solid;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    .flash-message.error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .flash-message.success {
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .flash-message.warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    /* Form Styles */
+    .login-form {
+      position: relative;
+      z-index: 2;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      font-size: 14px;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 3;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px 0 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 400;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.3s ease;
+      outline: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    input[type="email"]::placeholder,
+    input[type="password"]::placeholder,
+    input[type="text"]::placeholder {
+      color: #64748b;
+      opacity: 1;
+    }
+
+    input[type="email"]:hover,
+    input[type="password"]:hover,
+    input[type="text"]:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus,
+    input[type="text"]:focus {
+      background: rgba(249, 115, 22, 0.05);
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+
+    input[type="email"]:focus + .input-icon,
+    input[type="password"]:focus + .input-icon,
+    input[type="text"]:focus + .input-icon {
+      color: #f97316;
+    }
+
+    /* Password Toggle Button */
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      z-index: 3;
+    }
+
+    .password-toggle:hover {
+      color: #f97316;
+    }
+
+    /* Form Options */
+    .form-options {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    /* Custom Checkbox */
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .checkbox-wrapper input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .checkmark {
+      width: 18px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .checkbox-wrapper input[type="checkbox"]:checked + .checkmark {
+      background: #f97316;
+      border-color: #f97316;
+    }
+
+    .checkmark i {
+      color: #ffffff;
+      font-size: 10px;
+      opacity: 0;
+      transform: scale(0);
+      transition: all 0.2s ease;
+    }
+
+    .checkbox-wrapper input[type="checkbox"]:checked + .checkmark i {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .checkbox-text {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      user-select: none;
+    }
+
+    /* Forgot Password Link */
+    .forgot-link {
+      font-size: 12px;
+      color: #f97316;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .forgot-link:hover {
+      color: #fb923c;
+      text-decoration: underline;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      height: 36px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+    }
+
+    button[type="submit"]:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(249, 115, 22, 0.4);
+    }
+
+    button[type="submit"]:active {
+      transform: translateY(0);
+    }
+
+    button[type="submit"]::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+      );
+      transition: left 0.6s ease;
+    }
+
+    button[type="submit"]:hover::before {
+      left: 100%;
+    }
+
+    button[type="submit"] i {
+      transition: transform 0.3s ease;
+    }
+
+    button[type="submit"]:hover i {
+      transform: translateX(2px);
+    }
+
+    /* Loading State */
+    button[type="submit"].loading {
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    button[type="submit"].loading::after {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      position: absolute;
+    }
+
+    button[type="submit"].loading span,
+    button[type="submit"].loading i {
+      opacity: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Footer Section */
+    .security-footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      z-index: 2;
+    }
+
+    .security-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .security-notice i {
+      color: #ef4444;
+      font-size: 14px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .security-notice p {
+      font-size: 11px;
+      color: #fca5a5;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .security-notice strong {
+      color: #f87171;
+      font-weight: 600;
+    }
+
+    .back-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+      color: #f8fafc;
+    }
+
+    .back-link i {
+      transition: transform 0.3s ease;
+    }
+
+    .back-link:hover i {
+      transform: translateX(-2px);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 16px 12px;
+        border-radius: 12px;
+      }
+
+      .brand-text {
+        font-size: 14px;
+      }
+
+      .brand-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+      }
+
+      .login-title {
+        font-size: 18px;
+      }
+
+      input[type="email"],
+      input[type="password"],
+      input[type="text"] {
+        height: 38px;
+        font-size: 14px;
+      }
+
+      .form-options {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      button[type="submit"] {
+        height: 36px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .login-card {
+        padding: 12px 10px;
+      }
+
+      .login-title {
+        font-size: 16px;
+      }
+
+      .brand-text {
+        font-size: 20px;
+      }
+    }
+
+    @media (min-width: 768px) and (max-width: 1024px) {
+      .login-container {
+        max-width: 340px;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      .login-container {
+        max-width: 380px;
+      }
+
+      .login-card {
+        padding: 24px 20px;
+      }
+    }
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Autofill Fix */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: #f8fafc;
+      -webkit-box-shadow: 0 0 0px 1000px rgba(15, 23, 42, 0.9) inset;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="bg-animation">
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+  </div>
+  
+  <div class="grid-overlay"></div>
+
+  <!-- Main Container -->
+  <div class="login-container">
+    <div class="login-card">
+      
+      <!-- Header -->
+      <div class="login-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <i class="fas fa-cube"></i>
+          </div>
+          <span class="brand-text">UTHAO</span>
+        </div>
+
+        
+        <h1 class="login-title">Welcome Back</h1>
+        <p class="login-subtitle">Sign in to your admin dashboard</p>
+      </div>
+
+        <div class="security-notice">
+            <i class="fas fa-lock"></i>
+            <p>
+            <strong>Authorized Personnel Only.</strong> This system is monitored and all login attempts are logged. Unauthorized access will be prosecuted.
+            </p>
+        </div>
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages">
+            {% for category, message in messages %}
+              <div class="flash-message {{ category }}">
+                <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' if category == 'info' else 'exclamation-triangle' }}"></i>
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Login Form -->
+      <form method="POST" action="{{ url_for('auth.admin_login') }}" class="login-form" id="loginForm">
+        
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <div class="input-wrapper">
+            <i class="fas fa-envelope input-icon"></i>
+            <input 
+              type="email" 
+              id="email"
+              name="email" 
+              placeholder="admin@uthao.com"
+              required
+              autofocus
+              autocomplete="email"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrapper">
+            <i class="fas fa-lock input-icon"></i>
+            <input 
+              type="password" 
+              id="password"
+              name="password" 
+              placeholder="••••••••"
+              required
+              minlength="8"
+              autocomplete="current-password"
+            />
+            <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-options">
+          <label class="checkbox-wrapper">
+            <input type="checkbox" name="remember" id="remember" />
+            <span class="checkmark">
+              <i class="fas fa-check"></i>
+            </span>
+            <span class="checkbox-text">Remember this device</span>
+          </label>
+          <a href="{{ url_for('auth.forgot_password') }}" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" id="submitBtn">
+          <span>Sign In</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+
+      </form>
+
+      <!-- Footer -->
+      <div class="security-footer">
+        <a href="{{ url_for('auth.admin_register') }}" class="back-link">
+            <span class="px-2 bg-background-dark/50 text-slate-500 font-medium rounded-full border border-primary/10 backdrop-blur-sm">
+                Don't have an account? <span style="color: #f97316 !important;">create account</span> 
+            </span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Password Toggle
+    const toggleBtn = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = toggleBtn.querySelector('i');
+
+    toggleBtn.addEventListener('click', function() {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      
+      toggleIcon.classList.toggle('fa-eye');
+      toggleIcon.classList.toggle('fa-eye-slash');
+    });
+
+    // Form Loading State
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    loginForm.addEventListener('submit', function(e) {
+      submitBtn.classList.add('loading');
+    });
+
+    // Prevent form resubmission
+    if (window.history.replaceState) {
+      window.history.replaceState(null, null, window.location.href);
+    }
+
+    // Input focus effects with smooth transitions
+    const inputs = document.querySelectorAll('input[type="email"], input[type="password"]');
+    inputs.forEach(input => {
+      input.addEventListener('focus', function() {
+        this.parentElement.style.transform = 'scale(1.01)';
+        this.parentElement.style.transition = 'transform 0.3s ease';
+      });
+      
+      input.addEventListener('blur', function() {
+        this.parentElement.style.transform = 'scale(1)';
+      });
+    });
+
+    // Parallax effect on mouse move (desktop only)
+    if (window.matchMedia('(pointer: fine)').matches) {
+      document.addEventListener('mousemove', (e) => {
+        const orbs = document.querySelectorAll('.gradient-orb');
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        
+        orbs.forEach((orb, index) => {
+          const speed = (index + 1) * 10;
+          const xOffset = (0.5 - x) * speed;
+          const yOffset = (0.5 - y) * speed;
+          orb.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>

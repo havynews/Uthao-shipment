@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% block title %}Track {{ shipment.tracking_number }}{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f2f2f7;
+    --orange: #e8541a;
+    --orange-light: #fdf0eb;
+    --orange-dim: #f4a07a;
+    --green: #1a7a4a;
+    --green-light: #eaf5f0;
+    --blue: #1a4fe8;
+    --blue-light: #ebeffd;
+    --yellow: #c97d10;
+    --yellow-light: #fdf6e7;
+    --red: #c41a1a;
+    --red-light: #fdf0f0;
+    --border: #e0e0e5;
+    --muted: #8e8e93;
+    --card: #ffffff;
+    --sys-font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    --sys-mono: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--paper); font-family: var(--sys-font); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+  /* ── Page wrap ── */
+  .page-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+  @media (min-width: 640px) { .page-wrap { padding: 32px 24px 80px; } }
+  @media (min-width: 1024px) { .page-wrap { padding: 40px 24px 80px; } }
+
+  /* ── Top nav ── */
+  .top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--sys-font); font-size: 15px; font-weight: 400;
+    color: var(--orange); text-decoration: none; letter-spacing: -0.01em;
+    transition: opacity 0.2s;
+  }
+  .back-link:hover { opacity: 0.7; }
+  .back-link i { font-size: 13px; }
+
+  .nav-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; font-family: var(--sys-font); font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--card); color: var(--muted);
+    cursor: pointer; transition: all 0.2s; text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+  .btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+  .btn-ghost.orange { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+  .btn-ghost.orange:hover { background: var(--orange); color: white; }
+  /* Hide button text on very small screens */
+  @media (max-width: 380px) { .btn-ghost .btn-label { display: none; } }
+
+  /* ── Hero ── */
+  .hero {
+    background: var(--ink); border-radius: 20px; padding: 28px 24px;
+    margin-bottom: 12px; position: relative; overflow: hidden;
+  }
+  @media (min-width: 640px) { .hero { padding: 36px 32px; border-radius: 24px; } }
+  @media (min-width: 1024px) { .hero { padding: 40px; } }
+
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at top right, rgba(232,84,26,0.25) 0%, transparent 65%),
+                radial-gradient(ellipse at bottom left, rgba(26,79,232,0.12) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    position: relative;
+  }
+  @media (min-width: 580px) {
+    .hero-grid { grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+  }
+
+  .hero-label {
+    font-family: var(--sys-mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 6px;
+  }
+  .hero-tracking {
+    font-family: var(--sys-font); font-size: clamp(20px, 5vw, 34px);
+    font-weight: 700; color: white; letter-spacing: -0.03em;
+    line-height: 1; margin-bottom: 16px;
+  }
+  .pills-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 12px; border-radius: 100px;
+    font-family: var(--sys-font); font-size: 12px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; animation: blink 2s ease-in-out infinite; flex-shrink: 0; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .pill-delivered { background: rgba(26,122,74,0.25);  color: #4dd98a; }
+  .pill-transit   { background: rgba(26,79,232,0.25);  color: #7eb3ff; }
+  .pill-port      { background: rgba(201,125,16,0.25); color: #ffc85e; }
+  .pill-customs   { background: rgba(196,26,26,0.25);  color: #ff8f8f; }
+  .pill-delivery  { background: rgba(130,26,196,0.25); color: #d49dff; }
+  .pill-default   { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+
+  .service-pill {
+    font-family: var(--sys-mono); font-size: 10px; letter-spacing: 0.06em;
+    padding: 5px 10px; border-radius: 100px;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
+  }
+
+  .hero-eta { text-align: left; }
+  @media (min-width: 580px) { .hero-eta { text-align: right; } }
+  .hero-eta-date { font-family: var(--sys-font); font-size: 24px; font-weight: 700; color: white; line-height: 1; letter-spacing: -0.02em; }
+  .hero-eta-day  { font-family: var(--sys-mono); font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; letter-spacing: 0.04em; }
+  .hero-created  { font-family: var(--sys-mono); font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 10px; letter-spacing: 0.04em; }
+
+  /* Progress */
+  .hero-progress { margin-top: 28px; }
+  .progress-labels { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+  .progress-label { font-family: var(--sys-mono); font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 0.04em; flex: 1; }
+  .progress-label:last-child { text-align: right; }
+  .progress-pct { font-family: var(--sys-mono); font-size: 11px; color: var(--orange-dim); font-weight: 500; white-space: nowrap; }
+
+  .progress-track { height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; position: relative; overflow: visible; }
+  .progress-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--orange) 0%, #fb923c 100%);
+    position: relative; transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .progress-fill::after {
+    content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%);
+    width: 10px; height: 10px; border-radius: 50%; background: white;
+    border: 2px solid var(--orange); box-shadow: 0 0 8px rgba(232,84,26,0.5);
+  }
+
+  .progress-stages { display: flex; justify-content: space-between; margin-top: 12px; }
+  .progress-stage { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .stage-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .stage-dot.done { background: var(--orange); }
+  .stage-dot.pending { background: rgba(255,255,255,0.15); }
+  .stage-name { font-family: var(--sys-mono); font-size: 8px; color: rgba(255,255,255,0.25); text-align: center; letter-spacing: 0.02em; line-height: 1.3; display: none; }
+  @media (min-width: 480px) { .stage-name { display: block; } }
+
+  /* ── Route bar ── */
+  .route-bar {
+    display: flex; align-items: stretch;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; margin-bottom: 12px;
+  }
+  .route-end { flex: 1; padding: 16px 18px; min-width: 0; }
+  @media (min-width: 480px) { .route-end { padding: 20px 24px; } }
+  .route-end.dest { text-align: right; }
+  .route-end-label { font-family: var(--sys-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .route-end-place { font-family: var(--sys-font); font-size: clamp(14px, 3vw, 18px); font-weight: 700; color: var(--ink); letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .route-middle {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; padding: 12px 14px;
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .route-dots { display: flex; gap: 3px; }
+  .route-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .route-plane { font-size: 16px; }
+  .route-pct { font-family: var(--sys-mono); font-size: 10px; color: var(--orange); font-weight: 500; }
+
+  /* ── Stats strip ── */
+  .stats-strip {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; margin-bottom: 12px;
+  }
+  @media (min-width: 480px) { .stats-strip { grid-template-columns: repeat(4, 1fr); } }
+  .stat-cell { padding: 16px 12px; border-right: 1px solid var(--border); text-align: center; }
+  @media (min-width: 480px) { .stat-cell { padding: 20px; } }
+  .stat-cell:nth-child(2) { border-right: none; }
+  .stat-cell:nth-child(3) { border-top: 1px solid var(--border); }
+  .stat-cell:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+  @media (min-width: 480px) {
+    .stat-cell:nth-child(2) { border-right: 1px solid var(--border); }
+    .stat-cell:nth-child(3) { border-top: none; }
+    .stat-cell:nth-child(4) { border-top: none; border-right: none; }
+  }
+  .stat-val { font-family: var(--sys-font); font-size: clamp(18px, 4vw, 22px); font-weight: 700; color: var(--ink); letter-spacing: -0.03em; margin-bottom: 4px; }
+  .stat-label { font-family: var(--sys-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+  /* ── Cards ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 12px; }
+  @media (min-width: 640px) { .card { padding: 24px 28px; border-radius: 20px; } }
+
+  .card-title {
+    font-family: var(--sys-mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Info grid ── */
+  .info-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (min-width: 640px) { .info-grid { grid-template-columns: 1fr 1fr; gap: 16px; } }
+
+  .info-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .info-row:last-child { border-bottom: none; }
+  .info-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .info-label { font-family: var(--sys-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 2px; }
+  .info-value { font-family: var(--sys-font); font-size: 14px; font-weight: 500; color: var(--ink); letter-spacing: -0.01em; }
+
+  /* ── Packages ── */
+  .pkg-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; transition: border-color 0.2s; }
+  @media (min-width: 480px) { .pkg-row { gap: 16px; padding: 14px; } }
+  .pkg-row:hover { border-color: var(--orange); }
+  .pkg-icon { width: 38px; height: 38px; background: var(--orange-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--orange); font-size: 15px; flex-shrink: 0; }
+  .pkg-info { flex: 1; min-width: 0; }
+  .pkg-name { font-family: var(--sys-font); font-size: 14px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pkg-dims { font-family: var(--sys-mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pkg-right { text-align: right; flex-shrink: 0; }
+  .pkg-weight { font-family: var(--sys-font); font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+  .pkg-tags { display: flex; gap: 4px; justify-content: flex-end; margin-top: 4px; flex-wrap: wrap; }
+  .pkg-tag { font-family: var(--sys-mono); font-size: 9px; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+  .tag-fragile { background: var(--red-light); color: var(--red); }
+  .tag-stack   { background: var(--blue-light); color: var(--blue); }
+
+  /* ── Timeline ── */
+  .tl-item { display: grid; grid-template-columns: 64px 18px 1fr; gap: 0 12px; min-height: 64px; }
+  @media (min-width: 480px) { .tl-item { grid-template-columns: 80px 18px 1fr; gap: 0 16px; } }
+
+  .tl-time { padding-top: 1px; text-align: right; }
+  .tl-date { font-family: var(--sys-font); font-size: 12px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+  .tl-hour { font-family: var(--sys-mono); font-size: 10px; color: var(--muted); }
+
+  .tl-spine { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border); background: white; flex-shrink: 0; margin-top: 1px; z-index: 1; }
+  .tl-dot.active { border-color: var(--orange); background: var(--orange); box-shadow: 0 0 0 4px var(--orange-light); }
+  .tl-dot.done   { border-color: var(--green); background: var(--green); }
+  .tl-line { flex: 1; width: 1px; background: var(--border); margin: 4px 0; }
+
+  .tl-content { padding-bottom: 24px; }
+  .tl-status { font-family: var(--sys-font); font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; letter-spacing: -0.01em; }
+  .tl-latest { font-family: var(--sys-mono); font-size: 9px; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 4px; background: var(--orange-light); color: var(--orange); font-weight: 500; flex-shrink: 0; }
+  .tl-desc { font-family: var(--sys-font); font-size: 13px; color: var(--muted); line-height: 1.5; letter-spacing: -0.01em; }
+  .tl-loc { display: inline-flex; align-items: center; gap: 4px; font-family: var(--sys-mono); font-size: 10px; color: var(--muted); margin-top: 5px; letter-spacing: 0.02em; }
+  .tl-loc i { color: var(--orange); font-size: 9px; }
+
+  /* ── Help bar ── */
+  .help-bar {
+    display: flex; flex-direction: column; gap: 16px;
+    padding: 20px; background: var(--ink); border-radius: 16px; margin-top: 12px;
+  }
+  @media (min-width: 580px) {
+    .help-bar { flex-direction: row; align-items: center; justify-content: space-between; padding: 20px 28px; }
+  }
+  .help-text { font-family: var(--sys-font); color: rgba(255,255,255,0.6); font-size: 14px; letter-spacing: -0.01em; line-height: 1.4; }
+  .help-text strong { color: white; font-weight: 600; }
+  .btn-help {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; background: var(--orange); color: white;
+    border-radius: 10px; font-family: var(--sys-font); font-size: 14px; font-weight: 600;
+    text-decoration: none; flex-shrink: 0; transition: background 0.2s;
+    letter-spacing: -0.01em; width: fit-content;
+  }
+  .btn-help:hover { background: #c94415; }
+
+  /* ── Package images ── */
+  .pkg-card { padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0; transition: border-color 0.2s; }
+  .pkg-card:hover { border-color: var(--orange-dim); }
+
+  .pkg-images {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 480px) {
+    .pkg-images { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+  }
+
+  .pkg-img-wrap {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--paper);
+    border: 1px solid var(--border);
+  }
+  .pkg-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    display: block;
+  }
+  .pkg-img-wrap:hover img { transform: scale(1.05); }
+
+  .pkg-img-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s;
+    color: white; font-size: 16px;
+  }
+  .pkg-img-wrap:hover .pkg-img-overlay { opacity: 1; }
+
+  /* Lightbox */
+  #lightbox { display: none; }
+  #lightbox.open { display: flex !important; }
+</style>
+
+<div class="page-wrap" style="padding-top: 80px;">
+
+  <!-- Top nav -->
+  <div class="top-nav">
+    <a href="/" class="back-link"><i class="fas fa-chevron-left"></i> Track another</a>
+    <div class="nav-actions">
+      <button class="btn-ghost" onclick="window.print()"><i class="fas fa-print"></i> <span class="btn-label">Print</span></button>
+      <button class="btn-ghost orange" onclick="copyId(this)"><i class="fas fa-copy"></i> <span class="btn-label">Copy ID</span></button>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-label">Tracking Number</div>
+        <div class="hero-tracking" id="trackNum">{{ shipment.tracking_number }}</div>
+        <div class="pills-row">
+          {% set s = shipment.status %}
+          <span class="status-pill {% if s=='Delivered' %}pill-delivered{% elif s=='In Transit' %}pill-transit{% elif s=='At Port' %}pill-port{% elif s=='Customs Hold' %}pill-customs{% elif s=='Out for Delivery' %}pill-delivery{% else %}pill-default{% endif %}">
+            <span class="dot" style="background:currentColor;"></span>
+            {{ shipment.status }}
+          </span>
+          {% if shipment.service_level %}
+          <span class="service-pill">{{ shipment.service_level|upper }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="hero-eta">
+        {% if shipment.estimated_delivery %}
+        <div class="hero-label">Est. Delivery</div>
+        <div class="hero-eta-date">{{ shipment.estimated_delivery.strftime('%b %d') }}</div>
+        <div class="hero-eta-day">{{ shipment.estimated_delivery.strftime('%A, %Y') }}</div>
+        {% endif %}
+        <div class="hero-created">Created {{ shipment.created_at.strftime('%d %b %Y') }}</div>
+      </div>
+    </div>
+
+    <div class="hero-progress">
+      <div class="progress-labels">
+        <span class="progress-label">{{ shipment.origin }}</span>
+        <span class="progress-pct">{{ progress_percent }}% complete</span>
+        <span class="progress-label">{{ shipment.destination }}</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:{{ progress_percent }}%"></div>
+      </div>
+      <div class="progress-stages">
+        {% for name, threshold in [('Booking', 0), ('Picked Up', 20), ('In Transit', 40), ('At Port', 60), ('Out for Del.', 80), ('Delivered', 100)] %}
+        <div class="progress-stage">
+          <div class="stage-dot {% if progress_percent >= threshold %}done{% else %}pending{% endif %}"></div>
+          <span class="stage-name">{{ name }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Route bar -->
+  <div class="route-bar">
+    <div class="route-end">
+      <div class="route-end-label">From</div>
+      <div class="route-end-place">{{ shipment.origin }}</div>
+    </div>
+    <div class="route-middle">
+      <div class="route-dots">
+        {% for i in range(5) %}
+        <div class="route-dot" style="background:{% if i < (progress_percent // 20) %}var(--orange){% else %}var(--border){% endif %};"></div>
+        {% endfor %}
+      </div>
+      <span class="route-plane">✈</span>
+      <span class="route-pct">{{ progress_percent }}%</span>
+    </div>
+    <div class="route-end dest">
+      <div class="route-end-label">To</div>
+      <div class="route-end-place">{{ shipment.destination }}</div>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-strip">
+    <div class="stat-cell">
+      <div class="stat-val">{{ shipment.weight|round(1) if shipment.weight else '—' }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> kg</span></div>
+      <div class="stat-label">Weight</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ shipment.packages|length }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> pkg</span></div>
+      <div class="stat-label">Packages</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">{{ shipment.events|length }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> evt</span></div>
+      <div class="stat-label">Events</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val" style="color:var(--orange);">{% if shipment.cost %}${{ "%.0f"|format(shipment.cost) }}{% else %}—{% endif %}</div>
+      <div class="stat-label">Cost</div>
+    </div>
+  </div>
+
+  <!-- Sender / Receiver -->
+  <div class="info-grid">
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--orange);"></i> Sender</div>
+      {% if shipment.sender_name %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-user"></i></div>
+        <div><div class="info-label">Name</div><div class="info-value">{{ shipment.sender_name }}</div></div>
+      </div>
+      {% endif %}
+      {% if shipment.sender_phone %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-phone"></i></div>
+        <div><div class="info-label">Phone</div><div class="info-value">{{ shipment.sender_phone }}</div></div>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-map-pin"></i></div>
+        <div><div class="info-label">Location</div><div class="info-value">{{ shipment.origin }}</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0;">
+      <div class="card-title"><i class="fas fa-inbox" style="color:var(--green);"></i> Receiver</div>
+      {% if shipment.receiver_name %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-user"></i></div>
+        <div><div class="info-label">Name</div><div class="info-value">{{ shipment.receiver_name }}</div></div>
+      </div>
+      {% endif %}
+      {% if shipment.receiver_company %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-building"></i></div>
+        <div><div class="info-label">Company</div><div class="info-value">{{ shipment.receiver_company }}</div></div>
+      </div>
+      {% endif %}
+      {% if shipment.receiver_phone %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-phone"></i></div>
+        <div><div class="info-label">Phone</div><div class="info-value">{{ shipment.receiver_phone }}</div></div>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-map-pin"></i></div>
+        <div><div class="info-label">Location</div><div class="info-value">{{ shipment.destination }}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shipment Details -->
+  <div class="card">
+    <div class="card-title"><i class="fas fa-cube" style="color:var(--blue);"></i> Shipment Details</div>
+    <div class="info-grid" style="margin-bottom:0;">
+      {% if shipment.commodity %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-tag"></i></div>
+        <div><div class="info-label">Commodity</div><div class="info-value">{{ shipment.commodity }}</div></div>
+      </div>
+      {% endif %}
+      {% if shipment.dimensions %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-ruler-combined"></i></div>
+        <div><div class="info-label">Dimensions</div><div class="info-value">{{ shipment.dimensions }}</div></div>
+      </div>
+      {% endif %}
+      {% if shipment.service_level %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--yellow-light);color:var(--yellow);"><i class="fas fa-bolt"></i></div>
+        <div><div class="info-label">Service Level</div><div class="info-value">{{ shipment.service_level|title }}</div></div>
+      </div>
+      {% endif %}
+      {% if shipment.cost %}
+      <div class="info-row">
+        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-dollar-sign"></i></div>
+        <div>
+          <div class="info-label">Shipping Cost</div>
+          <div class="info-value" style="font-size:18px;font-weight:700;color:var(--orange);letter-spacing:-0.02em;">${{ "%.2f"|format(shipment.cost) }}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Packages -->
+  {% if shipment.packages %}
+  <div class="card">
+    <div class="card-title"><i class="fas fa-boxes" style="color:var(--orange);"></i> Packages — {{ shipment.packages|length }} item{{ 's' if shipment.packages|length != 1 }}</div>
+    {% for pkg in shipment.packages %}
+    <div class="pkg-card">
+      <div class="pkg-row" style="border:none;padding:0;margin-bottom:0;border-radius:0;">
+        <div class="pkg-icon"><i class="fas fa-box"></i></div>
+        <div class="pkg-info">
+          <div class="pkg-name">{{ pkg.description or ('Package ' ~ loop.index) }}</div>
+          <div class="pkg-dims">
+            {% if pkg.length and pkg.width and pkg.height %}{{ pkg.dimensions_str }}{% endif %}
+            {% if pkg.volume_cbm %} · {{ "%.4f"|format(pkg.volume_cbm) }} m³{% endif %}
+          </div>
+        </div>
+        <div class="pkg-right">
+          <div class="pkg-weight">{{ pkg.weight or '—' }} <span style="font-size:11px;font-weight:400;color:var(--muted);">kg</span></div>
+          <div class="pkg-tags">
+            {% if pkg.fragile %}<span class="pkg-tag tag-fragile">Fragile</span>{% endif %}
+            {% if pkg.stackable %}<span class="pkg-tag tag-stack">Stackable</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% if pkg.images %}
+      <div class="pkg-images">
+        {% for img in pkg.images %}
+        <div class="pkg-img-wrap" onclick="openLightbox('{{ img.image_url }}', '{{ pkg.description or 'Package' }}')">
+          <img src="{{ img.image_url }}" alt="Package image" loading="lazy">
+          <div class="pkg-img-overlay"><i class="fas fa-expand-alt"></i></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% if not loop.last %}<div style="height:1px;background:var(--border);margin:4px 0 16px;"></div>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:20px;">
+    <button onclick="closeLightbox()" style="position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <i class="fas fa-times"></i>
+    </button>
+    <div style="text-align:center;max-width:90vw;" onclick="event.stopPropagation()">
+      <img id="lightboxImg" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;">
+      <div id="lightboxCaption" style="color:rgba(255,255,255,0.6);font-family:var(--sys-mono);font-size:12px;margin-top:12px;letter-spacing:0.04em;"></div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:20px;">
+      <i class="fas fa-stream" style="color:var(--orange);"></i>
+      Timeline — {{ shipment.events|length }} event{{ 's' if shipment.events|length != 1 }}
+    </div>
+    {% if shipment.events %}
+    <div>
+      {% for event in shipment.events %}
+      <div class="tl-item">
+        <div class="tl-time">
+          <div class="tl-date">{{ event.timestamp.strftime('%b %d') }}</div>
+          <div class="tl-hour">{{ event.timestamp.strftime('%H:%M') }}</div>
+        </div>
+        <div class="tl-spine">
+          <div class="tl-dot {% if loop.first %}active{% elif not loop.last %}done{% endif %}"></div>
+          {% if not loop.last %}<div class="tl-line"></div>{% endif %}
+        </div>
+        <div class="tl-content">
+          <div class="tl-status">
+            {{ event.status }}
+            {% if loop.first %}<span class="tl-latest">Latest</span>{% endif %}
+          </div>
+          {% if event.description %}<div class="tl-desc">{{ event.description }}</div>{% endif %}
+          {% if event.location %}<div class="tl-loc"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:40px;color:var(--muted);">
+      <i class="fas fa-clock" style="font-size:32px;opacity:0.3;display:block;margin-bottom:10px;"></i>
+      <p style="font-family:var(--sys-mono);font-size:12px;letter-spacing:0.04em;">No events recorded yet</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Help bar -->
+  <div class="help-bar">
+    <div class="help-text"><strong>Need help?</strong> Our support team is available 24/7 for urgent shipment issues.</div>
+    <a href="/user/support" class="btn-help"><i class="fas fa-headset"></i> Contact Support</a>
+  </div>
+
+</div>
+
+<script>
+function copyId(btn) {
+  navigator.clipboard.writeText(document.getElementById('trackNum').textContent.trim()).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> <span class="btn-label">Copied!</span>';
+    btn.style.background = '#1a7a4a';
+    btn.style.borderColor = '#1a7a4a';
+    btn.style.color = 'white';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2000);
+  });
+}
+
+function openLightbox(url, caption) {
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightboxCaption').textContent = caption;
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+
+{% endblock %}
