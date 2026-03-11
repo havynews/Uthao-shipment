@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask
-fconfig import Config
+config import Config
 from flask_socketio import SocketIO
 import os
 
