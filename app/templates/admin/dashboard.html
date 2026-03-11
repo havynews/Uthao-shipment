@@ -1,0 +1,161 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+
+    <style>
+        @media (max-width: 480px) {
+            .dashboard-header {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+            }
+
+            .section1 {
+                display: block !important;
+                margin-bottom: 10px;
+            }
+
+            .stats-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            .stats-card {
+                padding: 10px !important;
+            }
+        }
+        
+    </style>
+
+{% endblock %}
+
+
+{% block main_content %}
+<div class="p-6 max-w-7xl mx-auto">
+  
+  <!-- Header -->
+  <div class="mb-8 flex justify-between items-center dashboard-header">
+    <div class="section1">
+      <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+      <p class="text-gray-500 mt-1">Overview of platform activity</p>
+    </div>
+    <div class="flex gap-3">
+      <a href="{{ url_for('admin.users') }}" class="px-4 py-2 bg-[#d97706] text-white rounded-lg hover:[#f59e0b]">
+        <i class="fas fa-users mr-2"></i>Manage Users
+      </a>
+      <a href="{{ url_for('admin.shipments') }}" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900">
+        <i class="fas fa-box mr-2"></i>All Shipments
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    
+    <!-- Users Card -->
+    <div class="stats-card bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-2 bg-[#d97706] rounded-lg">
+          <i class="fas fa-users text-[#ffff] text-xl"></i>
+        </div>
+        <span class="text-sm text-green-600 font-medium">+{{ stats.new_users_this_month }} this month</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">{{ stats.total_users }}</div>
+      <div class="text-sm text-gray-500 mt-1">Total Users</div>
+    </div>
+
+    <!-- Shipments Card -->
+    <div class="stats-card bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-purple-100 rounded-lg">
+          <i class="fas fa-box text-purple-600 text-xl"></i>
+        </div>
+        <span class="text-sm text-gray-500">{{ stats.active_shipments }} active</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">{{ stats.total_shipments }}</div>
+      <div class="text-sm text-gray-500 mt-1">Total Shipments</div>
+    </div>
+
+    <!-- Revenue Card -->
+    <div class="stats-card bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-green-100 rounded-lg">
+          <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+        </div>
+        <span class="text-sm text-orange-600 font-medium">{{ stats.pending_payments }} pending</span>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">${{ "%.0f"|format(stats.total_revenue) }}</div>
+      <div class="text-sm text-gray-500 mt-1">Total Revenue</div>
+    </div>
+
+    <!-- Tickets Card -->
+    <div class="stats-card bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+      <div class="flex items-center justify-between mb-4">
+        <div class="p-3 bg-yellow-100 rounded-lg">
+          <i class="fas fa-headset text-yellow-600 text-xl"></i>
+        </div>
+        <a href="{{ url_for('admin.tickets') }}" class="text-sm text-[#d97706] hover:underline">View all</a>
+      </div>
+      <div class="text-3xl font-bold text-gray-900">{{ stats.open_tickets }}</div>
+      <div class="text-sm text-gray-500 mt-1">Open Tickets</div>
+    </div>
+  </div>
+
+  <!-- Charts & Recent Activity -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Chart -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">Shipments (Last 30 Days)</h3>
+      <canvas id="shipmentsChart" height="100"></canvas>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
+      
+      <div class="space-y-4">
+        {% for user in recent_users %}
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
+            {{ user.full_name[:2].upper() if user.full_name else 'U' }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-900 truncate">{{ user.full_name }}</p>
+            <p class="text-xs text-gray-500">Joined {{ user.created_at.strftime('%d %b') }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('shipmentsChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: {{ chart_labels | tojson }},
+    datasets: [{
+      label: 'Shipments',
+      data: {{ chart_data | tojson }},
+      borderColor: '#2563eb',
+      backgroundColor: 'rgba(37, 99, 235, 0.1)',
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

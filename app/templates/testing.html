@@ -1,0 +1,1194 @@
+
+Goodness Chimemma Eze <goodnesschimemmaeze@gmail.com>
+10:19 PM (4 minutes ago)
+to me
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epik City Nig Ltd — Premium Real Estate Abuja</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+--green: #1a7a3c;
+--green-light: #2ecc71;
+--green-dark: #0d4a22;
+--gold: #c9a227;
+--gold-light: #f0c84a;
+--black: #080e09;
+--white: #f8faf8;
+--gray: #b0b8b2;
+--surface: #0f1a11;
+--surface2: #162119;
+}
+
+- { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+font-family: ‘Montserrat’, sans-serif;
+background: var(–black);
+color: var(–white);
+overflow-x: hidden;
+}
+
+/* NAV */
+nav {
+position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+padding: 20px 60px;
+display: flex; align-items: center; justify-content: space-between;
+background: rgba(8,14,9,0.85);
+backdrop-filter: blur(20px);
+border-bottom: 1px solid rgba(201,162,39,0.15);
+transition: all 0.3s ease;
+}
+nav.scrolled {
+padding: 14px 60px;
+background: rgba(8,14,9,0.97);
+}
+.nav-logo {
+display: flex; align-items: center; gap: 12px;
+}
+.logo-icon {
+width: 44px; height: 44px;
+background: var(–green);
+clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
+display: flex; align-items: center; justify-content: center;
+font-family: ‘Cormorant Garamond’, serif;
+font-weight: 700; font-size: 18px; color: white;
+}
+.logo-text { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+.logo-sub { font-size: 9px; letter-spacing: 3px; color: var(–gold); text-transform: uppercase; }
+.nav-links { display: flex; gap: 36px; list-style: none; }
+.nav-links a { text-decoration: none; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(–gray); transition: color 0.3s; }
+.nav-links a:hover { color: var(–gold); }
+.nav-cta {
+background: var(–gold);
+color: var(–black);
+padding: 10px 24px;
+font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+border: none; cursor: pointer;
+clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+transition: all 0.3s;
+}
+.nav-cta:hover { background: var(–gold-light); transform: translateY(-1px); }
+
+/* HERO */
+.hero {
+min-height: 100vh;
+position: relative;
+display: flex; align-items: center;
+overflow: hidden;
+}
+.hero-bg {
+position: absolute; inset: 0;
+background:
+linear-gradient(135deg, rgba(8,14,9,0.9) 0%, rgba(13,74,34,0.5) 50%, rgba(8,14,9,0.95) 100%),
+url(‘https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1600&q=80’) center/cover no-repeat;
+}
+.hero-grid {
+position: absolute; inset: 0;
+background-image:
+linear-gradient(rgba(26,122,60,0.05) 1px, transparent 1px),
+linear-gradient(90deg, rgba(26,122,60,0.05) 1px, transparent 1px);
+background-size: 60px 60px;
+}
+.hero-content {
+position: relative; z-index: 2;
+padding: 0 60px;
+max-width: 800px;
+}
+.hero-badge {
+display: inline-flex; align-items: center; gap: 8px;
+border: 1px solid var(–gold);
+padding: 6px 16px;
+font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(–gold);
+margin-bottom: 32px;
+opacity: 0; transform: translateY(20px);
+}
+.hero-badge span { width: 6px; height: 6px; background: var(–gold); border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.5)} }
+.hero h1 {
+font-family: ‘Cormorant Garamond’, serif;
+font-size: clamp(52px, 7vw, 96px);
+font-weight: 300; line-height: 1.0;
+opacity: 0; transform: translateY(40px);
+}
+.hero h1 em { font-style: italic; color: var(–green-light); }
+.hero h1 strong { font-weight: 700; display: block; }
+.hero-sub {
+font-size: 13px; letter-spacing: 1px; color: var(–gray);
+margin-top: 24px; line-height: 1.8; max-width: 480px;
+opacity: 0; transform: translateY(20px);
+}
+.hero-actions {
+margin-top: 48px; display: flex; gap: 16px; align-items: center;
+opacity: 0; transform: translateY(20px);
+}
+.btn-primary {
+background: var(–green);
+color: white; padding: 16px 36px;
+font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+border: none; cursor: pointer;
+clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+transition: all 0.3s; text-decoration: none; display: inline-block;
+}
+.btn-primary:hover { background: var(–green-light); transform: translateY(-2px); }
+.btn-outline {
+border: 1px solid var(–gray);
+color: var(–gray); padding: 15px 36px;
+font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600;
+background: transparent; cursor: pointer;
+transition: all 0.3s; text-decoration: none; display: inline-block;
+}
+.btn-outline:hover { border-color: var(–gold); color: var(–gold); }
+
+.hero-stats {
+position: absolute; right: 60px; bottom: 80px; z-index: 2;
+display: flex; gap: 0;
+}
+.stat {
+padding: 28px 32px;
+border: 1px solid rgba(255,255,255,0.08);
+text-align: center;
+background: rgba(15,26,17,0.8); backdrop-filter: blur(10px);
+border-right: none;
+opacity: 0; transform: translateY(30px);
+}
+.stat:last-child { border-right: 1px solid rgba(255,255,255,0.08); }
+.stat-num { font-family: ‘Cormorant Garamond’, serif; font-size: 42px; font-weight: 700; color: var(–gold); line-height: 1; }
+.stat-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(–gray); margin-top: 6px; }
+
+.scroll-hint {
+position: absolute; bottom: 40px; left: 60px; z-index: 2;
+display: flex; align-items: center; gap: 12px;
+font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(–gray);
+opacity: 0;
+}
+.scroll-line { width: 40px; height: 1px; background: var(–green); }
+
+/* SECTION COMMON */
+section { padding: 120px 60px; }
+.section-label {
+font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(–gold);
+margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+}
+.section-label::before { content:’’; width: 30px; height: 1px; background: var(–gold); }
+h2 {
+font-family: ‘Cormorant Garamond’, serif;
+font-size: clamp(36px, 4vw, 60px);
+font-weight: 400; line-height: 1.1;
+}
+h2 strong { font-weight: 700; }
+
+/* ABOUT */
+.about { background: var(–surface); }
+.about-inner {
+display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+max-width: 1200px; margin: 0 auto;
+}
+.about-img {
+position: relative;
+}
+.about-img-main {
+width: 100%; aspect-ratio: 4/5;
+background: linear-gradient(135deg, var(–green-dark), var(–surface2));
+overflow: hidden;
+}
+.about-img-main img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+.about-img-accent {
+position: absolute; bottom: -30px; right: -30px;
+width: 200px; height: 160px;
+background: var(–gold);
+display: flex; align-items: center; justify-content: center;
+flex-direction: column;
+text-align: center; padding: 20px;
+}
+.about-img-accent .big { font-family:‘Cormorant Garamond’,serif; font-size:48px; font-weight:700; color:var(–black); line-height:1; }
+.about-img-accent .small { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(–black); margin-top:4px; }
+.about-text { }
+.about-text p { font-size: 14px; color: var(–gray); line-height: 1.9; margin-top: 24px; }
+.fcda-badge {
+display: inline-flex; align-items: center; gap: 10px;
+border: 1px solid var(–green);
+padding: 10px 20px; margin-top: 32px;
+font-size: 11px; letter-spacing: 2px; color: var(–green-light);
+}
+
+/* ESTATES */
+.estates { background: var(–black); }
+.estates-header { max-width: 1200px; margin: 0 auto 60px; display:flex; justify-content:space-between; align-items:flex-end; }
+.estates-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+gap: 2px;
+max-width: 1400px; margin: 0 auto;
+}
+.estate-card {
+background: var(–surface);
+padding: 40px;
+border: 1px solid rgba(255,255,255,0.04);
+position: relative; overflow: hidden;
+transition: all 0.4s ease;
+cursor: pointer;
+}
+.estate-card::before {
+content: ‘’;
+position: absolute; top: 0; left: 0; right: 0;
+height: 3px;
+background: var(–green);
+transform: scaleX(0); transform-origin: left;
+transition: transform 0.4s ease;
+}
+.estate-card:hover::before { transform: scaleX(1); }
+.estate-card:hover { background: var(–surface2); transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.estate-card.featured { background: var(–green-dark); grid-column: span 1; }
+.estate-tag {
+font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+color: var(–gold); margin-bottom: 20px;
+display: flex; align-items: center; gap: 8px;
+}
+.estate-tag span { width: 20px; height: 1px; background: var(–gold); }
+.estate-card h3 { font-family: ‘Cormorant Garamond’,serif; font-size: 28px; font-weight: 600; line-height: 1.2; }
+.estate-location { font-size: 11px; color: var(–gray); margin-top: 8px; letter-spacing: 1px; }
+.estate-divider { width: 40px; height: 1px; background: rgba(255,255,255,0.1); margin: 20px 0; }
+.estate-props { display: flex; flex-direction: column; gap: 10px; }
+.estate-prop {
+display: flex; justify-content: space-between; align-items: center;
+padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+font-size: 12px;
+}
+.estate-prop:last-child { border-bottom: none; }
+.prop-name { color: var(–gray); }
+.prop-price { color: var(–white); font-weight: 600; }
+.prop-size { font-size: 10px; color: var(–green-light); letter-spacing: 1px; }
+.estate-cta {
+margin-top: 28px;
+font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(–green-light);
+display: flex; align-items: center; gap: 8px; cursor: pointer;
+transition: gap 0.3s;
+}
+.estate-card:hover .estate-cta { gap: 14px; }
+.estate-cta-arrow { font-size: 16px; }
+
+/* BOOKING */
+.booking {
+background: var(–surface);
+padding: 120px 60px;
+}
+.booking-inner {
+max-width: 900px; margin: 0 auto;
+display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start;
+}
+.booking-form-group { margin-bottom: 24px; }
+.booking-form-group label {
+display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+color: var(–gray); margin-bottom: 8px;
+}
+.booking-form-group input,
+.booking-form-group select,
+.booking-form-group textarea {
+width: 100%;
+background: rgba(255,255,255,0.04);
+border: 1px solid rgba(255,255,255,0.1);
+color: var(–white);
+padding: 14px 16px;
+font-family: ‘Montserrat’, sans-serif;
+font-size: 13px;
+outline: none;
+transition: border-color 0.3s;
+-webkit-appearance: none;
+}
+.booking-form-group select option { background: var(–surface); }
+.booking-form-group input:focus,
+.booking-form-group select:focus,
+.booking-form-group textarea:focus {
+border-color: var(–green);
+}
+.booking-form-group textarea { resize: vertical; min-height: 100px; }
+.btn-submit {
+width: 100%; padding: 16px;
+background: var(–green); color: white;
+border: none; cursor: pointer;
+font-family: ‘Montserrat’, sans-serif;
+font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+transition: all 0.3s;
+clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+}
+.btn-submit:hover { background: var(–green-light); transform: translateY(-2px); }
+.booking-info { padding-top: 8px; }
+.booking-info h3 { font-family:‘Cormorant Garamond’,serif; font-size:36px; font-weight:400; }
+.booking-info p { font-size:13px; color:var(–gray); line-height:1.8; margin-top:16px; }
+.contact-item { display:flex; gap:14px; align-items:flex-start; margin-top:24px; }
+.contact-icon { font-size:18px; color:var(–gold); margin-top:2px; flex-shrink:0; }
+.contact-text { font-size:13px; color:var(–gray); line-height:1.6; }
+.contact-text strong { color: var(–white); display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+
+/* WHY */
+.why { background: var(–black); }
+.why-inner { max-width: 1200px; margin: 0 auto; }
+.why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 60px; }
+.why-item {
+padding: 48px 40px; background: var(–surface);
+border: 1px solid rgba(255,255,255,0.04);
+transition: background 0.3s;
+}
+.why-item:hover { background: var(–surface2); }
+.why-num { font-family:‘Cormorant Garamond’,serif; font-size:72px; font-weight:700; color:rgba(26,122,60,0.2); line-height:1; margin-bottom:20px; }
+.why-title { font-size:16px; font-weight:600; margin-bottom:12px; }
+.why-text { font-size:13px; color:var(–gray); line-height:1.8; }
+
+/* TESTIMONIALS */
+.testimonials { background: var(–surface); }
+.testi-inner { max-width:1000px; margin:0 auto; }
+.testi-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:60px; }
+.testi-card {
+padding:40px; border:1px solid rgba(255,255,255,0.08);
+background: rgba(255,255,255,0.02);
+position:relative;
+}
+.testi-quote { font-family:‘Cormorant Garamond’,serif; font-size:72px; color:var(–green); line-height:0.5; margin-bottom:20px; }
+.testi-text { font-size:14px; color:var(–gray); line-height:1.8; font-style:italic; }
+.testi-author { margin-top:24px; display:flex; gap:14px; align-items:center; }
+.testi-avatar { width:44px; height:44px; background:var(–green-dark); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(–green-light); font-size:16px; }
+.testi-name { font-size:13px; font-weight:600; }
+.testi-role { font-size:10px; color:var(–gray); letter-spacing:1px; }
+
+/* FOOTER */
+footer {
+background: var(–black);
+padding: 80px 60px 40px;
+border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-inner { max-width:1200px; margin:0 auto; }
+.footer-grid { display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:60px; margin-bottom:60px; }
+.footer-brand .logo-text { font-size:16px; }
+.footer-brand p { font-size:13px; color:var(–gray); line-height:1.8; margin-top:16px; max-width:280px; }
+.footer-col h4 { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(–gold); margin-bottom:20px; }
+.footer-col ul { list-style:none; }
+.footer-col ul li { margin-bottom:10px; }
+.footer-col ul li a { font-size:13px; color:var(–gray); text-decoration:none; transition:color 0.3s; }
+.footer-col ul li a:hover { color:var(–white); }
+.footer-bottom { display:flex; justify-content:space-between; align-items:center; padding-top:30px; border-top:1px solid rgba(255,255,255,0.06); }
+.footer-bottom p { font-size:12px; color:var(–gray); }
+.footer-social { display:flex; gap:16px; }
+.social-link { width:36px; height:36px; border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(–gray); font-size:13px; transition:all 0.3s; }
+.social-link:hover { border-color:var(–green); color:var(–green-light); }
+
+/* HAMBURGER */
+.hamburger {
+display: none;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+width: 44px; height: 44px;
+cursor: pointer;
+position: relative;
+z-index: 200;
+flex-shrink: 0;
+}
+.hamburger .bar {
+position: absolute;
+width: 24px; height: 2px;
+background: var(–white);
+border-radius: 2px;
+transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.hamburger .bar:nth-child(1) { transform: translateY(-7px); }
+.hamburger .bar:nth-child(2) { transform: translateY(0px); }
+.hamburger .bar:nth-child(3) { transform: translateY(7px); }
+
+/* Open state → X */
+.hamburger.open .bar:nth-child(1) { transform: translateY(0) rotate(45deg); background: var(–gold); }
+.hamburger.open .bar:nth-child(2) { transform: translateY(0) scaleX(0); opacity: 0; }
+.hamburger.open .bar:nth-child(3) { transform: translateY(0) rotate(-45deg); background: var(–gold); }
+
+/* MOBILE DRAWER */
+.mobile-drawer {
+display: none;
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+z-index: 150;
+pointer-events: none;
+}
+.mobile-drawer.open { pointer-events: all; }
+
+/* Overlay */
+.drawer-overlay {
+position: absolute; inset: 0;
+background: rgba(8,14,9,0.7);
+backdrop-filter: blur(4px);
+opacity: 0;
+transition: opacity 0.4s ease;
+}
+.mobile-drawer.open .drawer-overlay { opacity: 1; }
+
+/* Panel */
+.drawer-panel {
+position: absolute;
+top: 0; right: 0;
+width: min(320px, 85vw);
+height: 100%;
+background: var(–surface);
+border-left: 1px solid rgba(201,162,39,0.2);
+transform: translateX(100%);
+transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+display: flex;
+flex-direction: column;
+overflow-y: auto;
+}
+.mobile-drawer.open .drawer-panel { transform: translateX(0); }
+
+.drawer-top {
+padding: 24px 28px 20px;
+border-bottom: 1px solid rgba(255,255,255,0.06);
+display: flex; align-items: center; justify-content: space-between;
+}
+.drawer-logo { display: flex; align-items: center; gap: 10px; }
+.drawer-logo .logo-icon { width: 38px; height: 38px; font-size: 15px; }
+.drawer-logo .logo-text { font-size: 12px; }
+.drawer-logo .logo-sub { font-size: 8px; }
+
+.drawer-nav {
+padding: 32px 28px;
+flex: 1;
+}
+.drawer-nav ul { list-style: none; }
+.drawer-nav ul li {
+border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.drawer-nav ul li a {
+display: flex; align-items: center; justify-content: space-between;
+padding: 18px 0;
+text-decoration: none;
+font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+color: var(–gray);
+font-weight: 500;
+transition: color 0.3s;
+}
+.drawer-nav ul li a:hover { color: var(–gold); }
+.drawer-nav ul li a .arrow {
+font-size: 18px; color: var(–green); opacity: 0;
+transform: translateX(-6px);
+transition: all 0.3s;
+}
+.drawer-nav ul li a:hover .arrow { opacity: 1; transform: translateX(0); }
+
+.drawer-footer {
+padding: 24px 28px 40px;
+border-top: 1px solid rgba(255,255,255,0.06);
+}
+.drawer-cta {
+display: block; width: 100%; padding: 16px;
+background: var(–green); color: white;
+text-align: center; text-decoration: none;
+font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+border: none; cursor: pointer;
+clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+transition: background 0.3s;
+}
+.drawer-cta:hover { background: var(–green-light); }
+.drawer-contact {
+margin-top: 24px;
+}
+.drawer-contact p {
+font-size: 11px; color: var(–gray); letter-spacing: 1px; margin-bottom: 8px;
+}
+.drawer-contact strong { color: var(–gold); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.drawer-socials { display: flex; gap: 10px; margin-top: 16px; }
+.drawer-social {
+width: 36px; height: 36px;
+border: 1px solid rgba(255,255,255,0.1);
+display: flex; align-items: center; justify-content: center;
+text-decoration: none; color: var(–gray); font-size: 12px; font-weight: 700;
+transition: all 0.3s;
+}
+.drawer-social:hover { border-color: var(–green); color: var(–green-light); }
+
+/* Stagger drawer nav items on open */
+.drawer-nav ul li {
+opacity: 0;
+transform: translateX(20px);
+transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.mobile-drawer.open .drawer-nav ul li:nth-child(1) { opacity:1; transform:translateX(0); transition-delay:0.12s; }
+.mobile-drawer.open .drawer-nav ul li:nth-child(2) { opacity:1; transform:translateX(0); transition-delay:0.17s; }
+.mobile-drawer.open .drawer-nav ul li:nth-child(3) { opacity:1; transform:translateX(0); transition-delay:0.22s; }
+.mobile-drawer.open .drawer-nav ul li:nth-child(4) { opacity:1; transform:translateX(0); transition-delay:0.27s; }
+.mobile-drawer.open .drawer-nav ul li:nth-child(5) { opacity:1; transform:translateX(0); transition-delay:0.32s; }
+
+@media (max-width: 900px) {
+nav { padding: 16px 20px; }
+nav.scrolled { padding: 12px 20px; }
+.nav-links { display: none; }
+.nav-cta { display: none; }
+.hamburger { display: flex; }
+.mobile-drawer { display: block; }
+section { padding: 80px 24px; }
+.hero-content { padding: 0 24px; }
+.hero h1 { font-size: 44px; }
+.hero-stats { display:none; }
+.scroll-hint { display:none; }
+.about-inner { grid-template-columns:1fr; gap:40px; }
+.about-img-accent { bottom:-20px; right:0; width:140px; height:120px; }
+.estates-grid { grid-template-columns:1fr; }
+.estates-header { flex-direction:column; align-items:flex-start; gap:20px; }
+.booking-inner { grid-template-columns:1fr; gap:40px; }
+.why-grid { grid-template-columns:1fr; }
+.testi-grid { grid-template-columns:1fr; }
+.footer-grid { grid-template-columns:1fr 1fr; gap:40px; }
+.footer-bottom { flex-direction:column; gap:16px; text-align:center; }
+.hero-actions { flex-direction:column; align-items:flex-start; }
+}
+
+@media (max-width: 480px) {
+.footer-grid { grid-template-columns:1fr; }
+}
+
+/* ANIMATE IN */
+.fade-up { opacity:0; transform:translateY(40px); transition:opacity 0.8s ease, transform 0.8s ease; }
+.fade-up.visible { opacity:1; transform:translateY(0); }
+
+/* SUCCESS MSG */
+.success-msg {
+display:none; background:var(–green-dark); border:1px solid var(–green);
+padding:16px 20px; margin-top:16px;
+font-size:13px; color:var(–green-light);
+}
+</style>
+
+</head>
+<body>
+
+<!-- NAV -->
+
+<nav id="navbar">
+<div class="nav-logo">
+<div class="logo-icon">EC</div>
+<div>
+<div class="logo-text">Epik City</div>
+<div class="logo-sub">Nig Ltd</div>
+</div>
+</div>
+<ul class="nav-links">
+<li><a href="#about">About</a></li>
+<li><a href="#estates">Estates</a></li>
+<li><a href="#why">Why Us</a></li>
+<li><a href="#contact">Contact</a></li>
+</ul>
+<button class="nav-cta" onclick="scrollToBooking()">Book Consultation</button>
+<div class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Toggle menu" role="button">
+<div class="bar"></div>
+<div class="bar"></div>
+<div class="bar"></div>
+</div>
+</nav>
+
+<!-- MOBILE DRAWER -->
+
+<div class="mobile-drawer" id="mobileDrawer">
+<div class="drawer-overlay" onclick="closeMenu()"></div>
+<div class="drawer-panel">
+<div class="drawer-top">
+<div class="drawer-logo nav-logo">
+<div class="logo-icon">EC</div>
+<div>
+<div class="logo-text">Epik City</div>
+<div class="logo-sub">Nig Ltd</div>
+</div>
+</div>
+</div>
+<div class="drawer-nav">
+<ul>
+<li><a href="#home" onclick="closeMenu()"><span>Home</span><span class="arrow">→</span></a></li>
+<li><a href="#about" onclick="closeMenu()"><span>About</span><span class="arrow">→</span></a></li>
+<li><a href="#estates" onclick="closeMenu()"><span>Estates</span><span class="arrow">→</span></a></li>
+<li><a href="#why" onclick="closeMenu()"><span>Why Us</span><span class="arrow">→</span></a></li>
+<li><a href="#contact" onclick="closeMenu()"><span>Contact</span><span class="arrow">→</span></a></li>
+</ul>
+</div>
+<div class="drawer-footer">
+<a href="#contact" class="drawer-cta" onclick="closeMenu()">Book Consultation →</a>
+<div class="drawer-contact">
+<strong>Office</strong>
+<p>Suite BE 5, Apo Sparklight Mall,<br>Opposite Living Faith Church,<br>Durumi 2, Abuja.</p>
+<strong style="margin-top:16px;">Follow Us</strong>
+<div class="drawer-socials">
+<a href="#" class="drawer-social">f</a>
+<a href="#" class="drawer-social">t</a>
+<a href="#" class="drawer-social">in</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- HERO -->
+
+<section class="hero" id="home">
+<div class="hero-bg"></div>
+<div class="hero-grid"></div>
+<div class="hero-content">
+<div class="hero-badge" id="heroBadge">
+<span></span>
+FCDA Approved Properties — Abuja, Nigeria
+</div>
+<h1 id="heroTitle">
+<em>Own</em> Your<br>
+<strong>Piece of</strong><br>Abuja
+</h1>
+<p class="hero-sub" id="heroSub">
+Premium, verified real estate investments across Abuja's most sought-after locations. Transparent processes. Secure documentation. Exclusive access.
+</p>
+<div class="hero-actions" id="heroActions">
+<a href="#estates" class="btn-primary">Explore Estates</a>
+<a href="#contact" class="btn-outline">Book a Tour</a>
+</div>
+</div>
+<div class="hero-stats">
+<div class="stat" id="stat1"><div class="stat-num">5+</div><div class="stat-label">Estates</div></div>
+<div class="stat" id="stat2"><div class="stat-num">500+</div><div class="stat-label">Units</div></div>
+<div class="stat" id="stat3"><div class="stat-num">FCDA</div><div class="stat-label">Approved</div></div>
+</div>
+<div class="scroll-hint" id="scrollHint">
+<div class="scroll-line"></div>
+Scroll to explore
+</div>
+</section>
+
+<!-- ABOUT -->
+
+<section class="about" id="about">
+<div class="about-inner">
+<div class="about-img fade-up">
+<div class="about-img-main">
+<img src="https://images.unsplash.com/photo-1560185007-c5ca9d2c014d?w=600&q=80" alt="Modern Architecture" />
+</div>
+<div class="about-img-accent">
+<div class="big">10+</div>
+<div class="small">Years of Excellence</div>
+</div>
+</div>
+<div class="about-text fade-up">
+<div class="section-label">About Us</div>
+<h2>Building <strong>Dreams</strong><br>Across Abuja</h2>
+<p>Epik City Nig Ltd is Abuja's premier real estate development company, delivering FCDA-approved residential estates that combine luxury, affordability, and security. From Airport Road to IDU to Kuje, we build communities—not just houses.</p>
+<p>Every plot is verified. Every process is transparent. Every client leaves with confidence, clear documentation, and the peace of mind that comes from working with professionals.</p>
+<div class="fcda-badge">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+FCDA Approved · Verified Documentation · Secure Titles
+</div>
+</div>
+</div>
+</section>
+
+<!-- ESTATES -->
+
+<section class="estates" id="estates">
+<div class="estates-header fade-up">
+<div>
+<div class="section-label">Our Portfolio</div>
+<h2>Premium <strong>Estates</strong></h2>
+</div>
+<a href="#contact" class="btn-outline" style="font-size:11px">View All Listings →</a>
+</div>
+<div class="estates-grid">
+
+```
+<!-- HUTU Estate -->
+<div class="estate-card fade-up">
+<div class="estate-tag"><span></span>Hutu Estate · FCDA Approved</div>
+<h3>Hutu Resort Estate</h3>
+<div class="estate-location">📍 Airport Road, Before Centenary City, Abuja</div>
+<div class="estate-divider"></div>
+<div class="estate-props">
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Terrace Duplex</div><div class="prop-size">150 SQM</div></div>
+<div class="prop-price">₦13.7M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Semi-Detached Duplex</div><div class="prop-size">250 SQM</div></div>
+<div class="prop-price">₦21.3M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">4 BD Fully Detached Duplex</div><div class="prop-size">400 SQM</div></div>
+<div class="prop-price">₦32.8M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">5 BD Fully Detached Duplex</div><div class="prop-size">500 SQM</div></div>
+<div class="prop-price">₦42.6M</div>
+</div>
+</div>
+<div class="estate-cta" onclick="scrollToBooking()">
+Book a Unit <span class="estate-cta-arrow">→</span>
+</div>
+</div>
+
+<!-- SKYLINE Estate -->
+<div class="estate-card featured fade-up">
+<div class="estate-tag"><span></span>Skyline · Pre-sale Prices</div>
+<h3>Skyline Exclusive City</h3>
+<div class="estate-location">📍 IDU (Gousa District), Abuja</div>
+<div class="estate-divider"></div>
+<div class="estate-props">
+<div class="estate-prop">
+<div><div class="prop-name">2 BD Terrace Plot</div><div class="prop-size">150 SQM</div></div>
+<div class="prop-price">₦7.5M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Terrace Plot</div><div class="prop-size">250 SQM</div></div>
+<div class="prop-price">₦12.5M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">5 BD Fully Detached</div><div class="prop-size">500 SQM</div></div>
+<div class="prop-price">₦25M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">4 BD Fully Detached</div><div class="prop-size">350 SQM</div></div>
+<div class="prop-price">₦17.5M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">Apartment Plot (1&2 BD)</div><div class="prop-size">1000 SQM</div></div>
+<div class="prop-price">₦50M</div>
+</div>
+</div>
+<div class="estate-cta" onclick="scrollToBooking()">
+Book a Unit <span class="estate-cta-arrow">→</span>
+</div>
+</div>
+
+<!-- FLAMINGO Estate -->
+<div class="estate-card fade-up">
+<div class="estate-tag"><span></span>Flamingo · Presale</div>
+<h3>Flamingo Estate</h3>
+<div class="estate-location">📍 Within D Terranova City, Abuja</div>
+<div class="estate-divider"></div>
+<div class="estate-props">
+<div class="estate-prop">
+<div><div class="prop-name">4 BD Terrace Duplex (2 Floors)</div><div class="prop-size">150 SQM</div></div>
+<div class="prop-price">₦10.5M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">5 BD Semi-Detached Duplex</div><div class="prop-size">250 SQM</div></div>
+<div class="prop-price">₦17.5M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">5 BD Fully Detached Duplex</div><div class="prop-size">350 SQM</div></div>
+<div class="prop-price">₦24.5M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">7 BD Semi-Detached Luxury</div><div class="prop-size">600 SQM</div></div>
+<div class="prop-price">₦42M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">Block of Flats</div><div class="prop-size">1000 SQM</div></div>
+<div class="prop-price">₦70M</div>
+</div>
+</div>
+<div class="estate-cta" onclick="scrollToBooking()">
+Book a Unit <span class="estate-cta-arrow">→</span>
+</div>
+</div>
+
+<!-- DOWNTOWN Estate -->
+<div class="estate-card fade-up">
+<div class="estate-tag"><span></span>Downtown Golf Resort · Pre Sale</div>
+<h3>Downtown Golf Resort</h3>
+<div class="estate-location">📍 After Handmaid Girls Sec. School, Kuje, Abuja FCT</div>
+<div class="estate-divider"></div>
+<div class="estate-props">
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Semi-Detached Bungalow</div><div class="prop-size">250 SQM</div></div>
+<div class="prop-price">₦2M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Bungalow</div><div class="prop-size">350 SQM</div></div>
+<div class="prop-price">₦2.8M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">4 BD Bungalow with BQ</div><div class="prop-size">450 SQM</div></div>
+<div class="prop-price">₦3.6M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">5 BD Penthouse</div><div class="prop-size">550 SQM</div></div>
+<div class="prop-price">₦4.4M</div>
+</div>
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Block of Flats</div><div class="prop-size">1000 SQM</div></div>
+<div class="prop-price">₦8M</div>
+</div>
+</div>
+<div class="estate-cta" style="margin-top:10px; font-size:10px; color: var(--gold);">★ 600k Initial Deposit</div>
+<div class="estate-cta" onclick="scrollToBooking()">
+Book a Unit <span class="estate-cta-arrow">→</span>
+</div>
+</div>
+
+<!-- ECOVILLE Estate -->
+<div class="estate-card fade-up" style="grid-column: span 1;">
+<div class="estate-tag"><span></span>Ecoville · New Listing · 20% OFF</div>
+<h3>Ecoville Estate Kuje</h3>
+<div class="estate-location">📍 Kuje, Abuja — Kuje C of O</div>
+<div class="estate-divider"></div>
+<div class="estate-props">
+<div class="estate-prop">
+<div><div class="prop-name">3 BD Fully Detached Duplex</div><div class="prop-size">270 SQM</div></div>
+<div>
+<div class="prop-price">₦8M</div>
+<div style="font-size:10px; color:var(--gray); text-decoration:line-through;">₦10M</div>
+</div>
+</div>
+</div>
+<div style="background:rgba(201,162,39,0.1); border:1px solid var(--gold); padding:14px 16px; margin-top:20px; font-size:12px; color:var(--gold);">
+🔔 Limited Time — 20% Discount Available Now!
+</div>
+<div class="estate-cta" onclick="scrollToBooking()">
+Claim Discount <span class="estate-cta-arrow">→</span>
+</div>
+</div>
+```
+
+</div>
+</section>
+
+<!-- WHY US -->
+
+<section class="why" id="why">
+<div class="why-inner">
+<div class="fade-up">
+<div class="section-label">Why Choose Us</div>
+<h2>Investing with <strong>Confidence</strong></h2>
+</div>
+<div class="why-grid">
+<div class="why-item fade-up">
+<div class="why-num">01</div>
+<div class="why-title">FCDA Approved</div>
+<div class="why-text">All our estates carry full Federal Capital Development Authority approval, giving you the legal protection and peace of mind that comes with proper government documentation.</div>
+</div>
+<div class="why-item fade-up">
+<div class="why-num">02</div>
+<div class="why-title">Transparent Processes</div>
+<div class="why-text">No hidden charges, no vague documentation. From initial deposit to final title transfer, every step is clearly communicated and professionally executed.</div>
+</div>
+<div class="why-item fade-up">
+<div class="why-num">03</div>
+<div class="why-title">Prime Locations</div>
+<div class="why-text">Our estates are strategically positioned across Abuja's fastest-growing corridors — Airport Road, IDU, Kuje — for maximum investment appreciation.</div>
+</div>
+<div class="why-item fade-up">
+<div class="why-num">04</div>
+<div class="why-title">Flexible Payment</div>
+<div class="why-text">Pre-sale prices with flexible installment plans make homeownership accessible. Start with as little as ₦600,000 initial deposit on select properties.</div>
+</div>
+<div class="why-item fade-up">
+<div class="why-num">05</div>
+<div class="why-title">Verified Titles</div>
+<div class="why-text">Every property comes with proper C of O, R of O, or FCDA Right of Occupancy — verified, registered, and secure against any future encumbrances.</div>
+</div>
+<div class="why-item fade-up">
+<div class="why-num">06</div>
+<div class="why-title">Exclusive Access</div>
+<div class="why-text">Our exclusive client network gets first access to pre-sale prices, limited units, and early-bird discounts before properties are publicly listed at higher rates.</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- TESTIMONIALS -->
+
+<section class="testimonials">
+<div class="testi-inner">
+<div class="fade-up">
+<div class="section-label">Client Stories</div>
+<h2>What Our <strong>Clients</strong> Say</h2>
+</div>
+<div class="testi-grid">
+<div class="testi-card fade-up">
+<div class="testi-quote">"</div>
+<div class="testi-text">I purchased a plot at Skyline Exclusive City and the entire process was seamless. The documentation was ready on time and the presale price was unbeatable. I'm already seeing appreciation in the value.</div>
+<div class="testi-author">
+<div class="testi-avatar">A</div>
+<div>
+<div class="testi-name">Amaka Okonkwo</div>
+<div class="testi-role">Investor · Skyline Estate</div>
+</div>
+</div>
+</div>
+<div class="testi-card fade-up">
+<div class="testi-quote">"</div>
+<div class="testi-text">Epik City delivered exactly what they promised — a verified, FCDA-approved property in a premium location. The team was professional from start to finish. I'm recommending them to my entire family.</div>
+<div class="testi-author">
+<div class="testi-avatar">T</div>
+<div>
+<div class="testi-name">Tunde Adeyemi</div>
+<div class="testi-role">Homeowner · Hutu Estate</div>
+</div>
+</div>
+</div>
+<div class="testi-card fade-up">
+<div class="testi-quote">"</div>
+<div class="testi-text">As a diaspora investor, I was skeptical about buying remotely. Rashida and the Epik City team walked me through every document virtually and ensured my investment was fully secure. Excellent service.</div>
+<div class="testi-author">
+<div class="testi-avatar">C</div>
+<div>
+<div class="testi-name">Chioma Eze</div>
+<div class="testi-role">Diaspora Investor · Flamingo Estate</div>
+</div>
+</div>
+</div>
+<div class="testi-card fade-up">
+<div class="testi-quote">"</div>
+<div class="testi-text">The Downtown Golf Resort is an incredible concept. I bought into it at presale and the vision is truly ambitious. The ₦600k initial deposit made it easy to secure my unit while prices are still low.</div>
+<div class="testi-author">
+<div class="testi-avatar">M</div>
+<div>
+<div class="testi-name">Mohammed Sule</div>
+<div class="testi-role">Homeowner · Downtown Golf Resort</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- BOOKING / CONTACT -->
+
+<section class="booking" id="contact">
+<div class="booking-inner">
+<div class="booking-info fade-up">
+<div class="section-label">Get in Touch</div>
+<h3>Book Your<br><strong>Free Consultation</strong></h3>
+<p>Speak directly with our real estate advisors. We'll match you with the right estate, budget, and payment plan to make your Abuja property dream a reality.</p>
+
+```
+<div class="contact-item">
+<div class="contact-icon">📍</div>
+<div class="contact-text">
+<strong>Office Address</strong>
+Suite BE 5, Apo Sparklight Mall, Opposite Living Faith Church, Durumi 2, Abuja.
+</div>
+</div>
+<div class="contact-item">
+<div class="contact-icon">📱</div>
+<div class="contact-text">
+<strong>Phone / WhatsApp</strong>
+Contact us via our social channels @_epikcity
+</div>
+</div>
+<div class="contact-item">
+<div class="contact-icon">🌐</div>
+<div class="contact-text">
+<strong>Social Media</strong>
+Follow @_epikcity on Instagram, Facebook & Twitter for the latest listings and updates.
+</div>
+</div>
+</div>
+
+<div class="fade-up">
+<div class="section-label">Enquiry Form</div>
+<form id="bookingForm" onsubmit="handleSubmit(event)">
+<div class="booking-form-group">
+<label>Full Name</label>
+<input type="text" placeholder="Your full name" required />
+</div>
+<div class="booking-form-group">
+<label>Phone Number</label>
+<input type="tel" placeholder="+234 xxx xxx xxxx" required />
+</div>
+<div class="booking-form-group">
+<label>Email Address</label>
+<input type="email" placeholder="your@email.com" />
+</div>
+<div class="booking-form-group">
+<label>Estate of Interest</label>
+<select required>
+<option value="">Select an estate...</option>
+<option>Hutu Resort Estate — Airport Road</option>
+<option>Skyline Exclusive City — IDU</option>
+<option>Flamingo Estate — Terranova City</option>
+<option>Downtown Golf Resort — Kuje</option>
+<option>Ecoville Estate — Kuje (20% Off!)</option>
+<option>Not Sure — Need Advice</option>
+</select>
+</div>
+<div class="booking-form-group">
+<label>Budget Range</label>
+<select>
+<option value="">Select budget range...</option>
+<option>Under ₦5M</option>
+<option>₦5M – ₦15M</option>
+<option>₦15M – ₦30M</option>
+<option>₦30M – ₦50M</option>
+<option>Above ₦50M</option>
+</select>
+</div>
+<div class="booking-form-group">
+<label>Message (Optional)</label>
+<textarea placeholder="Tell us more about what you're looking for..."></textarea>
+</div>
+<button type="submit" class="btn-submit">Send Enquiry →</button>
+<div class="success-msg" id="successMsg">
+✓ Thank you! Our team will contact you within 24 hours.
+</div>
+</form>
+</div>
+```
+
+</div>
+</section>
+
+<!-- FOOTER -->
+
+<footer>
+<div class="footer-inner">
+<div class="footer-grid">
+<div class="footer-brand">
+<div class="nav-logo">
+<div class="logo-icon">EC</div>
+<div>
+<div class="logo-text">Epik City Nig Ltd</div>
+<div class="logo-sub">Premium Real Estate · Abuja</div>
+</div>
+</div>
+<p>Building Abuja's most sought-after residential communities with transparency, verified documentation, and a commitment to excellence.</p>
+</div>
+<div class="footer-col">
+<h4>Estates</h4>
+<ul>
+<li><a href="#estates">Hutu Resort Estate</a></li>
+<li><a href="#estates">Skyline Exclusive City</a></li>
+<li><a href="#estates">Flamingo Estate</a></li>
+<li><a href="#estates">Downtown Golf Resort</a></li>
+<li><a href="#estates">Ecoville Estate Kuje</a></li>
+</ul>
+</div>
+<div class="footer-col">
+<h4>Company</h4>
+<ul>
+<li><a href="#about">About Us</a></li>
+<li><a href="#why">Why Choose Us</a></li>
+<li><a href="#contact">Contact</a></li>
+</ul>
+</div>
+<div class="footer-col">
+<h4>Contact</h4>
+<ul>
+<li><a href="#">Suite BE 5, Apo Sparklight Mall</a></li>
+<li><a href="#">Opposite Living Faith Church</a></li>
+<li><a href="#">Durumi 2, Abuja</a></li>
+<li><a href="#">@_epikcity</a></li>
+</ul>
+</div>
+</div>
+<div class="footer-bottom">
+<p>© 2024 Epik City Nig Ltd. All rights reserved. FCDA Approved.</p>
+<div class="footer-social">
+<a href="#" class="social-link">f</a>
+<a href="#" class="social-link">t</a>
+<a href="#" class="social-link">in</a>
+</div>
+</div>
+</div>
+</footer>
+
+<script>
+// NAV scroll effect
+window.addEventListener('scroll', () => {
+const nav = document.getElementById('navbar');
+nav.classList.toggle('scrolled', window.scrollY > 60);
+});
+
+// Hero animations
+setTimeout(() => {
+const badge = document.getElementById('heroBadge');
+badge.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+badge.style.opacity = '1'; badge.style.transform = 'translateY(0)';
+}, 200);
+setTimeout(() => {
+const el = document.getElementById('heroTitle');
+el.style.transition = 'opacity 1s ease, transform 1s ease';
+el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+}, 400);
+setTimeout(() => {
+const el = document.getElementById('heroSub');
+el.style.transition = 'opacity 1s ease, transform 1s ease';
+el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+}, 600);
+setTimeout(() => {
+const el = document.getElementById('heroActions');
+el.style.transition = 'opacity 1s ease, transform 1s ease';
+el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+}, 800);
+['stat1','stat2','stat3'].forEach((id, i) => {
+setTimeout(() => {
+const el = document.getElementById(id);
+el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+el.style.opacity = '1'; el.style.transform = 'translateY(0)';
+}, 1000 + i * 150);
+});
+setTimeout(() => {
+const el = document.getElementById('scrollHint');
+el.style.transition = 'opacity 1s ease';
+el.style.opacity = '1';
+}, 1400);
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+entries.forEach((entry, i) => {
+if (entry.isIntersecting) {
+setTimeout(() => entry.target.classList.add('visible'), i * 80);
+observer.unobserve(entry.target);
+}
+});
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+// Helpers
+function scrollToBooking() {
+document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleMenu() {
+const drawer = document.getElementById('mobileDrawer');
+const burger = document.getElementById('hamburger');
+const isOpen = drawer.classList.contains('open');
+if (isOpen) {
+closeMenu();
+} else {
+drawer.classList.add('open');
+burger.classList.add('open');
+document.body.style.overflow = 'hidden';
+}
+}
+
+function closeMenu() {
+const drawer = document.getElementById('mobileDrawer');
+const burger = document.getElementById('hamburger');
+drawer.classList.remove('open');
+burger.classList.remove('open');
+document.body.style.overflow = '';
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+if (e.key === 'Escape') closeMenu();
+});
+
+function handleSubmit(e) {
+e.preventDefault();
+const msg = document.getElementById('successMsg');
+msg.style.display = 'block';
+e.target.querySelectorAll('input, select, textarea').forEach(f => f.value = '');
+setTimeout(() => msg.style.display = 'none', 5000);
+}
+</script>
+
+</body>
+</html>

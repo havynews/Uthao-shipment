@@ -1,0 +1,474 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}User: {{ user.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .text-primary { color: #f59e0b; }
+    .bg-primary { background-color: #f59e0b; }
+    .bg-primary-light { background-color: rgba(245, 158, 11, 0.1); }
+    .border-primary { border-color: #f59e0b; }
+    .hover\:bg-primary:hover { background-color: #f59e0b; }
+    .hover\:text-primary:hover { color: #f59e0b; }
+    .ring-primary { --tw-ring-color: #f59e0b; }
+    .focus\:ring-primary:focus { --tw-ring-color: #f59e0b; }
+    
+    .dark .bg-primary-light { background-color: rgba(245, 158, 11, 0.2); }
+    .dark .text-primary { color: #fbbf24; }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="p-6 max-w-7xl mx-auto">
+    <!-- Breadcrumb -->
+    <div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <a href="{{ url_for('admin.users') }}" class="hover:text-primary transition">Users</a>
+        <i class="fas fa-chevron-right mx-2 text-xs"></i>
+        <span class="text-gray-900 dark:text-white">{{ user.full_name or user.email }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-white flex items-center justify-center text-2xl font-bold shadow-lg">
+                {{ user.full_name[:2].upper() if user.full_name else 'U' }}
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-black ">{{ user.full_name or 'Unnamed User' }}</h1>
+                <p class="text-gray-500 dark:text-gray-400">{{ user.email }}</p>
+                <div class="flex gap-2 mt-2">
+                    {% if user.is_admin %}
+                    <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium dark:bg-purple-900/30 dark:text-purple-300">
+                        <i class="fas fa-shield-alt mr-1"></i>Admin
+                    </span>
+                    {% endif %}
+                    {% if user.subscription %}
+                    <span class="px-2 py-1 bg-primary-light text-amber-700 text-xs rounded-full font-medium dark:text-amber-300">
+                        {{ plans[user.subscription.plan_id].name if user.subscription.plan_id in plans else user.subscription.plan_id }}
+                    </span>
+                    {% else %}
+                    <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-medium dark:bg-gray-700 dark:text-gray-300">
+                        Free Plan
+                    </span>
+                    {% endif %}
+                    {% if not user.is_active|default(true) %}
+                    <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium dark:bg-red-900/30 dark:text-red-300">
+                        Inactive
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-3">
+            <form method="POST" action="{{ url_for('admin.impersonate_user', user_id=user.id) }}" class="inline">
+                <button type="submit" class="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition font-medium dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50">
+                    <i class="fas fa-user-secret mr-2"></i>Impersonate
+                </button>
+            </form>
+            <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-amber-600 transition font-medium shadow-md hover:shadow-lg">
+                <i class="fas fa-edit mr-2"></i>Edit User
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Info & Stats -->
+        <div class="space-y-6">
+            <!-- Quick Stats -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <h3 class="font-bold text-gray-900 mb-4 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-primary"></i>
+                    Statistics
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-4 bg-amber-50 rounded-lg dark:bg-amber-900/20">
+                        <div class="text-2xl font-bold text-primary">{{ stats.shipment_count }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Shipments</div>
+                    </div>
+                    <div class="text-center p-4 bg-green-50 rounded-lg dark:bg-green-900/20">
+                        <div class="text-2xl font-bold text-green-600 dark:text-green-400">${{ "%.0f"|format(stats.total_spent) }}</div>
+                        <div class="text-sm text-gray-500 dark:text-gray-400">Total Spent</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <h3 class="font-bold text-gray-900 mb-4 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-address-card text-primary"></i>
+                    Contact Information
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3 text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
+                            <i class="fas fa-envelope text-primary"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                            <p class="font-medium text-gray-900 dark:text-white truncate">{{ user.email }}</p>
+                        </div>
+                    </div>
+                    {% if user.phone %}
+                    <div class="flex items-center gap-3 text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
+                            <i class="fas fa-phone text-primary"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ user.phone }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if user.company %}
+                    <div class="flex items-center gap-3 text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
+                            <i class="fas fa-building text-primary"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Company</p>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ user.company }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="flex items-center gap-3 text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
+                            <i class="fas fa-calendar text-primary"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Joined</p>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ user.created_at.strftime('%B %d, %Y') }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <div class="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
+                            <i class="fas fa-globe text-primary"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Currency</p>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ user.currency }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Actions -->
+            {% if current_user.id != user.id %}
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <h3 class="font-bold text-gray-900 mb-4 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-cog text-primary"></i>
+                    Admin Actions
+                </h3>
+                <div class="space-y-3">
+                    <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=user.id) }}" class="w-full">
+                        <button type="submit" class="w-full px-4 py-2 {% if user.is_admin %}bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30{% else %}bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/30{% endif %} rounded-lg transition text-sm font-medium" onclick="return confirm('Are you sure you want to {% if user.is_admin %}revoke{% else %}grant{% endif %} admin access?')">
+                            {% if user.is_admin %}
+                            <i class="fas fa-user-shield mr-2"></i>Revoke Admin Access
+                            {% else %}
+                            <i class="fas fa-user-shield mr-2"></i>Grant Admin Access
+                            {% endif %}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="w-full">
+                        {% if user.is_active %}
+                            <!-- Deactivate Button -->
+                            <button 
+                                type="button"
+                                onclick="openStatusModal('deactivate')"
+                                class="w-full px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition text-sm font-medium dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30">
+                                <i class="fas fa-user-slash mr-2"></i>Deactivate Account
+                            </button>
+                        {% else %}
+                            <!-- Activate Button -->
+                            <button 
+                                type="button"
+                                onclick="openStatusModal('activate')"
+                                class="w-full px-4 py-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition text-sm font-medium dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30">
+                                <i class="fas fa-user-check mr-2"></i>Activate Account
+                            </button>
+                        {% endif %}
+                    </form>
+
+                    <!-- Delete Button (Triggers Modal) -->
+                    <button 
+                        type="button"
+                        onclick="openDeleteModal()"
+                        class="w-full px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition text-sm font-medium dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30">
+                        <i class="fas fa-user-slash mr-2"></i>Delete Account
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all scale-95 opacity-0" id="deleteModalContent">
+                
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-2xl"></i>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                        Deactivate User?
+                    </h3>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                        This user will lose access to their account.  
+                        Their data will be preserved for records.
+                    </p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button 
+                        type="button"
+                        onclick="closeDeleteModal()"
+                        class="flex-1 px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                        Cancel
+                    </button>
+
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="flex-1">
+                        <button 
+                            type="submit"
+                            class="w-full px-2 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-md">
+                            Yes, Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Deactivate Confirmation Modal -->
+        <!-- Status Toggle Modal -->
+        <div id="statusModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 transform transition-all scale-95 opacity-0" id="statusModalContent">
+                
+                <div class="text-center">
+                    <div id="statusIconWrapper" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4">
+                        <i id="statusIcon" class="text-2xl"></i>
+                    </div>
+
+                    <h3 id="statusTitle" class="text-lg font-bold text-gray-900 dark:text-white mb-2"></h3>
+
+                    <p id="statusMessage" class="text-sm text-gray-500 dark:text-gray-400 mb-6"></p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button 
+                        type="button"
+                        onclick="closeStatusModal()"
+                        class="flex-1 px-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                        Cancel
+                    </button>
+
+                    <form method="POST" action="{{ url_for('admin.toggle_user_status', user_id=user.id) }}" class="flex-1">
+                        <button 
+                            id="statusConfirmBtn"
+                            type="submit"
+                            class="w-full px-4 py-2 text-white rounded-lg transition shadow-md">
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Activity -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Recent Shipments -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="fas fa-box text-primary"></i>
+                        Recent Shipments
+                    </h3>
+                    <a href="{{ url_for('admin.shipments') }}?user={{ user.id }}" class="text-sm text-primary hover:text-amber-600 transition">View All →</a>
+                </div>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for shipment in recent_shipments %}
+                    <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <p class="font-mono font-medium text-gray-900 dark:text-white">{{ shipment.tracking_number }}</p>
+                                    <span class="px-2 py-0.5 text-xs rounded-full 
+                                        {% if shipment.status == 'Delivered' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
+                                        {% elif shipment.status == 'In Transit' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300
+                                        {% elif shipment.status == 'Cancelled' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+                                        {% else %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">
+                                        {{ shipment.status }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ shipment.origin }} → {{ shipment.destination }}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ shipment.created_at.strftime('%d %b %Y') }}</p>
+                            </div>
+                            <a href="{{ url_for('admin.shipment_detail', shipment_id=shipment.id) }}" class="text-primary hover:text-amber-600 transition">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-box-open text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
+                        <p>No shipments yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="fas fa-credit-card text-primary"></i>
+                        Payment History
+                    </h3>
+                </div>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for payment in payment_history %}
+                    <div class="px-6 py-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                        <div>
+                            <p class="font-medium text-gray-900 dark:text-white">{{ payment.requested_plan_name }}</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ payment.created_at.strftime('%d %b %Y') }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-gray-900 dark:text-white">${{ "%.2f"|format(payment.amount_usd) }}</p>
+                            <span class="text-xs px-2 py-1 rounded-full 
+                                {% if payment.status == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
+                                {% elif payment.status == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+                                {% else %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">
+                                {{ payment.status|title }}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-receipt text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
+                        <p>No payment history</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Support Tickets -->
+            {% if tickets %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <i class="fas fa-headset text-primary"></i>
+                        Recent Tickets
+                    </h3>
+                    <a href="{{ url_for('admin.tickets') }}?user={{ user.id }}" class="text-sm text-primary hover:text-amber-600 transition">View All →</a>
+                </div>
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for ticket in tickets %}
+                    <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <p class="font-medium text-gray-900 dark:text-white">{{ ticket.subject }}</p>
+                                    <span class="px-2 py-0.5 text-xs rounded-full 
+                                        {% if ticket.status == 'open' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+                                        {% elif ticket.status == 'in_progress' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300
+                                        {% else %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300{% endif %}">
+                                        {{ ticket.status|replace('_', ' ')|title }}
+                                    </span>
+                                    {% if ticket.priority == 'high' %}
+                                    <span class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                                        <i class="fas fa-exclamation mr-1"></i>High
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ ticket.created_at.strftime('%d %b %Y') }}</p>
+                            </div>
+                            <a href="{{ url_for('admin.ticket_detail', ticket_id=ticket.id) }}" class="text-primary hover:text-amber-600 transition ml-2">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function openDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        const content = document.getElementById('deleteModalContent');
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        const content = document.getElementById('deleteModalContent');
+
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 200);
+    }
+
+    function openStatusModal(action) {
+        const modal = document.getElementById('statusModal');
+        const content = document.getElementById('statusModalContent');
+
+        const iconWrapper = document.getElementById('statusIconWrapper');
+        const icon = document.getElementById('statusIcon');
+        const title = document.getElementById('statusTitle');
+        const message = document.getElementById('statusMessage');
+        const confirmBtn = document.getElementById('statusConfirmBtn');
+
+        if (action === 'deactivate') {
+            iconWrapper.className = "w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4";
+            icon.className = "fas fa-user-slash text-red-600 dark:text-red-400 text-2xl";
+            title.innerText = "Deactivate User Account?";
+            message.innerText = "The user will immediately lose access but their data will remain stored.";
+            confirmBtn.className = "w-full px-2 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition shadow-md";
+            confirmBtn.innerText = "Yes, Deactivate";
+        } else {
+            iconWrapper.className = "w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4";
+            icon.className = "fas fa-user-check text-green-600 dark:text-green-400 text-2xl";
+            title.innerText = "Activate User Account?";
+            message.innerText = "The user will regain full access to their account.";
+            confirmBtn.className = "w-full px-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition shadow-md";
+            confirmBtn.innerText = "Yes, Activate";
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeStatusModal() {
+        const modal = document.getElementById('statusModal');
+        const content = document.getElementById('statusModalContent');
+
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+
+        setTimeout(() => {
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }, 200);
+    }
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,571 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}All Payments{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --orange: #f97316; --orange-dk: #ea6200;
+    --orange-lt: #fff7ed; --orange-mid: #ffedd5;
+    --surface: #fff; --surface2: #f9fafb; --surface3: #f3f4f6;
+    --border: #e5e7eb; --border2: #d1d5db;
+    --text: #111827; --text2: #374151; --text3: #6b7280; --text4: #9ca3af;
+    --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --yellow: #f59e0b;
+    --r: 12px; --r-sm: 8px;
+  }
+
+  .ap-wrap { max-width: 1300px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* ── Stats strip ── */
+  .ap-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  @media(max-width:700px){ .ap-stats { grid-template-columns: repeat(2,1fr); } }
+  .ap-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .ap-stat.accent { background: var(--orange-lt); border-color: var(--orange-mid); }
+  .ap-stat-lbl { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .ap-stat-val { font-size: 24px; font-weight: 800; color: var(--text); }
+  .ap-stat.accent .ap-stat-val { color: var(--orange); }
+  .ap-stat-sub { font-size: 12px; color: var(--text4); margin-top: 2px; }
+
+  /* ── Tabs ── */
+  .ap-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+  .ap-tabs::-webkit-scrollbar { display: none; }
+  .ap-tab {
+    padding: 10px 20px; font-size: 14px; font-weight: 600; color: var(--text3);
+    border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer;
+    white-space: nowrap; text-decoration: none; transition: all .15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .ap-tab:hover { color: var(--orange); }
+  .ap-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+  .ap-tab .badge {
+    background: var(--orange); color: white;
+    font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700;
+  }
+
+  /* ── Filters bar ── */
+  .ap-filters {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px;
+  }
+  .ap-search {
+    flex: 1; min-width: 200px; position: relative;
+  }
+  .ap-search input {
+    width: 100%; padding: 9px 12px 9px 36px;
+    border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+    font-size: 14px; outline: none; transition: border-color .15s;
+  }
+  .ap-search input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(249,115,22,.1); }
+  .ap-search i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text4); font-size: 13px; }
+  .ap-filter-select {
+    padding: 9px 14px; border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+    font-size: 14px; color: var(--text); outline: none; background: var(--surface); cursor: pointer;
+    transition: border-color .15s;
+  }
+  .ap-filter-select:focus { border-color: var(--orange); }
+
+  /* ── Table ── */
+  .ap-table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .ap-table { width: 100%; border-collapse: collapse; }
+  .ap-table thead th {
+    background: var(--surface2); padding: 12px 16px;
+    text-align: left; font-size: 11px; font-weight: 700;
+    color: var(--text3); text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .ap-table tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  .ap-table tbody tr:last-child { border-bottom: none; }
+  .ap-table tbody tr:hover { background: var(--surface2); }
+  .ap-table td { padding: 14px 16px; font-size: 14px; color: var(--text2); vertical-align: middle; }
+
+  /* ── Type badge ── */
+  .type-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+  }
+  .type-plan     { background: #ede9fe; color: #7c3aed; }
+  .type-shipment { background: #dbeafe; color: #1d4ed8; }
+
+  /* ── Status badge ── */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .status-badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .s-pending   { background: #fef3c7; color: #b45309; }
+  .s-pending_verification { background: #fef9c3; color: #a16207; }
+  .s-approved, .s-paid { background: #dcfce7; color: #15803d; }
+  .s-rejected, .s-failed { background: #fee2e2; color: #b91c1c; }
+  .s-cancelled { background: var(--surface3); color: var(--text3); }
+
+  /* ── Method chip ── */
+  .method-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 12px; font-weight: 500; background: var(--surface3); color: var(--text2);
+  }
+  .method-chip i { font-size: 14px; }
+  .method-chip.crypto i { color: #f59e0b; }
+  .method-chip.bank i { color: #3b82f6; }
+  .method-chip.paypal i { color: #2563eb; }
+
+  /* ── User cell ── */
+  .user-cell { display: flex; align-items: center; gap: 10px; }
+  .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #f97316, #8b5cf6);
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .user-name { font-weight: 600; color: var(--text); font-size: 13px; line-height: 1.2; }
+  .user-email { font-size: 11px; color: var(--text3); }
+
+  /* ── Amount ── */
+  .amount-main { font-size: 15px; font-weight: 800; color: var(--text); }
+  .amount-sub  { font-size: 11px; color: var(--text4); }
+
+  /* ── Actions ── */
+  .row-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+  .btn-xs {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .15s; white-space: nowrap; text-decoration: none;
+  }
+  .btn-view    { background: var(--orange-lt); color: var(--orange); }
+  .btn-view:hover { background: var(--orange); color: white; }
+  .btn-approve { background: #dcfce7; color: #15803d; }
+  .btn-approve:hover { background: #16a34a; color: white; }
+  .btn-reject  { background: #fee2e2; color: #b91c1c; }
+  .btn-reject:hover { background: #dc2626; color: white; }
+
+  /* ── Mobile cards ── */
+  @media(max-width:900px) {
+    .desktop-table { display: none; }
+    .mobile-cards { display: block; }
+  }
+  @media(min-width:901px) {
+    .desktop-table { display: block; }
+    .mobile-cards { display: none; }
+  }
+
+  .m-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 16px; margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .m-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
+  .m-card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .m-card-user { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface2); border-radius: var(--r-sm); margin-bottom: 12px; }
+  .m-card-actions { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .m-card-actions a, .m-card-actions button { flex: 1; justify-content: center; }
+
+  /* ── Empty state ── */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text4); }
+  .empty-state i { font-size: 48px; margin-bottom: 12px; display: block; }
+  .empty-state p { font-size: 15px; color: var(--text3); }
+
+  /* ── Pagination ── */
+  .ap-pagination { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-top: 1px solid var(--border); }
+  .pg-info { font-size: 13px; color: var(--text3); }
+  .pg-btns { display: flex; gap: 6px; }
+  .pg-btn {
+    padding: 7px 14px; border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+    font-size: 13px; font-weight: 500; color: var(--text2); background: var(--surface);
+    cursor: pointer; text-decoration: none; transition: all .15s;
+  }
+  .pg-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .pg-btn.active { background: var(--orange); border-color: var(--orange); color: white; }
+  .pg-btn.disabled { opacity: .4; pointer-events: none; }
+
+  /* ── Quick action modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: white; border-radius: var(--r); width: 100%; max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    transform: scale(.95); transition: transform .2s;
+  }
+  .modal-overlay.open .modal-box { transform: scale(1); }
+  .modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .modal-head h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+  .modal-body { padding: 20px; }
+  .modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .sf-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .sf-field label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+  .sf-field textarea, .sf-field input {
+    padding: 9px 12px; border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+    font-size: 14px; color: var(--text); outline: none; font-family: inherit;
+    transition: border-color .15s;
+  }
+  .sf-field textarea:focus, .sf-field input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(249,115,22,.1); }
+  .sf-field textarea { resize: vertical; min-height: 80px; }
+  .btn-primary { background: var(--orange); color: white; border: none; padding: 10px 20px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-primary:hover { background: var(--orange-dk); }
+  .btn-secondary { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); padding: 10px 20px; border-radius: var(--r-sm); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-secondary:hover { border-color: var(--orange); color: var(--orange); }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="ap-wrap">
+
+  <!-- Header -->
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+    <div>
+      <h1 style="font-size:24px; font-weight:800; color:var(--text); margin:0 0 4px;">All Payments</h1>
+      <p style="font-size:14px; color:var(--text3); margin:0;">Plan upgrades and shipment payments in one place</p>
+    </div>
+    <a href="{{ url_for('admin.payment_methods') }}" style="display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:var(--orange); color:white; border-radius:var(--r-sm); font-size:14px; font-weight:600; text-decoration:none;">
+      <i class="fas fa-credit-card"></i> Manage Payment Methods
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="ap-stats">
+    <div class="ap-stat accent">
+      <div class="ap-stat-lbl">Total Revenue</div>
+      <div class="ap-stat-val">${{ '%.0f'|format(stats.total_revenue) }}</div>
+      <div class="ap-stat-sub">Approved payments</div>
+    </div>
+    <div class="ap-stat">
+      <div class="ap-stat-lbl">Pending Review</div>
+      <div class="ap-stat-val" style="color:#b45309;">{{ stats.pending_count }}</div>
+      <div class="ap-stat-sub">Needs action</div>
+    </div>
+    <div class="ap-stat">
+      <div class="ap-stat-lbl">Plan Upgrades</div>
+      <div class="ap-stat-val">{{ stats.plan_count }}</div>
+      <div class="ap-stat-sub">Total requests</div>
+    </div>
+    <div class="ap-stat">
+      <div class="ap-stat-lbl">Shipment Payments</div>
+      <div class="ap-stat-val">{{ stats.shipment_count }}</div>
+      <div class="ap-stat-sub">Total records</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="ap-tabs">
+    <a href="{{ url_for('admin.all_payments', type='all', status=status_filter) }}"
+       class="ap-tab {% if type_filter == 'all' %}active{% endif %}">
+      <i class="fas fa-list"></i> All
+    </a>
+    <a href="{{ url_for('admin.all_payments', type='plan', status=status_filter) }}"
+       class="ap-tab {% if type_filter == 'plan' %}active{% endif %}">
+      <i class="fas fa-crown"></i> Plan Upgrades
+      {% if stats.pending_plan > 0 %}<span class="badge">{{ stats.pending_plan }}</span>{% endif %}
+    </a>
+    <a href="{{ url_for('admin.all_payments', type='shipment', status=status_filter) }}"
+       class="ap-tab {% if type_filter == 'shipment' %}active{% endif %}">
+      <i class="fas fa-box"></i> Shipment Payments
+      {% if stats.pending_shipment > 0 %}<span class="badge">{{ stats.pending_shipment }}</span>{% endif %}
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" action="{{ url_for('admin.all_payments') }}" class="ap-filters">
+    <input type="hidden" name="type" value="{{ type_filter }}">
+    <div class="ap-search">
+      <i class="fas fa-search"></i>
+      <input type="text" name="q" value="{{ search }}" placeholder="Search by user, email, tracking…">
+    </div>
+    <select name="status" class="ap-filter-select" onchange="this.form.submit()">
+      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+      <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+      <option value="pending_verification" {% if status_filter == 'pending_verification' %}selected{% endif %}>Pending Verification</option>
+      <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+      <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+      <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+      <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+    </select>
+    <button type="submit" class="btn-primary" style="padding:9px 18px; border-radius:var(--r-sm);">
+      <i class="fas fa-search"></i> Search
+    </button>
+  </form>
+
+  <!-- Desktop Table -->
+  <div class="desktop-table ap-table-wrap">
+    <table class="ap-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>User</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in payments %}
+        <tr>
+          <td>
+            {% if item.type == 'plan' %}
+            <span class="type-badge type-plan"><i class="fas fa-crown"></i> Plan</span>
+            {% else %}
+            <span class="type-badge type-shipment"><i class="fas fa-box"></i> Shipment</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar">{{ (item.user.full_name or item.user.email or 'U')[:2].upper() }}</div>
+              <div>
+                <div class="user-name">{{ item.user.full_name or 'Unknown' }}</div>
+                <div class="user-email">{{ item.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if item.type == 'plan' %}
+            <div style="font-weight:600; color:var(--text);">{{ item.obj.requested_plan_name }} Plan</div>
+            <div style="font-size:11px; color:var(--text3);">Request #{{ item.obj.id }}</div>
+            {% else %}
+            <div style="font-weight:600; color:var(--text);">{{ item.obj.shipment.tracking_number }}</div>
+            <div style="font-size:11px; color:var(--text3);">{{ item.obj.shipment.origin }} → {{ item.obj.shipment.destination }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <div class="amount-main">${{ '%.2f'|format(item.amount) }}</div>
+            <div class="amount-sub">USD</div>
+          </td>
+          <td>
+            {% if item.method %}
+            <span class="method-chip {% if item.method.method_type == 'crypto' %}crypto{% elif item.method.method_type == 'bank_transfer' %}bank{% elif item.method.method_type == 'paypal' %}paypal{% endif %}">
+              {% if item.method.method_type == 'crypto' %}<i class="fab fa-bitcoin"></i>
+              {% elif item.method.method_type == 'bank_transfer' %}<i class="fas fa-university"></i>
+              {% elif item.method.method_type == 'paypal' %}<i class="fab fa-paypal"></i>
+              {% else %}<i class="fas fa-money-bill"></i>{% endif %}
+              {{ item.method.display_name or item.method.name }}
+            </span>
+            {% else %}
+            <span style="color:var(--text4); font-size:12px;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="status-badge s-{{ item.status }}">{{ item.status|replace('_',' ')|title }}</span>
+          </td>
+          <td style="color:var(--text3); font-size:13px;">{{ item.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <div class="row-actions">
+              {% if item.type == 'plan' %}
+              <a href="{{ url_for('admin.payment_detail', payment_id=item.obj.id) }}" class="btn-xs btn-view"><i class="fas fa-eye"></i> View</a>
+              {% if item.status == 'pending' %}
+              <button class="btn-xs btn-approve" onclick="openApproveModal('plan', {{ item.obj.id }})"><i class="fas fa-check"></i> Approve</button>
+              <button class="btn-xs btn-reject"  onclick="openRejectModal('plan', {{ item.obj.id }})"><i class="fas fa-times"></i> Reject</button>
+              {% endif %}
+              {% else %}
+              <a href="{{ url_for('admin.shipment_payment_detail', payment_id=item.obj.id) }}" class="btn-xs btn-view"><i class="fas fa-eye"></i> View</a>
+              {% if item.status in ['pending', 'pending_verification'] %}
+              <button class="btn-xs btn-approve" onclick="openApproveModal('shipment', {{ item.obj.id }})"><i class="fas fa-check"></i> Verify</button>
+              <button class="btn-xs btn-reject"  onclick="openRejectModal('shipment', {{ item.obj.id }})"><i class="fas fa-times"></i> Reject</button>
+              {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8"><div class="empty-state"><i class="fas fa-receipt"></i><p>No payments found matching your filters.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if total_pages > 1 %}
+    <div class="ap-pagination">
+      <span class="pg-info">Page {{ current_page }} of {{ total_pages }}</span>
+      <div class="pg-btns">
+        <a href="{{ url_for('admin.all_payments', type=type_filter, status=status_filter, q=search, page=current_page-1) }}"
+           class="pg-btn {% if current_page == 1 %}disabled{% endif %}">
+          <i class="fas fa-chevron-left"></i> Prev
+        </a>
+        <a href="{{ url_for('admin.all_payments', type=type_filter, status=status_filter, q=search, page=current_page+1) }}"
+           class="pg-btn {% if current_page == total_pages %}disabled{% endif %}">
+          Next <i class="fas fa-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="mobile-cards">
+    {% for item in payments %}
+    <div class="m-card">
+      <div class="m-card-top">
+        <div>
+          {% if item.type == 'plan' %}
+          <span class="type-badge type-plan" style="margin-bottom:6px; display:inline-flex;"><i class="fas fa-crown"></i> Plan Upgrade</span>
+          <div style="font-weight:700; color:var(--text); font-size:15px; margin-top:4px;">{{ item.obj.requested_plan_name }}</div>
+          <div style="font-size:12px; color:var(--text3);">Request #{{ item.obj.id }}</div>
+          {% else %}
+          <span class="type-badge type-shipment" style="margin-bottom:6px; display:inline-flex;"><i class="fas fa-box"></i> Shipment</span>
+          <div style="font-weight:700; color:var(--text); font-size:15px; margin-top:4px; font-family:monospace;">{{ item.obj.shipment.tracking_number }}</div>
+          <div style="font-size:12px; color:var(--text3);">{{ item.obj.shipment.origin|truncate(20) }} → {{ item.obj.shipment.destination|truncate(20) }}</div>
+          {% endif %}
+        </div>
+        <div style="text-align:right;">
+          <div class="amount-main">${{ '%.2f'|format(item.amount) }}</div>
+          <div style="margin-top:6px;"><span class="status-badge s-{{ item.status }}">{{ item.status|replace('_',' ')|title }}</span></div>
+        </div>
+      </div>
+
+      <div class="m-card-user">
+        <div class="user-avatar" style="width:32px;height:32px;font-size:11px;">{{ (item.user.full_name or item.user.email or 'U')[:2].upper() }}</div>
+        <div>
+          <div class="user-name">{{ item.user.full_name or 'Unknown' }}</div>
+          <div class="user-email">{{ item.user.email }}</div>
+        </div>
+      </div>
+
+      <div class="m-card-meta">
+        {% if item.method %}
+        <span class="method-chip">
+          {% if item.method.method_type == 'crypto' %}<i class="fab fa-bitcoin" style="color:#f59e0b;"></i>
+          {% elif item.method.method_type == 'bank_transfer' %}<i class="fas fa-university" style="color:#3b82f6;"></i>
+          {% elif item.method.method_type == 'paypal' %}<i class="fab fa-paypal" style="color:#2563eb;"></i>
+          {% else %}<i class="fas fa-money-bill"></i>{% endif %}
+          {{ item.method.display_name or item.method.name }}
+        </span>
+        {% endif %}
+        <span style="font-size:12px; color:var(--text3); display:flex; align-items:center; gap:4px;">
+          <i class="far fa-calendar"></i> {{ item.created_at.strftime('%d %b %Y') }}
+        </span>
+      </div>
+
+      <div class="m-card-actions">
+        {% if item.type == 'plan' %}
+        <a href="{{ url_for('admin.payment_detail', payment_id=item.obj.id) }}" class="btn-xs btn-view" style="display:flex; align-items:center; justify-content:center; gap:5px;"><i class="fas fa-eye"></i> View</a>
+        {% if item.status == 'pending' %}
+        <button class="btn-xs btn-approve" style="flex:1;" onclick="openApproveModal('plan', {{ item.obj.id }})"><i class="fas fa-check"></i> Approve</button>
+        <button class="btn-xs btn-reject"  style="flex:1;" onclick="openRejectModal('plan', {{ item.obj.id }})"><i class="fas fa-times"></i> Reject</button>
+        {% endif %}
+        {% else %}
+        <a href="{{ url_for('admin.shipment_payment_detail', payment_id=item.obj.id) }}" class="btn-xs btn-view" style="display:flex; align-items:center; justify-content:center; gap:5px;"><i class="fas fa-eye"></i> View</a>
+        {% if item.status in ['pending', 'pending_verification'] %}
+        <button class="btn-xs btn-approve" style="flex:1;" onclick="openApproveModal('shipment', {{ item.obj.id }})"><i class="fas fa-check"></i> Verify</button>
+        <button class="btn-xs btn-reject"  style="flex:1;" onclick="openRejectModal('shipment', {{ item.obj.id }})"><i class="fas fa-times"></i> Reject</button>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-receipt"></i><p>No payments found.</p></div>
+    {% endfor %}
+
+    {% if total_pages > 1 %}
+    <div style="display:flex; justify-content:center; gap:8px; margin-top:16px;">
+      <a href="{{ url_for('admin.all_payments', type=type_filter, status=status_filter, q=search, page=current_page-1) }}"
+         class="pg-btn {% if current_page == 1 %}disabled{% endif %}"><i class="fas fa-chevron-left"></i></a>
+      <span class="pg-btn active">{{ current_page }} / {{ total_pages }}</span>
+      <a href="{{ url_for('admin.all_payments', type=type_filter, status=status_filter, q=search, page=current_page+1) }}"
+         class="pg-btn {% if current_page == total_pages %}disabled{% endif %}"><i class="fas fa-chevron-right"></i></a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Approve Modal -->
+<div class="modal-overlay" id="approveModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><i class="fas fa-check-circle" style="color:#16a34a;margin-right:8px;"></i>Approve Payment</h3>
+      <button onclick="closeModal('approveModal')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);">&times;</button>
+    </div>
+    <form id="approveForm" method="POST">
+      <div class="modal-body">
+        <div class="sf-field">
+          <label>Admin Notes (optional)</label>
+          <textarea name="notes" placeholder="Add any notes about this approval…"></textarea>
+        </div>
+        <div style="padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--r-sm);font-size:13px;color:#15803d;">
+          <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+          This will approve the payment and activate the associated plan/shipment.
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
+        <button type="submit" class="btn-primary"><i class="fas fa-check"></i> Confirm Approval</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><i class="fas fa-times-circle" style="color:#dc2626;margin-right:8px;"></i>Reject Payment</h3>
+      <button onclick="closeModal('rejectModal')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);">&times;</button>
+    </div>
+    <form id="rejectForm" method="POST">
+      <div class="modal-body">
+        <div class="sf-field">
+          <label>Reason for Rejection <span style="color:var(--red)">*</span></label>
+          <textarea name="notes" required placeholder="Explain why this payment is being rejected…"></textarea>
+        </div>
+        <div style="padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-sm);font-size:13px;color:#b91c1c;">
+          <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
+          The user will be notified of the rejection with your reason.
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
+        <button type="submit" style="background:#dc2626;color:white;border:none;padding:10px 20px;border-radius:var(--r-sm);font-size:14px;font-weight:600;cursor:pointer;">
+          <i class="fas fa-times"></i> Reject Payment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openApproveModal(type, id) {
+    const url = type === 'plan'
+      ? `/admin/payments/${id}/approve`
+      : `/admin/shipment-payments/${id}/verify`;
+    document.getElementById('approveForm').action = url;
+    if (type === 'shipment') {
+      // add hidden action field for shipment verify
+      let inp = document.getElementById('approveForm').querySelector('input[name="action"]');
+      if (!inp) { inp = document.createElement('input'); inp.type='hidden'; inp.name='action'; document.getElementById('approveForm').appendChild(inp); }
+      inp.value = 'approve';
+    }
+    document.getElementById('approveModal').classList.add('open');
+  }
+
+  function openRejectModal(type, id) {
+    const url = type === 'plan'
+      ? `/admin/payments/${id}/reject`
+      : `/admin/shipment-payments/${id}/verify`;
+    document.getElementById('rejectForm').action = url;
+    if (type === 'shipment') {
+      let inp = document.getElementById('rejectForm').querySelector('input[name="action"]');
+      if (!inp) { inp = document.createElement('input'); inp.type='hidden'; inp.name='action'; document.getElementById('rejectForm').appendChild(inp); }
+      inp.value = 'reject';
+    }
+    document.getElementById('rejectModal').classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // Close on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+  });
+</script>
+{% endblock %}

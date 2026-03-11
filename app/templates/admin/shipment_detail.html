@@ -1,0 +1,765 @@
+<!-- shipment_detail --> 
+{% extends "admin/base_admin.html" %}
+{% macro status_class(s) %}{% if 'Created' in s or 'Booking' in s %}sp-booking{% elif 'Transit' in s or 'Picked' in s %}sp-transit{% elif 'Customs' in s or 'Hold' in s or 'Attempted' in s %}sp-customs{% elif 'Delivery' in s and 'Attempted' not in s %}sp-delivery{% elif s == 'Delivered' %}sp-delivered{% elif s == 'Cancelled' %}sp-cancelled{% else %}sp-default{% endif %}{% endmacro %}
+{% block title %}Shipment {{ shipment.tracking_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --orange:      #f97316;
+    --orange-dk:   #ea6200;
+    --orange-lt:   #fff7ed;
+    --orange-mid:  #ffedd5;
+    --surface:     #ffffff;
+    --surface2:    #f9fafb;
+    --surface3:    #f3f4f6;
+    --border:      #e5e7eb;
+    --border2:     #d1d5db;
+    --text:        #111827;
+    --text2:       #374151;
+    --text3:       #6b7280;
+    --text4:       #9ca3af;
+    --red:         #ef4444;
+    --green:       #22c55e;
+    --blue:        #3b82f6;
+    --yellow:      #f59e0b;
+    --purple:      #8b5cf6;
+    --r:           12px;
+    --r-sm:        8px;
+    --sh:          0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+    --sh-md:       0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  .sd-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  /* ── Breadcrumb ── */
+  .sd-bc {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text3); margin-bottom: 20px;
+  }
+  .sd-bc a { color: var(--text3); text-decoration: none; }
+  .sd-bc a:hover { color: var(--orange); }
+  .sd-bc .sep { font-size: 10px; color: var(--text4); }
+
+  /* ── Page header ── */
+  .sd-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .sd-header-left h1 {
+    font-size: 22px; font-weight: 800; color: var(--text);
+    margin: 0 0 6px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    letter-spacing: -.3px;
+  }
+  .sd-header-left p { font-size: 13px; color: var(--text3); margin: 0; }
+  .sd-header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── Status badge ── */
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  }
+  .status-pill::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .sp-booking   { background:#eff6ff; color:#2563eb; }
+  .sp-transit   { background:#fff7ed; color:#ea6200; }
+  .sp-customs   { background:#fef3c7; color:#d97706; }
+  .sp-delivery  { background:#f0fdf4; color:#16a34a; }
+  .sp-delivered { background:#dcfce7; color:#15803d; }
+  .sp-cancelled { background:#fee2e2; color:#dc2626; }
+  .sp-default   { background:var(--surface3); color:var(--text3); }
+
+  /* ── Layout grid ── */
+  .sd-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .sd-grid { grid-template-columns: 1fr; } }
+
+  /* ── Card ── */
+  .sd-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: var(--sh);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .sd-card:last-child { margin-bottom: 0; }
+  .sd-card-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--surface2);
+  }
+  .sd-card-head h3 {
+    margin: 0; font-size: 14px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sd-card-head h3 i { color: var(--orange); font-size: 13px; }
+  .sd-card-body { padding: 20px; }
+
+  /* ── Info grid ── */
+  .info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+  @media(max-width:500px){ .info-grid{grid-template-columns:1fr;} }
+  .info-item {}
+  .info-item .lbl { font-size: 11px; font-weight: 600; color: var(--text4); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+  .info-item .val { font-size: 14px; color: var(--text); font-weight: 500; }
+  .info-item .val.mono { font-family: 'Courier New', monospace; font-size: 13px; background: var(--surface3); padding: 2px 8px; border-radius: 4px; display: inline-block; }
+
+  /* ── Route banner ── */
+  .route-banner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--orange-lt) 0%, #fff 100%);
+    border-bottom: 1px solid var(--orange-mid);
+  }
+  .route-city { flex: 1; }
+  .route-city .city-name { font-size: 16px; font-weight: 800; color: var(--text); }
+  .route-city .city-sub  { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .route-arrow {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;
+  }
+  .route-arrow i { font-size: 18px; color: var(--orange); }
+  .route-arrow .svc {
+    font-size: 10px; font-weight: 700; color: var(--orange);
+    background: var(--orange-mid); padding: 2px 8px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+
+  /* ── Timeline ── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute;
+    left: 10px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--border); border-radius: 2px;
+  }
+  .tl-item { position: relative; margin-bottom: 20px; }
+  .tl-item:last-child { margin-bottom: 0; }
+  .tl-dot {
+    position: absolute; left: -23px; top: 3px;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 2px var(--border);
+    background: var(--text4);
+    transition: transform .2s;
+  }
+  .tl-item.latest .tl-dot {
+    background: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-mid);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 3px var(--orange-mid); }
+    50% { box-shadow: 0 0 0 6px rgba(249,115,22,.15); }
+  }
+  .tl-item.delivered .tl-dot { background: var(--green); box-shadow: 0 0 0 3px #dcfce7; }
+  .tl-status { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+  .tl-desc   { font-size: 13px; color: var(--text3); margin-bottom: 3px; line-height: 1.4; }
+  .tl-meta   { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tl-loc    { font-size: 12px; color: var(--text4); display: flex; align-items: center; gap: 4px; }
+  .tl-time   { font-size: 12px; color: var(--text4); }
+
+  /* ── Packages ── */
+  .pkg-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm); padding: 14px;
+    margin-bottom: 10px; background: var(--surface2);
+  }
+  .pkg-card:last-child { margin-bottom: 0; }
+  .pkg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .pkg-title { font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .pkg-tags  { display: flex; gap: 6px; }
+  .pkg-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px;
+  }
+  .pkg-tag.fragile  { background: #fee2e2; color: var(--red); }
+  .pkg-tag.stackable{ background: #dcfce7; color: #16a34a; }
+  .pkg-specs { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+  @media(max-width:400px){ .pkg-specs{grid-template-columns:repeat(2,1fr);} }
+  .pkg-spec .lbl { font-size: 10px; color: var(--text4); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .pkg-spec .val { font-size: 13px; color: var(--text); font-weight: 600; }
+
+  /* ── Update status form ── */
+  .status-form { display: flex; flex-direction: column; gap: 14px; }
+  .sf-field { display: flex; flex-direction: column; gap: 5px; }
+  .sf-field label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+  .sf-field input,
+  .sf-field select,
+  .sf-field textarea {
+    width: 100%; padding: 9px 12px;
+    border: 1.5px solid var(--border2);
+    border-radius: var(--r-sm);
+    font-size: 14px; color: var(--text); background: var(--surface);
+    outline: none; transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  .sf-field input:focus,
+  .sf-field select:focus,
+  .sf-field textarea:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+  }
+  .sf-field textarea { resize: vertical; min-height: 80px; }
+
+  /* Status options with colours */
+  .status-select option[value="Booking Created"]     { color: #2563eb; }
+  .status-select option[value="Picked Up"]           { color: #7c3aed; }
+  .status-select option[value="In Transit"]          { color: #ea6200; }
+  .status-select option[value="Arrived at Hub"]      { color: #d97706; }
+  .status-select option[value="Customs Clearance"]   { color: #b45309; }
+  .status-select option[value="Out for Delivery"]    { color: #16a34a; }
+  .status-select option[value="Delivered"]           { color: #15803d; }
+  .status-select option[value="Delivery Attempted"]  { color: #dc2626; }
+  .status-select option[value="On Hold"]             { color: #6b7280; }
+  .status-select option[value="Cancelled"]           { color: #dc2626; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--r-sm);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    border: none; transition: all .15s; font-family: inherit; white-space: nowrap;
+  }
+  .btn-primary { background: var(--orange); color: #fff; box-shadow: 0 2px 6px rgba(249,115,22,.35); }
+  .btn-primary:hover { background: var(--orange-dk); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(249,115,22,.4); }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1.5px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--orange); color: var(--orange); }
+  .btn-danger { background: #fee2e2; color: var(--red); border: 1.5px solid #fecaca; }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  /* ── Stats strip ── */
+  .sd-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+  @media(max-width:600px){ .sd-stats{grid-template-columns:repeat(2,1fr);} }
+  .sd-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 14px 16px; box-shadow: var(--sh);
+  }
+  .sd-stat.accent { background: var(--orange-lt); border-color: var(--orange-mid); }
+  .sd-stat-lbl { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .sd-stat-val { font-size: 20px; font-weight: 800; color: var(--text); }
+  .sd-stat.accent .sd-stat-val { color: var(--orange); }
+  .sd-stat-sub { font-size: 11px; color: var(--text4); margin-top: 2px; }
+
+  /* ── Customer card ── */
+  .cust-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dk) 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; flex-shrink: 0;
+    box-shadow: 0 0 0 3px var(--orange-mid); overflow: hidden;
+  }
+  .cust-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .cust-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .cust-name { font-size: 15px; font-weight: 700; color: var(--text); margin: 0 0 2px; }
+  .cust-email { font-size: 12px; color: var(--text3); }
+
+  /* ── Toast ── */
+  .sd-toasts { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .sd-toast {
+    background: var(--text); color: #fff; padding: 11px 16px; border-radius: var(--r-sm);
+    font-size: 13px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    display: flex; align-items: center; gap: 8px; pointer-events: all; max-width: 300px;
+    animation: tIn .25s ease;
+  }
+  .sd-toast.success { background: #16a34a; }
+  .sd-toast.error   { background: var(--red); }
+  @keyframes tIn { from{opacity:0;transform:translateX(16px);} to{opacity:1;transform:translateX(0);} }
+
+  /* ── Divider ── */
+  .sd-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  /* ── Danger zone ── */
+  .danger-zone {
+    border: 1.5px solid #fecaca; border-radius: var(--r);
+    background: #fff5f5; padding: 16px;
+  }
+  .danger-zone h4 { font-size: 13px; font-weight: 700; color: var(--red); margin: 0 0 4px; }
+  .danger-zone p  { font-size: 12px; color: #9ca3af; margin: 0 0 12px; }
+
+  /* ── Cost highlight ── */
+  .cost-highlight {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-radius: var(--r-sm);
+    background: var(--orange-lt); border: 1px solid var(--orange-mid);
+    margin-top: 12px;
+  }
+  .cost-highlight .cost-lbl { font-size: 12px; font-weight: 600; color: var(--text3); }
+  .cost-highlight .cost-val { font-size: 20px; font-weight: 800; color: var(--orange); }
+
+  /* ── Receiver card ── */
+  .receiver-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .receiver-row:last-child { border-bottom: none; }
+  .receiver-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); flex-shrink: 0; }
+  .receiver-info .rname { font-size: 14px; font-weight: 600; color: var(--text); }
+  .receiver-info .rsub  { font-size: 12px; color: var(--text3); }
+
+  /* quick edit inline */
+  .quick-edit-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; color: var(--orange); font-weight: 600;
+    padding: 2px 6px; border-radius: 4px; transition: background .15s;
+  }
+  .quick-edit-btn:hover { background: var(--orange-lt); }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="sd-wrap">
+  <div class="sd-toasts" id="toastContainer"></div>
+
+  <!-- Breadcrumb -->
+  <div class="sd-bc">
+    <a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i></a>
+    <span class="sep"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin.shipments') }}">Shipments</a>
+    <span class="sep"><i class="fas fa-chevron-right"></i></span>
+    <span>{{ shipment.tracking_number }}</span>
+  </div>
+
+  <!-- Header -->
+  <div class="sd-header">
+    <div class="sd-header-left">
+      <h1>
+        <span style="font-family:'Courier New',monospace;font-size:18px;background:var(--surface3);padding:3px 10px;border-radius:6px;">{{ shipment.tracking_number }}</span>
+        <span class="status-pill {{ status_class(shipment.status) }}">{{ shipment.status }}</span>
+      </h1>
+      <p>
+        Created {{ shipment.created_at.strftime('%d %b %Y, %H:%M') }} UTC
+        &nbsp;·&nbsp;
+        {{ shipment.service_level or 'Standard' }} Service
+        {% if shipment.estimated_delivery %}
+          &nbsp;·&nbsp; ETA {{ shipment.estimated_delivery.strftime('%d %b %Y') }}
+        {% endif %}
+      </p>
+    </div>
+    <div class="sd-header-actions">
+      <a href="{{ url_for('admin.shipments') }}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <button class="btn btn-ghost btn-sm" onclick="window.print()">
+        <i class="fas fa-print"></i> Print
+      </button>
+      <a href="{{ url_for('admin.user_detail', user_id=shipment.user_id) }}" class="btn btn-ghost btn-sm">
+        <i class="fas fa-user"></i> View Customer
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="sd-stats">
+    <div class="sd-stat accent">
+      <div class="sd-stat-lbl">Shipment Cost</div>
+      <div class="sd-stat-val">${{ '%.2f'|format(shipment.cost or 0) }}</div>
+      <div class="sd-stat-sub">{{ shipment.service_level or 'Standard' }}</div>
+    </div>
+    <div class="sd-stat">
+      <div class="sd-stat-lbl">Total Weight</div>
+      <div class="sd-stat-val">{{ shipment.weight or 0 }} <span style="font-size:13px;font-weight:500;color:var(--text3);">kg</span></div>
+      <div class="sd-stat-sub">{{ shipment.packages|length }} package{{ 's' if shipment.packages|length != 1 }}</div>
+    </div>
+    <div class="sd-stat">
+      <div class="sd-stat-lbl">Events Logged</div>
+      <div class="sd-stat-val">{{ shipment.events|length }}</div>
+      <div class="sd-stat-sub">Tracking updates</div>
+    </div>
+    <div class="sd-stat">
+      <div class="sd-stat-lbl">Est. Delivery</div>
+      <div class="sd-stat-val" style="font-size:15px;">
+        {{ shipment.estimated_delivery.strftime('%d %b') if shipment.estimated_delivery else '—' }}
+      </div>
+      <div class="sd-stat-sub">{{ shipment.estimated_delivery.strftime('%Y') if shipment.estimated_delivery else 'Not set' }}</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="sd-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- Route card -->
+      <div class="sd-card">
+        <div class="route-banner">
+          <div class="route-city">
+            <div class="city-name">{{ shipment.origin.split(',')[0] if ',' in shipment.origin else shipment.origin }}</div>
+            <div class="city-sub"><i class="fas fa-map-marker-alt" style="color:var(--orange);margin-right:4px;"></i>{{ shipment.origin }}</div>
+          </div>
+          <div class="route-arrow">
+            <i class="fas fa-long-arrow-alt-right"></i>
+            <span class="svc">{{ shipment.service_level or 'STD' }}</span>
+          </div>
+          <div class="route-city" style="text-align:right;">
+            <div class="city-name">{{ shipment.destination.split(',')[0] if ',' in shipment.destination else shipment.destination }}</div>
+            <div class="city-sub">{{ shipment.destination }}&nbsp;<i class="fas fa-map-marker-alt" style="color:var(--green);margin-left:4px;"></i></div>
+          </div>
+        </div>
+        <div class="sd-card-body">
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="lbl">Sender</div>
+              <div class="val">{{ shipment.sender_name or '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Sender Phone</div>
+              <div class="val">{{ shipment.sender_phone or '—' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Commodity</div>
+              <div class="val">{{ shipment.commodity or 'General Cargo' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Dimensions</div>
+              <div class="val">{{ shipment.dimensions or '—' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Receiver -->
+      <div class="sd-card">
+        <div class="sd-card-head"><h3><i class="fas fa-user-check"></i> Receiver Details</h3></div>
+        <div class="sd-card-body" style="padding:14px 20px;">
+          <div class="receiver-row">
+            <div class="receiver-icon"><i class="fas fa-user"></i></div>
+            <div class="receiver-info">
+              <div class="rname">{{ shipment.receiver_name or 'Not provided' }}</div>
+              <div class="rsub">Recipient Name</div>
+            </div>
+          </div>
+          {% if shipment.receiver_company %}
+          <div class="receiver-row">
+            <div class="receiver-icon"><i class="fas fa-building"></i></div>
+            <div class="receiver-info">
+              <div class="rname">{{ shipment.receiver_company }}</div>
+              <div class="rsub">Company</div>
+            </div>
+          </div>
+          {% endif %}
+          <div class="receiver-row">
+            <div class="receiver-icon"><i class="fas fa-phone"></i></div>
+            <div class="receiver-info">
+              <div class="rname">{{ shipment.receiver_phone or 'Not provided' }}</div>
+              <div class="rsub">Phone Number</div>
+            </div>
+          </div>
+          <div class="receiver-row">
+            <div class="receiver-icon"><i class="fas fa-map-pin"></i></div>
+            <div class="receiver-info">
+              <div class="rname">{{ shipment.destination }}</div>
+              <div class="rsub">Delivery Address</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Packages -->
+      <div class="sd-card">
+        <div class="sd-card-head">
+          <h3><i class="fas fa-boxes"></i> Packages ({{ shipment.packages|length }})</h3>
+        </div>
+        <div class="sd-card-body">
+          {% if shipment.packages %}
+            {% for pkg in shipment.packages %}
+            <div class="pkg-card">
+              <div class="pkg-head">
+                <div class="pkg-title">
+                  <i class="fas fa-box" style="color:var(--orange);"></i>
+                  Package #{{ loop.index }}
+                  {% if pkg.description %}<span style="font-weight:400;color:var(--text3);font-size:12px;">— {{ pkg.description }}</span>{% endif %}
+                </div>
+                <div class="pkg-tags">
+                  {% if pkg.fragile %}<span class="pkg-tag fragile"><i class="fas fa-exclamation-triangle"></i> Fragile</span>{% endif %}
+                  {% if pkg.stackable %}<span class="pkg-tag stackable"><i class="fas fa-layer-group"></i> Stackable</span>{% endif %}
+                </div>
+              </div>
+              <div class="pkg-specs">
+                <div class="pkg-spec"><div class="lbl">Length</div><div class="val">{{ pkg.length or '—' }} cm</div></div>
+                <div class="pkg-spec"><div class="lbl">Width</div><div class="val">{{ pkg.width or '—' }} cm</div></div>
+                <div class="pkg-spec"><div class="lbl">Height</div><div class="val">{{ pkg.height or '—' }} cm</div></div>
+                <div class="pkg-spec"><div class="lbl">Weight</div><div class="val">{{ pkg.weight or '—' }} kg</div></div>
+              </div>
+              {% if pkg.length and pkg.width and pkg.height %}
+              <div style="margin-top:8px;font-size:12px;color:var(--text4);">
+                <i class="fas fa-cube" style="margin-right:4px;"></i>
+                Volume: {{ '%.4f'|format(pkg.volume_cbm) }} CBM
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          {% else %}
+            <div style="text-align:center;padding:20px;color:var(--text4);font-size:14px;">
+              <i class="fas fa-box-open" style="font-size:28px;margin-bottom:8px;display:block;"></i>
+              No package details recorded.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Tracking Timeline -->
+      <div class="sd-card">
+        <div class="sd-card-head">
+          <h3><i class="fas fa-route"></i> Tracking Timeline</h3>
+          <span style="font-size:12px;color:var(--text3);">{{ shipment.events|length }} event{{ 's' if shipment.events|length != 1 }}</span>
+        </div>
+        <div class="sd-card-body">
+          {% if shipment.events %}
+          <div class="timeline">
+            {% for event in shipment.events %}
+            <div class="tl-item {% if loop.first %}latest{% endif %} {% if event.status == 'Delivered' %}delivered{% endif %}">
+              <div class="tl-dot"></div>
+              <div class="tl-status">{{ event.status }}</div>
+              {% if event.description %}
+              <div class="tl-desc">{{ event.description }}</div>
+              {% endif %}
+              <div class="tl-meta">
+                {% if event.location %}
+                <span class="tl-loc"><i class="fas fa-map-marker-alt"></i>{{ event.location }}</span>
+                {% endif %}
+                <span class="tl-time">{{ event.timestamp.strftime('%d %b %Y, %H:%M') }} UTC</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div style="text-align:center;padding:20px;color:var(--text4);">
+            <i class="fas fa-map-marked-alt" style="font-size:28px;margin-bottom:8px;display:block;"></i>
+            No tracking events yet.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /left col -->
+
+    <!-- RIGHT COLUMN -->
+    <div>
+
+      <!-- ★ Update Status Form ★ -->
+      <div class="sd-card" style="border-color:var(--orange-mid);">
+        <div class="sd-card-head" style="background:var(--orange-lt);border-bottom-color:var(--orange-mid);">
+          <h3><i class="fas fa-edit"></i> Update Shipment Status</h3>
+        </div>
+        <div class="sd-card-body">
+          <form method="POST" action="{{ url_for('admin.update_shipment_status', shipment_id=shipment.id) }}" class="status-form">
+
+            <div class="sf-field">
+              <label>New Status <span style="color:var(--red)">*</span></label>
+              <select name="status" class="status-select" id="statusSelect" required onchange="onStatusChange(this)">
+                <option value="">— Select status —</option>
+                {% for s in [
+                  'Booking Created', 'Picked Up', 'In Transit',
+                  'Arrived at Hub', 'Customs Clearance',
+                  'Out for Delivery', 'Delivered',
+                  'Delivery Attempted', 'On Hold', 'Cancelled'
+                ] %}
+                <option value="{{ s }}" {% if shipment.status == s %}selected{% endif %}>
+                  {{ s }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="sf-field">
+              <label>Current Location</label>
+              <input type="text" name="location" id="locationField"
+                     placeholder="e.g. Lagos Hub, Nigeria"
+                     value="{{ shipment.events[0].location if shipment.events else '' }}">
+            </div>
+
+            <div class="sf-field">
+              <label>Update Description</label>
+              <textarea name="description" id="descField"
+                        placeholder="Add details about this status update…"></textarea>
+            </div>
+
+            <div class="sf-field">
+              <label>Estimated Delivery <span style="color:var(--text4);font-weight:400;">(optional update)</span></label>
+              <input type="date" name="estimated_delivery"
+                     value="{{ shipment.estimated_delivery.strftime('%Y-%m-%d') if shipment.estimated_delivery else '' }}">
+            </div>
+
+            <!-- Notify user toggle -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border);">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text);">Notify Customer</div>
+                <div style="font-size:11px;color:var(--text3);">Send in-app notification on update</div>
+              </div>
+              <label style="position:relative;width:38px;height:21px;flex-shrink:0;">
+                <input type="checkbox" name="notify_user" checked style="opacity:0;width:0;height:0;">
+                <span style="position:absolute;inset:0;background:var(--orange);border-radius:21px;cursor:pointer;"></span>
+                <span style="position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:20px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+              </label>
+            </div>
+
+            <!-- Preview -->
+            <div id="statusPreview" style="display:none;padding:10px 12px;background:var(--orange-lt);border:1px solid var(--orange-mid);border-radius:var(--r-sm);font-size:12px;color:var(--text2);">
+              <i class="fas fa-bell" style="color:var(--orange);margin-right:6px;"></i>
+              Customer will be notified: <strong id="previewStatusText">—</strong>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">
+              <i class="fas fa-check-circle"></i> Apply Status Update
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Customer -->
+      <div class="sd-card">
+        <div class="sd-card-head"><h3><i class="fas fa-user"></i> Customer</h3></div>
+        <div class="sd-card-body">
+          <div class="cust-row">
+            <div class="cust-avatar">
+              {% if shipment.customer and shipment.customer.avatar_url %}
+                <img src="{{ shipment.customer.avatar_url }}" alt="">
+              {% else %}
+                {{ (shipment.customer.full_name or shipment.customer.email or 'U')[0].upper() if shipment.customer else 'U' }}
+              {% endif %}
+            </div>
+            <div>
+              <div class="cust-name">{{ shipment.customer.full_name if shipment.customer else 'Unknown' }}</div>
+              <div class="cust-email">{{ shipment.customer.email if shipment.customer else '—' }}</div>
+            </div>
+          </div>
+          {% if shipment.customer %}
+          <div class="info-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="info-item">
+              <div class="lbl">Plan</div>
+              <div class="val">{{ shipment.customer.active_plan.name }}</div>
+            </div>
+            <div class="info-item">
+              <div class="lbl">Currency</div>
+              <div class="val">{{ shipment.customer.currency }}</div>
+            </div>
+            {% if shipment.customer.phone %}
+            <div class="info-item" style="grid-column:span 2;">
+              <div class="lbl">Phone</div>
+              <div class="val">{{ shipment.customer.phone }}</div>
+            </div>
+            {% endif %}
+          </div>
+          <hr class="sd-divider">
+          <div style="display:flex;gap:8px;">
+            <a href="{{ url_for('admin.user_detail', user_id=shipment.customer.id) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
+              <i class="fas fa-eye"></i> View Profile
+            </a>
+            <a href="{{ url_for('admin.edit_user', user_id=shipment.customer.id) }}?tab=notify" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
+              <i class="fas fa-bell"></i> Notify
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Shipment cost -->
+      <div class="sd-card">
+        <div class="sd-card-head"><h3><i class="fas fa-receipt"></i> Pricing</h3></div>
+        <div class="sd-card-body">
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
+            <span>Service Level</span><span style="color:var(--text);font-weight:600;">{{ shipment.service_level or 'Standard' }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
+            <span>Weight</span><span style="color:var(--text);font-weight:600;">{{ shipment.weight or 0 }} kg</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
+            <span>Packages</span><span style="color:var(--text);font-weight:600;">{{ shipment.packages|length }}</span>
+          </div>
+          <div class="cost-highlight">
+            <span class="cost-lbl">Total Cost</span>
+            <span class="cost-val">${{ '%.2f'|format(shipment.cost or 0) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="danger-zone">
+        <h4><i class="fas fa-exclamation-triangle"></i> Danger Zone</h4>
+        <p>These actions cannot be undone. Proceed carefully.</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <form method="POST"
+                action="{{ url_for('admin.update_shipment_status', shipment_id=shipment.id) }}"
+                onsubmit="return confirm('Cancel this shipment? This will notify the customer.')">
+            <input type="hidden" name="status" value="Cancelled">
+            <input type="hidden" name="description" value="Shipment cancelled by administrator.">
+            <input type="hidden" name="notify_user" value="on">
+            <button type="submit" class="btn btn-danger btn-full btn-sm">
+              <i class="fas fa-ban"></i> Cancel Shipment
+            </button>
+          </form>
+          <form method="POST"
+                action="#"
+                onsubmit="return confirm('Permanently delete this shipment and all its data?')">
+            <button type="submit" class="btn btn-danger btn-full btn-sm">
+              <i class="fas fa-trash"></i> Delete Shipment
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div><!-- /right col -->
+  </div><!-- /grid -->
+</div><!-- /wrap -->
+
+<script>
+/* ── Status pill class helper (mirrors Jinja macro below) ── */
+function onStatusChange(sel) {
+  const val = sel.value;
+  const preview = document.getElementById('statusPreview');
+  const previewText = document.getElementById('previewStatusText');
+
+  if (val) {
+    preview.style.display = 'block';
+    previewText.textContent = val;
+
+    // Auto-fill description suggestion
+    const suggestions = {
+      'Picked Up':          'Package has been collected from sender.',
+      'In Transit':         'Shipment is on its way to the destination.',
+      'Arrived at Hub':     'Shipment arrived at sorting/transit hub.',
+      'Customs Clearance':  'Shipment is undergoing customs inspection.',
+      'Out for Delivery':   'Package is out for final delivery.',
+      'Delivered':          'Package successfully delivered to recipient.',
+      'Delivery Attempted': 'Delivery attempted — recipient unavailable.',
+      'On Hold':            'Shipment placed on hold pending further action.',
+      'Cancelled':          'Shipment has been cancelled.',
+    };
+    const desc = document.getElementById('descField');
+    if (desc && !desc.value && suggestions[val]) {
+      desc.value = suggestions[val];
+    }
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+/* ── Toast ── */
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'sd-toast ' + (type || 'success');
+  const icons = { success: 'check-circle', error: 'times-circle' };
+  t.innerHTML = '<i class="fas fa-' + (icons[type] || 'check-circle') + '"></i> ' + msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}{% for cat, msg in messages %}
+document.addEventListener('DOMContentLoaded', () =>
+  showToast('{{ msg | e }}', '{{ cat if cat in ["success","error"] else "success" }}')
+);
+{% endfor %}{% endif %}
+{% endwith %}
+</script>
+{% endblock %}

@@ -1,0 +1,664 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Plan Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --orange:     #f97316;
+    --orange-dk:  #ea6200;
+    --orange-lt:  #fff7ed;
+    --orange-mid: #ffedd5;
+    --surface:    #ffffff;
+    --surface2:   #f9fafb;
+    --surface3:   #f3f4f6;
+    --border:     #e5e7eb;
+    --border2:    #d1d5db;
+    --text:       #111827;
+    --text2:      #374151;
+    --text3:      #6b7280;
+    --text4:      #9ca3af;
+    --red:        #ef4444;
+    --green:      #22c55e;
+    --blue:       #3b82f6;
+    --r:          12px;
+    --r-sm:       8px;
+    --sh:         0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    --sh-md:      0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --sh-lg:      0 12px 40px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.06);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  .pm-wrap {
+    max-width: 1200px; margin: 0 auto;
+    padding: 28px 24px 60px;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  /* ── Breadcrumb ── */
+  .pm-bc { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text3); margin-bottom:20px; }
+  .pm-bc a { color:var(--text3); text-decoration:none; }
+  .pm-bc a:hover { color:var(--orange); }
+  .pm-bc .sep { font-size:10px; color:var(--text4); }
+
+  /* ── Header ── */
+  .pm-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:28px; flex-wrap:wrap; }
+  .pm-header h1 { font-size:24px; font-weight:800; color:var(--text); margin:0 0 4px; letter-spacing:-.4px; }
+  .pm-header p  { font-size:14px; color:var(--text3); margin:0; }
+
+  /* ── Stats ── */
+  .pm-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }
+  @media(max-width:640px){ .pm-stats{grid-template-columns:repeat(2,1fr);} }
+  .pm-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; box-shadow:var(--sh); }
+  .pm-stat.accent { background:var(--orange-lt); border-color:var(--orange-mid); }
+  .pm-stat-lbl { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
+  .pm-stat-val { font-size:24px; font-weight:800; color:var(--text); }
+  .pm-stat.accent .pm-stat-val { color:var(--orange); }
+  .pm-stat-sub { font-size:11px; color:var(--text4); margin-top:3px; }
+
+  /* ── Plans grid ── */
+  .plans-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px; margin-bottom:28px; }
+
+  /* ── Plan card ── */
+  .plan-card {
+    background:var(--surface); border:1.5px solid var(--border);
+    border-radius:var(--r); box-shadow:var(--sh);
+    overflow:hidden; transition:box-shadow .2s, transform .2s;
+    position:relative;
+  }
+  .plan-card:hover { box-shadow:var(--sh-md); transform:translateY(-2px); }
+  .plan-card.inactive { opacity:.65; }
+  .plan-card.featured { border-color:var(--orange); box-shadow:0 0 0 2px rgba(249,115,22,.15), var(--sh-md); }
+
+  .plan-card-top {
+    padding:20px 20px 16px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface2);
+    position:relative;
+  }
+  .plan-name-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .plan-name { font-size:17px; font-weight:800; color:var(--text); }
+  .plan-badges { display:flex; gap:6px; flex-wrap:wrap; }
+  .plan-badge {
+    font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px;
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .pb-active   { background:#dcfce7; color:#15803d; }
+  .pb-inactive { background:var(--surface3); color:var(--text3); }
+  .pb-featured { background:var(--orange-mid); color:var(--orange-dk); }
+  .pb-free     { background:#eff6ff; color:#2563eb; }
+  .pb-custom   { background:#f3e8ff; color:#7c3aed; }
+
+  .plan-price { font-size:30px; font-weight:900; color:var(--orange); margin-bottom:2px; line-height:1; }
+  .plan-price span { font-size:14px; font-weight:500; color:var(--text3); }
+  .plan-interval { font-size:12px; color:var(--text4); }
+
+  .plan-card-body { padding:16px 20px; }
+  .plan-meta { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .pm-item .lbl { font-size:11px; color:var(--text4); font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  .pm-item .val { font-size:13px; color:var(--text); font-weight:600; margin-top:2px; }
+
+  .plan-features { list-style:none; padding:0; margin:0 0 16px; }
+  .plan-features li {
+    font-size:12px; color:var(--text3); padding:4px 0;
+    display:flex; align-items:center; gap:7px;
+    border-bottom:1px solid var(--border);
+  }
+  .plan-features li:last-child { border-bottom:none; }
+  .plan-features li i { color:var(--green); font-size:11px; flex-shrink:0; }
+
+  .plan-subscribers {
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--text3);
+    padding:8px 10px; background:var(--surface2);
+    border-radius:var(--r-sm); margin-bottom:14px;
+  }
+  .plan-subscribers i { color:var(--orange); }
+  .plan-subscribers strong { color:var(--text); }
+
+  .plan-actions { display:flex; gap:8px; }
+
+  /* ── Buttons ── */
+  .btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 16px; border-radius:var(--r-sm);
+    font-size:13px; font-weight:600; cursor:pointer;
+    border:none; transition:all .15s; font-family:inherit; white-space:nowrap;
+  }
+  .btn-primary { background:var(--orange); color:#fff; box-shadow:0 2px 6px rgba(249,115,22,.3); }
+  .btn-primary:hover { background:var(--orange-dk); transform:translateY(-1px); }
+  .btn-ghost { background:var(--surface); color:var(--text2); border:1.5px solid var(--border2); }
+  .btn-ghost:hover { border-color:var(--orange); color:var(--orange); }
+  .btn-danger { background:#fee2e2; color:var(--red); border:1.5px solid #fecaca; }
+  .btn-danger:hover { background:var(--red); color:#fff; }
+  .btn-sm { padding:6px 12px; font-size:12px; }
+  .btn-icon { padding:7px 10px; }
+
+  /* ── Modal overlay ── */
+  .modal-overlay {
+    position:fixed; inset:0; z-index:1000;
+    background:rgba(0,0,0,.45); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px; opacity:0; pointer-events:none;
+    transition:opacity .2s;
+  }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+
+  .modal {
+    background:var(--surface); border-radius:var(--r);
+    box-shadow:var(--sh-lg); width:100%; max-width:560px;
+    max-height:90vh; overflow-y:auto;
+    transform:scale(.96) translateY(10px);
+    transition:transform .2s;
+  }
+  .modal-overlay.open .modal { transform:scale(1) translateY(0); }
+
+  .modal-head {
+    padding:18px 22px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; background:var(--surface); z-index:1;
+  }
+  .modal-head h3 { font-size:16px; font-weight:700; color:var(--text); margin:0; display:flex; align-items:center; gap:8px; }
+  .modal-head h3 i { color:var(--orange); }
+  .modal-close { background:none; border:none; font-size:18px; color:var(--text3); cursor:pointer; padding:4px; border-radius:4px; transition:color .15s; }
+  .modal-close:hover { color:var(--red); }
+  .modal-body { padding:22px; }
+  .modal-foot { padding:16px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; background:var(--surface2); }
+
+  /* ── Form fields ── */
+  .f-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .f-row.full { grid-template-columns:1fr; }
+  .f-field { display:flex; flex-direction:column; gap:5px; }
+  .f-field label { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.04em; }
+  .f-field input, .f-field select, .f-field textarea {
+    width:100%; padding:9px 12px;
+    border:1.5px solid var(--border2); border-radius:var(--r-sm);
+    font-size:14px; color:var(--text); background:var(--surface);
+    outline:none; transition:border-color .15s, box-shadow .15s; font-family:inherit;
+  }
+  .f-field input:focus, .f-field select:focus, .f-field textarea:focus {
+    border-color:var(--orange); box-shadow:0 0 0 3px rgba(249,115,22,.12);
+  }
+  .f-field textarea { resize:vertical; min-height:70px; }
+  .f-hint { font-size:11px; color:var(--text4); }
+  .f-section { font-size:12px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin:18px 0 10px; display:flex; align-items:center; gap:6px; }
+  .f-section::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── Feature editor ── */
+  .feature-list { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .feature-item { display:flex; gap:8px; align-items:center; }
+  .feature-item input {
+    flex:1; padding:7px 10px; border:1.5px solid var(--border2);
+    border-radius:var(--r-sm); font-size:13px; color:var(--text);
+    outline:none; font-family:inherit;
+  }
+  .feature-item input:focus { border-color:var(--orange); }
+  .feature-remove { background:none; border:none; color:var(--text4); cursor:pointer; padding:4px 6px; border-radius:4px; font-size:14px; transition:color .15s; }
+  .feature-remove:hover { color:var(--red); }
+  .add-feature-btn {
+    background:none; border:1.5px dashed var(--border2);
+    border-radius:var(--r-sm); padding:7px 12px;
+    font-size:13px; color:var(--text3); cursor:pointer; width:100%;
+    font-family:inherit; transition:all .15s; display:flex; align-items:center; gap:6px; justify-content:center;
+  }
+  .add-feature-btn:hover { border-color:var(--orange); color:var(--orange); background:var(--orange-lt); }
+
+  /* ── Toggle row ── */
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+  .toggle-row:last-child { border-bottom:none; }
+  .toggle-info h4 { font-size:13px; font-weight:600; color:var(--text); margin:0 0 2px; }
+  .toggle-info p  { font-size:11px; color:var(--text3); margin:0; }
+  .toggle { position:relative; width:38px; height:21px; flex-shrink:0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-sl { position:absolute; inset:0; background:var(--border2); border-radius:21px; cursor:pointer; transition:background .2s; }
+  .toggle-sl::before { content:''; position:absolute; width:15px; height:15px; border-radius:50%; background:#fff; top:3px; left:3px; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .toggle input:checked + .toggle-sl { background:var(--orange); }
+  .toggle input:checked + .toggle-sl::before { transform:translateX(17px); }
+
+  /* ── Empty state ── */
+  .empty-state { text-align:center; padding:48px 24px; color:var(--text4); }
+  .empty-state i { font-size:40px; margin-bottom:12px; display:block; }
+  .empty-state p { font-size:14px; }
+
+  /* ── Toast ── */
+  .pm-toasts { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+  .pm-toast {
+    background:var(--text); color:#fff; padding:11px 16px; border-radius:var(--r-sm);
+    font-size:13px; font-weight:500; box-shadow:var(--sh-lg);
+    display:flex; align-items:center; gap:8px; pointer-events:all; max-width:300px;
+    animation:tIn .2s ease;
+  }
+  .pm-toast.success { background:#16a34a; }
+  .pm-toast.error   { background:var(--red); }
+  @keyframes tIn { from{opacity:0;transform:translateX(14px);} to{opacity:1;transform:none;} }
+
+  /* ── Delete confirm card ── */
+  .delete-confirm { border:1.5px solid #fecaca; border-radius:var(--r); background:#fff5f5; padding:16px; }
+  .delete-confirm p { font-size:13px; color:var(--text2); margin:0 0 14px; line-height:1.5; }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="pm-wrap">
+  <div class="pm-toasts" id="toastContainer"></div>
+
+  <!-- Breadcrumb -->
+  <div class="pm-bc">
+    <a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i></a>
+    <span class="sep"><i class="fas fa-chevron-right"></i></span>
+    <span>Plans</span>
+  </div>
+
+  <!-- Header -->
+  <div class="pm-header">
+    <div>
+      <h1><i class="fas fa-crown" style="color:var(--orange);margin-right:10px;font-size:20px;"></i>Plan Management</h1>
+      <p>Create, edit, and manage subscription plans. Changes take effect immediately for new subscribers.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openCreateModal()">
+      <i class="fas fa-plus"></i> New Plan
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="pm-stats">
+    <div class="pm-stat accent">
+      <div class="pm-stat-lbl">Total Plans</div>
+      <div class="pm-stat-val">{{ plans | length }}</div>
+      <div class="pm-stat-sub">{{ plans | selectattr('is_active') | list | length }} active</div>
+    </div>
+    <div class="pm-stat">
+      <div class="pm-stat-lbl">Total Subscribers</div>
+      <div class="pm-stat-val">{{ total_subscribers }}</div>
+      <div class="pm-stat-sub">Across all plans</div>
+    </div>
+    <div class="pm-stat">
+      <div class="pm-stat-lbl">Monthly Revenue</div>
+      <div class="pm-stat-val">${{ '%.0f'|format(monthly_revenue) }}</div>
+      <div class="pm-stat-sub">Active subscriptions</div>
+    </div>
+    <div class="pm-stat">
+      <div class="pm-stat-lbl">Free Users</div>
+      <div class="pm-stat-val">{{ free_users }}</div>
+      <div class="pm-stat-sub">No active plan</div>
+    </div>
+  </div>
+
+  <!-- Plans grid -->
+  {% if plans %}
+  <div class="plans-grid">
+    {% for plan in plans %}
+    <div class="plan-card {% if not plan.is_active %}inactive{% endif %} {% if plan.is_featured %}featured{% endif %}" id="plan-card-{{ plan.id }}">
+
+      <div class="plan-card-top">
+        <div class="plan-name-row">
+          <div class="plan-name">{{ plan.name }}</div>
+          <div class="plan-badges">
+            {% if plan.is_featured %}<span class="plan-badge pb-featured"><i class="fas fa-star"></i> Featured</span>{% endif %}
+            {% if plan.is_active %}<span class="plan-badge pb-active">Active</span>
+            {% else %}<span class="plan-badge pb-inactive">Inactive</span>{% endif %}
+            {% if plan.price_usd == 0 %}<span class="plan-badge pb-free">Free</span>{% endif %}
+            {% if plan.price_usd is none %}<span class="plan-badge pb-custom">Custom</span>{% endif %}
+          </div>
+        </div>
+
+        {% if plan.price_usd is none %}
+          <div class="plan-price">Custom<span style="font-size:16px;"> pricing</span></div>
+        {% elif plan.price_usd == 0 %}
+          <div class="plan-price">$0<span> / mo</span></div>
+        {% else %}
+          <div class="plan-price">${{ plan.price_usd }}<span> / mo</span></div>
+        {% endif %}
+        <div class="plan-interval">Billed {{ plan.interval }}ly &nbsp;·&nbsp; Plan ID: <code style="font-size:11px;background:var(--surface3);padding:1px 5px;border-radius:3px;">{{ plan.plan_key }}</code></div>
+      </div>
+
+      <div class="plan-card-body">
+        <div class="plan-meta">
+          <div class="pm-item">
+            <div class="lbl">Shipments</div>
+            <div class="val">{{ plan.shipments if plan.shipments else '∞ Unlimited' }}</div>
+          </div>
+          <div class="pm-item">
+            <div class="lbl">Subscribers</div>
+            <div class="val">{{ subscriber_counts.get(plan.plan_key, 0) }}</div>
+          </div>
+          <div class="pm-item">
+            <div class="lbl">Sort Order</div>
+            <div class="val">{{ plan.sort_order }}</div>
+          </div>
+          <div class="pm-item">
+            <div class="lbl">Revenue / mo</div>
+            <div class="val">${{ '%.0f'|format((plan.price_usd or 0) * subscriber_counts.get(plan.plan_key, 0)) }}</div>
+          </div>
+        </div>
+
+        {% if plan.subscribers_sample %}
+        <div class="plan-subscribers">
+          <i class="fas fa-users"></i>
+          <strong>{{ subscriber_counts.get(plan.plan_key, 0) }}</strong>&nbsp;active subscriber{{ 's' if subscriber_counts.get(plan.plan_key, 0) != 1 }}
+        </div>
+        {% endif %}
+
+        {% if plan.features %}
+        <ul class="plan-features">
+          {% for feature in plan.features[:4] %}
+          <li><i class="fas fa-check"></i>{{ feature }}</li>
+          {% endfor %}
+          {% if plan.features | length > 4 %}
+          <li style="color:var(--text4);font-style:italic;border:none;">+ {{ plan.features | length - 4 }} more features</li>
+          {% endif %}
+        </ul>
+        {% endif %}
+
+        <div class="plan-actions">
+          <button class="btn btn-ghost btn-sm" style="flex:1;" onclick='openEditModal({{ plan.to_dict() | tojson }})'>
+            <i class="fas fa-edit"></i> Edit
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Toggle active"
+                  onclick="togglePlan({{ plan.id }}, {{ plan.is_active | tojson }})">
+            <i class="fas fa-{{ 'eye-slash' if plan.is_active else 'eye' }}"></i>
+          </button>
+          {% if subscriber_counts.get(plan.plan_key, 0) == 0 %}
+          <button class="btn btn-danger btn-sm btn-icon" title="Delete plan"
+                  onclick="confirmDelete({{ plan.id }}, '{{ plan.name }}')">
+            <i class="fas fa-trash"></i>
+          </button>
+          {% else %}
+          <button class="btn btn-ghost btn-sm btn-icon" title="Cannot delete — has subscribers" disabled style="opacity:.4;cursor:not-allowed;">
+            <i class="fas fa-trash"></i>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="fas fa-layer-group" style="height: 35px; font-size: 18px;"></i>
+    <p>No plans yet. Create your first plan to get started.</p>
+    <button class="btn btn-primary" onclick="openCreateModal()" style="height: 35px; padding: 8px !important; margin-top: 10px;">
+        <span style="font-size: 18px !important; margin-top: 10px !important;">
+            <i class="fas fa-plus" style="font-size: 18px !important;"></i> 
+        </span>
+        Create First Plan
+    </button>
+  </div>
+  {% endif %}
+
+</div><!-- /pm-wrap -->
+
+
+<!-- ═══════════════════════════════════════════
+     CREATE / EDIT MODAL
+═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="planModal" onclick="closeModalOnBackdrop(event)">
+  <div class="modal" id="planModalBox">
+    <div class="modal-head">
+      <h3><i class="fas fa-crown" id="modalIcon"></i> <span id="modalTitle">New Plan</span></h3>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <form id="planForm" method="POST" action="">
+      <input type="hidden" name="plan_id" id="formPlanId">
+
+      <div class="modal-body">
+
+        <!-- Basic info -->
+        <div class="f-row">
+          <div class="f-field">
+            <label>Plan Name <span style="color:var(--red)">*</span></label>
+            <input type="text" name="name" id="fname" placeholder="e.g. Professional" required maxlength="50">
+          </div>
+          <div class="f-field">
+            <label>Plan Key / ID <span style="color:var(--red)">*</span></label>
+            <input type="text" name="plan_key" id="fkey" placeholder="e.g. professional" required maxlength="30"
+                   pattern="[a-z0-9_-]+" title="Lowercase letters, numbers, hyphens and underscores only">
+            <span class="f-hint">Lowercase, no spaces. Used in code.</span>
+          </div>
+        </div>
+
+        <div class="f-row">
+          <div class="f-field">
+            <label>Price (USD / month)</label>
+            <input type="number" name="price_usd" id="fprice" placeholder="0 for free, blank for custom" min="0" step="0.01">
+            <span class="f-hint">Leave blank for enterprise/custom pricing.</span>
+          </div>
+          <div class="f-field">
+            <label>Shipments / month</label>
+            <input type="number" name="shipments" id="fshipments" placeholder="Leave blank for unlimited" min="0">
+          </div>
+        </div>
+
+        <div class="f-row">
+          <div class="f-field">
+            <label>Billing Interval</label>
+            <select name="interval" id="finterval">
+              <option value="month">Monthly</option>
+              <option value="year">Yearly</option>
+            </select>
+          </div>
+          <div class="f-field">
+            <label>Sort Order</label>
+            <input type="number" name="sort_order" id="fsort" value="0" min="0">
+            <span class="f-hint">Lower numbers appear first.</span>
+          </div>
+        </div>
+
+        <div class="f-row full">
+          <div class="f-field">
+            <label>Description</label>
+            <textarea name="description" id="fdesc" placeholder="Brief plan description shown to users…" rows="2"></textarea>
+          </div>
+        </div>
+
+        <!-- Toggles -->
+        <div class="f-section"><i class="fas fa-sliders-h"></i> Settings</div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Active</h4>
+            <p>Inactive plans are hidden from users but keep existing subscribers.</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="is_active" id="factive" checked>
+            <span class="toggle-sl"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <h4>Featured / Recommended</h4>
+            <p>Highlight this plan with an orange border on the pricing page.</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" name="is_featured" id="ffeatured">
+            <span class="toggle-sl"></span>
+          </label>
+        </div>
+
+        <!-- Features -->
+        <div class="f-section"><i class="fas fa-list-check"></i> Features</div>
+        <div class="feature-list" id="featureList"></div>
+        <button type="button" class="add-feature-btn" onclick="addFeature('')">
+          <i class="fas fa-plus"></i> Add Feature
+        </button>
+
+      </div><!-- /modal-body -->
+
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="modalSubmitBtn">
+          <i class="fas fa-save"></i> <span id="modalSubmitLabel">Create Plan</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     DELETE CONFIRM MODAL
+═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="deleteModal" onclick="closeDeleteOnBackdrop(event)">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h3><i class="fas fa-trash" style="color:var(--red);"></i> Delete Plan</h3>
+      <button class="modal-close" onclick="closeDeleteModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-confirm">
+        <p>You are about to delete <strong id="deletePlanName">this plan</strong>. This action cannot be undone.</p>
+        <p style="margin:0;color:var(--text3);">Plans with active subscribers cannot be deleted.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+      <form id="deleteForm" method="POST" style="display:inline;">
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete Plan</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── Auto-slug plan name → key ──────────────────────────────────────────────
+document.getElementById('fname').addEventListener('input', function() {
+  const keyField = document.getElementById('fkey');
+  if (!keyField.dataset.manuallyEdited) {
+    keyField.value = this.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
+  }
+});
+document.getElementById('fkey').addEventListener('input', function() {
+  this.dataset.manuallyEdited = 'true';
+});
+
+// ── Feature management ─────────────────────────────────────────────────────
+function addFeature(value) {
+  const list = document.getElementById('featureList');
+  const item = document.createElement('div');
+  item.className = 'feature-item';
+  item.innerHTML = `
+    <input type="text" name="features[]" value="${value}" placeholder="e.g. Up to 100 shipments / month" maxlength="120">
+    <button type="button" class="feature-remove" onclick="this.parentElement.remove()">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  list.appendChild(item);
+  item.querySelector('input').focus();
+}
+
+function setFeatures(features) {
+  document.getElementById('featureList').innerHTML = '';
+  (features || []).forEach(f => addFeature(f));
+}
+
+// ── Modal: Create ──────────────────────────────────────────────────────────
+function openCreateModal() {
+  document.getElementById('modalTitle').textContent = 'New Plan';
+  document.getElementById('modalSubmitLabel').textContent = 'Create Plan';
+  document.getElementById('planForm').action = "{{ url_for('admin.create_plan') }}";
+  document.getElementById('formPlanId').value = '';
+
+  // Reset form
+  ['fname','fkey','fprice','fshipments','fdesc'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('finterval').value = 'month';
+  document.getElementById('fsort').value = '0';
+  document.getElementById('factive').checked = true;
+  document.getElementById('ffeatured').checked = false;
+  document.getElementById('fkey').dataset.manuallyEdited = '';
+  setFeatures([]);
+
+  openModal();
+}
+
+// ── Modal: Edit ────────────────────────────────────────────────────────────
+function openEditModal(plan) {
+  document.getElementById('modalTitle').textContent = 'Edit Plan: ' + plan.name;
+  document.getElementById('modalSubmitLabel').textContent = 'Save Changes';
+  document.getElementById('planForm').action = `/admin/plans/${plan.id}/edit`;
+  document.getElementById('formPlanId').value = plan.id;
+
+  document.getElementById('fname').value      = plan.name || '';
+  document.getElementById('fkey').value       = plan.plan_key || '';
+  document.getElementById('fprice').value     = plan.price_usd ?? '';
+  document.getElementById('fshipments').value = plan.shipments ?? '';
+  document.getElementById('finterval').value  = plan.interval || 'month';
+  document.getElementById('fsort').value      = plan.sort_order ?? 0;
+  document.getElementById('fdesc').value      = plan.description || '';
+  document.getElementById('factive').checked  = !!plan.is_active;
+  document.getElementById('ffeatured').checked= !!plan.is_featured;
+  document.getElementById('fkey').dataset.manuallyEdited = 'true';
+  setFeatures(plan.features || []);
+
+  openModal();
+}
+
+function openModal() {
+  document.getElementById('planModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('planModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeModalOnBackdrop(e) {
+  if (e.target === document.getElementById('planModal')) closeModal();
+}
+
+// ── Delete modal ───────────────────────────────────────────────────────────
+function confirmDelete(planId, planName) {
+  document.getElementById('deletePlanName').textContent = planName;
+  document.getElementById('deleteForm').action = `/admin/plans/${planId}/delete`;
+  document.getElementById('deleteModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeDeleteOnBackdrop(e) {
+  if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+}
+
+// ── Toggle active via fetch ────────────────────────────────────────────────
+function togglePlan(planId, currentlyActive) {
+  fetch(`/admin/plans/${planId}/toggle`, { method: 'POST',
+    headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || '' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showToast(data.message, 'success');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'Failed to toggle plan.', 'error');
+    }
+  })
+  .catch(() => showToast('Network error.', 'error'));
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'pm-toast ' + (type || 'success');
+  const icons = { success:'check-circle', error:'times-circle' };
+  t.innerHTML = `<i class="fas fa-${icons[type]||'bell'}"></i> ${msg}`;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}{% for cat, msg in messages %}
+document.addEventListener('DOMContentLoaded', () =>
+  showToast('{{ msg | e }}', '{{ cat if cat in ["success","error"] else "success" }}')
+);
+{% endfor %}{% endif %}
+{% endwith %}
+
+// ── Keyboard close ─────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
+});
+</script>
+{% endblock %}

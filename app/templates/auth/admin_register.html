@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="relative min-h-screen flex items-center justify-center overflow-hidden px-2 bg-background-light dark:bg-background-dark">
+    <!-- Background -->
+    <div class="absolute inset-0 z-0">
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-background-dark/90 to-red-900/20 z-10"></div>
+        <div class="w-full h-full bg-cover bg-center opacity-40" 
+             style="background-image: url('https://images.unsplash.com/photo-1553413077-190dd305871c?w=1920&q=80');">
+        </div>
+    </div>
+
+    <main class="relative z-20 w-full max-w-sm">
+        <!-- Security Badge -->
+        <div class="flex justify-center mb-2">
+            <div class="bg-red-500/10 border border-red-500/30 rounded-full px-2 py-1 flex items-center gap-1">
+                <span class="material-symbols-outlined text-red-400 text-xs">security</span>
+                <span class="text-red-400 text-[10px] font-bold uppercase">Restricted</span>
+            </div>
+        </div>
+
+        <!-- Glass Panel -->
+        <div class="glass-panel rounded-lg p-3 shadow-xl border border-red-500/10 bg-slate-900/80 backdrop-blur-md">
+            
+            <!-- Header -->
+            <div class="flex flex-col items-center mb-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-red-500 blur opacity-30 rounded"></div>
+                        <div class="relative bg-gradient-to-br from-red-500 to-orange-600 p-1.5 rounded shadow">
+                            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 48 48">
+                                <path d="M24 4L6 12v10c0 11 7.5 21.3 18 24 10.5-2.7 18-13 18-24V12L24 4z" fill="currentColor" fill-opacity="0.8"/>
+                                <path d="M24 4L6 12v10c0 11 7.5 21.3 18 24V4z" fill="currentColor"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-lg font-black tracking-tight text-white">Uthao<span class="text-red-400">Admin</span></h1>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-wider">System Admin</p>
+                    </div>
+                </div>
+                <div class="h-px w-16 bg-gradient-to-r from-transparent via-red-500/50 to-transparent mb-2"></div>
+                <h2 class="text-sm font-bold text-slate-100">Create Admin</h2>
+                <p class="text-red-400/80 text-xs mt-0.5">Step <span id="step-num">1</span> of 2</p>
+            </div>
+
+            <!-- Progress -->
+            <div class="flex gap-1 mb-3">
+                <div class="h-1 flex-1 bg-red-500 rounded-full transition-all" id="progress-1"></div>
+                <div class="h-1 flex-1 bg-slate-700 rounded-full transition-all" id="progress-2"></div>
+            </div>
+
+            <!-- Alerts -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="mb-2 p-1.5 rounded text-xs font-medium flex items-center gap-1
+                            {% if category == 'error' %}bg-red-500/20 border border-red-500/30 text-red-200
+                            {% else %}bg-green-500/20 border border-green-500/30 text-green-200{% endif %}">
+                            <span class="material-symbols-outlined text-xs">
+                                {% if category == 'error' %}error{% else %}check_circle{% endif %}
+                            </span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Step 1: Access & Identity -->
+            <form class="space-y-2" id="step1-form" onsubmit="return goToStep2(event)">
+                <div class="bg-slate-800/50 rounded p-2 border border-red-500/20">
+                    <label class="block text-xs font-medium text-red-300 mb-1 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-xs">vpn_key</span>
+                        Admin Key
+                    </label>
+                    <div class="relative">
+                        <input type="password" name="admin_key" required id="admin-key"
+                            class="w-full bg-slate-950/50 border border-red-500/30 rounded text-xs py-1.5 px-2 text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-red-500/50 font-mono"
+                            placeholder="Enter key">
+                        <button type="button" onclick="toggleVisibility('admin-key', 'key-toggle')" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-500 hover:text-red-400">
+                            <span class="material-symbols-outlined text-xs" id="key-toggle">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-0.5 ml-0.5">Full Name</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined text-slate-500 text-xs absolute left-2 top-1.5">badge</span>
+                        <input type="text" name="full_name" required
+                            class="w-full bg-slate-800/50 border border-slate-600 rounded text-xs py-1.5 pl-7 pr-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500"
+                            placeholder="Admin Name">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-0.5 ml-0.5">Email</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined text-slate-500 text-xs absolute left-2 top-1.5">mail</span>
+                        <input type="email" name="email" required id="email-input"
+                            class="w-full bg-slate-800/50 border border-slate-600 rounded text-xs py-1.5 pl-7 pr-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500"
+                            placeholder="admin@uthao.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-0.5 ml-0.5">Admin Level</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined text-slate-500 text-xs absolute left-2 top-1.5">admin_panel_settings</span>
+                        <select name="admin_level" required
+                            class="w-full bg-slate-800/50 border border-slate-600 rounded text-xs py-1.5 pl-7 pr-6 text-white focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500 appearance-none cursor-pointer">
+                            <option value="">Select level...</option>
+                            <option value="super">Super Admin</option>
+                            <option value="manager">Manager</option>
+                            <option value="support">Support</option>
+                            <option value="logistics">Logistics</option>
+                        </select>
+                        <span class="material-symbols-outlined text-slate-500 text-xs absolute right-2 top-1.5 pointer-events-none">expand_more</span>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold py-2 rounded shadow shadow-red-500/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-1 text-xs mt-2">
+                    <span>Continue</span>
+                    <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                </button>
+            </form>
+
+            <!-- Step 2: Security -->
+            <form class="space-y-2 hidden" id="step2-form" method="POST" action="{{ url_for('auth.admin_register') }}">
+                <input type="hidden" name="admin_key" id="hidden-key">
+                <input type="hidden" name="full_name" id="hidden-name">
+                <input type="hidden" name="email" id="hidden-email">
+                <input type="hidden" name="admin_level" id="hidden-level">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-0.5 ml-0.5">Password</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined text-slate-500 text-xs absolute left-2 top-1.5">lock</span>
+                        <input type="password" name="password" required id="password-input" minlength="12"
+                            class="w-full bg-slate-800/50 border border-slate-600 rounded text-xs py-1.5 pl-7 pr-7 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500"
+                            placeholder="12+ chars">
+                        <button type="button" onclick="toggleVisibility('password-input', 'pass-toggle')" class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-500 hover:text-red-400">
+                            <span class="material-symbols-outlined text-xs" id="pass-toggle">visibility_off</span>
+                        </button>
+                    </div>
+                    <div class="flex gap-0.5 h-0.5 mt-1">
+                        <div class="flex-1 bg-slate-700 rounded-full transition-all" id="str-1"></div>
+                        <div class="flex-1 bg-slate-700 rounded-full transition-all" id="str-2"></div>
+                        <div class="flex-1 bg-slate-700 rounded-full transition-all" id="str-3"></div>
+                        <div class="flex-1 bg-slate-700 rounded-full transition-all" id="str-4"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-0.5 text-[9px] text-slate-500 mt-1">
+                        <span id="req-len">• 12+ chars</span>
+                        <span id="req-cap">• Uppercase</span>
+                        <span id="req-num">• Number</span>
+                        <span id="req-sym">• Symbol</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-0.5 ml-0.5">Confirm</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined text-slate-500 text-xs absolute left-2 top-1.5">lock_reset</span>
+                        <input type="password" name="confirm_password" required id="confirm-pass"
+                            class="w-full bg-slate-800/50 border border-slate-600 rounded text-xs py-1.5 pl-7 pr-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500"
+                            placeholder="Re-enter">
+                    </div>
+                    <p class="text-[9px] text-red-400 hidden" id="match-err">Mismatch</p>
+                </div>
+
+                <div class="bg-red-500/5 border border-red-500/20 rounded p-2">
+                    <div class="flex items-start gap-1.5">
+                        <input type="checkbox" id="sec-agree" name="security_agreement" required
+                            class="mt-0.5 w-3 h-3 rounded border-red-500/30 bg-slate-900/50 text-red-500 focus:ring-red-500/20 cursor-pointer">
+                        <label for="sec-agree" class="text-[9px] text-slate-400 leading-tight cursor-pointer select-none">
+                            I confirm authorized access. Unauthorized attempts are logged and prosecuted.
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="goBack()"
+                        class="flex-1 py-1.5 border border-slate-600 rounded text-xs font-bold text-slate-300 hover:bg-slate-800 transition-all">
+                        Back
+                    </button>
+                    <button type="submit" id="submit-btn"
+                        class="flex-[2] bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold py-1.5 rounded shadow shadow-red-500/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-1 text-xs">
+                        <span class="material-symbols-outlined text-xs">shield_lock</span>
+                        <span>Create</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Back Link -->
+            <div class="mt-2 text-center">
+                <a href="{{ url_for('auth.login') }}" class="text-[10px] text-slate-500 hover:text-red-400 transition-colors flex items-center justify-center gap-0.5">
+                    <span class="material-symbols-outlined text-[10px]">arrow_back</span>
+                    Login
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-3 flex justify-between items-center px-2">
+            <div class="flex items-center gap-1">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <p class="text-[9px] text-slate-500 uppercase">Secure</p>
+            </div>
+            <p class="text-[9px] text-slate-600">v2.4.1</p>
+        </footer>
+
+        <p class="text-[8px] text-slate-600 text-center mt-1 flex items-center justify-center gap-0.5">
+            <span class="material-symbols-outlined text-[8px]">fingerprint</span>
+            IP logged
+        </p>
+    </main>
+</div>
+
+<style>
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(12px);
+    }
+</style>
+
+<script>
+    function toggleVisibility(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        input.type = input.type === 'password' ? 'text' : 'password';
+        icon.textContent = input.type === 'password' ? 'visibility_off' : 'visibility';
+    }
+
+    function goToStep2(e) {
+        e.preventDefault();
+        
+        // Validate step 1
+        const form = document.getElementById('step1-form');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return false;
+        }
+        
+        // Transfer values
+        document.getElementById('hidden-key').value = document.getElementById('admin-key').value;
+        document.getElementById('hidden-name').value = form.full_name.value;
+        document.getElementById('hidden-email').value = form.email.value;
+        document.getElementById('hidden-level').value = form.admin_level.value;
+        
+        // Switch steps
+        document.getElementById('step1-form').classList.add('hidden');
+        document.getElementById('step2-form').classList.remove('hidden');
+        
+        // Update progress
+        document.getElementById('progress-1').classList.remove('bg-red-500');
+        document.getElementById('progress-1').classList.add('bg-slate-700');
+        document.getElementById('progress-2').classList.remove('bg-slate-700');
+        document.getElementById('progress-2').classList.add('bg-red-500');
+        document.getElementById('step-num').textContent = '2';
+        
+        return false;
+    }
+
+    function goBack() {
+        document.getElementById('step2-form').classList.add('hidden');
+        document.getElementById('step1-form').classList.remove('hidden');
+        
+        document.getElementById('progress-2').classList.remove('bg-red-500');
+        document.getElementById('progress-2').classList.add('bg-slate-700');
+        document.getElementById('progress-1').classList.remove('bg-slate-700');
+        document.getElementById('progress-1').classList.add('bg-red-500');
+        document.getElementById('step-num').textContent = '1';
+    }
+
+    // Password strength
+    document.getElementById('password-input').addEventListener('input', function() {
+        const v = this.value;
+        const s = (v.length >= 12) + /[A-Z]/.test(v) + /[0-9]/.test(v) + /[^A-Za-z0-9]/.test(v);
+        
+        const c = ['bg-slate-700', 'bg-red-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`str-${i}`).className = `flex-1 rounded-full transition-all ${i <= s ? c[s] : 'bg-slate-700'}`;
+        }
+        
+        document.getElementById('req-len').className = v.length >= 12 ? 'text-green-400' : 'text-slate-500';
+        document.getElementById('req-cap').className = /[A-Z]/.test(v) ? 'text-green-400' : 'text-slate-500';
+        document.getElementById('req-num').className = /[0-9]/.test(v) ? 'text-green-400' : 'text-slate-500';
+        document.getElementById('req-sym').className = /[^A-Za-z0-9]/.test(v) ? 'text-green-400' : 'text-slate-500';
+    });
+
+    // Match check
+    document.getElementById('confirm-pass').addEventListener('input', function() {
+        const match = this.value === document.getElementById('password-input').value;
+        document.getElementById('match-err').classList.toggle('hidden', match || !this.value);
+    });
+
+    // Submit validation
+    document.getElementById('step2-form').addEventListener('submit', function(e) {
+        const p = document.getElementById('password-input').value;
+        if (p !== document.getElementById('confirm-pass').value) {
+            e.preventDefault();
+            document.getElementById('match-err').classList.remove('hidden');
+            return;
+        }
+        if (p.length < 12 || !/[A-Z]/.test(p) || !/[0-9]/.test(p) || !/[^A-Za-z0-9]/.test(p)) {
+            e.preventDefault();
+            alert('Password requirements not met');
+            return;
+        }
+        document.getElementById('submit-btn').innerHTML = '<span class="material-symbols-outlined animate-spin text-xs">progress_activity</span> Creating...';
+    });
+</script>
+{% endblock %}

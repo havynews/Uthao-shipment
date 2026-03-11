@@ -1,0 +1,534 @@
+<!-- base_admin -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}Admin{% endblock %} | UTHAO Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Socket.IO Client Library -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        .sidebar-link { 
+            transition: all 0.2s; 
+        }
+        .sidebar-link:hover, .sidebar-link.active { 
+            background: rgba(245, 158, 11, 0.1); 
+            color: #d97706; 
+            border-right: 3px solid #d97706; 
+        }
+        
+        /* Mobile active state without border */
+        @media (max-width: 1023px) {
+            .sidebar-link.active {
+                border-right: none;
+                background: rgba(245, 158, 11, 0.15);
+            }
+        }
+        
+        .impersonation-bar { 
+            background: linear-gradient(90deg, #f59e0b, #d97706); 
+        }
+        
+        /* Mobile Sidebar Styles */
+        #sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #sidebar-overlay {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 1023px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 50;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+            }
+            
+            #sidebar.open {
+                transform: translateX(0);
+            }
+            
+            #sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(2px);
+                z-index: 40;
+                opacity: 0;
+                pointer-events: none;
+            }
+            
+            #sidebar-overlay.open {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+        
+        /* Prevent body scroll when sidebar is open on mobile */
+        body.sidebar-open {
+            overflow: hidden;
+        }
+        
+        /* Bottom Navigation for Mobile */
+        @media (max-width: 640px) {
+            .bottom-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: white;
+                border-top: 1px solid #e5e7eb;
+                z-index: 40;
+                display: flex;
+                justify-content: space-around;
+                padding: 8px 0 12px;
+                padding-bottom: env(safe-area-inset-bottom, 12px);
+            }
+            
+            .bottom-nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 12px;
+                color: #6b7280;
+                font-size: 11px;
+                font-weight: 500;
+                transition: all 0.2s;
+            }
+            
+            .bottom-nav-item.active {
+                color: #d97706;
+            }
+            
+            .bottom-nav-item i {
+                font-size: 20px;
+            }
+            
+            /* Add padding to main content to account for bottom nav */
+            main {
+                padding-bottom: 70px !important;
+            }
+        }
+        
+        @media (min-width: 641px) {
+            .bottom-nav {
+                display: none;
+            }
+        }
+        
+        /* Swipe gesture hint */
+        .swipe-hint {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(245, 158, 11, 0.9);
+            color: white;
+            padding: 12px 8px;
+            border-radius: 0 8px 8px 0;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 1023px) {
+            .swipe-hint.visible {
+                opacity: 1;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            .sidebar-link, .bottom-nav-item, button, a {
+                min-height: 44px;
+            }
+            
+            .sidebar-link {
+                padding-top: 12px;
+                padding-bottom: 12px;
+            }
+        }
+        
+        /* Pull to refresh indicator */
+        .ptr-indicator {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: #f59e0b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        
+        .ptr-indicator.visible {
+            opacity: 1;
+        }
+        
+        .ptr-indicator.loading {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: translateX(-50%) rotate(360deg); }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <!-- Impersonation Warning Bar -->
+    {% if session.impersonator_id %}
+    <div class="impersonation-bar text-white px-4 lg:px-6 py-2 flex justify-between items-center shadow-lg relative z-50 text-sm lg:text-base">
+        <div class="flex items-center gap-2 lg:gap-3">
+            <i class="fas fa-user-secret"></i>
+            <span class="font-medium">Impersonating: <strong>{{ current_user.full_name }}</strong></span>
+            <span class="hidden sm:inline">({{ current_user.email }})</span>
+        </div>
+        <a href="{{ url_for('admin.stop_impersonating') }}" class="bg-white text-amber-600 px-3 lg:px-4 py-1 rounded-full text-xs lg:text-sm font-semibold hover:bg-gray-100 transition whitespace-nowrap">
+            <i class="fas fa-sign-out-alt mr-1"></i><span class="hidden sm:inline">Return to </span>Admin
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Swipe Hint (shows briefly on mobile) -->
+    <div class="swipe-hint" id="swipeHint">
+        <i class="fas fa-chevron-right mb-1"></i>
+        <div style="writing-mode: vertical-rl; text-orientation: mixed;">Swipe</div>
+    </div>
+
+    <!-- Mobile Header / Navbar -->
+    <div class="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+        <button onclick="toggleSidebar()" class="p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition touch-manipulation">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900">UTHAO <span class="text-[#f59e0b]">Admin</span></h1>
+        <div class="w-8 h-8 rounded-full bg-[#f59e0b] text-white flex items-center justify-center font-semibold text-sm">
+            {{ current_user.full_name[:2].upper() if current_user.full_name else 'A' }}
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay (mobile only) -->
+    <div id="sidebar-overlay" onclick="closeSidebar()" class="hidden lg:hidden"></div>
+
+    <div class="flex h-[calc(100vh-{% if session.impersonator_id %}40px{% else %}0px{% endif %})] lg:h-screen overflow-hidden relative">
+        <!-- Pull to Refresh Indicator -->
+        <div class="ptr-indicator" id="ptrIndicator">
+            <i class="fas fa-sync-alt"></i>
+        </div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col lg:static lg:transform-none">
+            <!-- Desktop Logo (hidden on mobile since we have the header) -->
+            <div class="p-6 border-b border-gray-200 hidden lg:block">
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">UTHAO <span class="text-[#f59e0b]">Admin</span></h1>
+                <p class="text-xs text-gray-500 mt-1">Super Admin Panel</p>
+            </div>
+
+            <!-- Mobile Sidebar Header -->
+            <div class="p-4 border-b border-gray-200 lg:hidden flex items-center justify-between">
+                <h1 class="text-xl font-bold text-gray-900">UTHAO <span class="text-[#f59e0b]">Admin</span></h1>
+                <button onclick="closeSidebar()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Mobile User Info (shown in sidebar on mobile) -->
+            <div class="p-4 border-b border-gray-200 lg:hidden">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-[#f59e0b] text-white flex items-center justify-center font-bold text-lg">
+                        {{ current_user.full_name[:2].upper() if current_user.full_name else 'A' }}
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900">{{ current_user.full_name or 'Admin' }}</p>
+                        <p class="text-sm text-gray-500">{{ current_user.email }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-4">
+                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-line w-6"></i>
+                    <span class="font-medium">Dashboard</span>
+                </a>
+                
+                <a href="{{ url_for('admin.users') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint.startswith('admin.user') %}active{% endif %}">
+                    <i class="fas fa-users w-6"></i>
+                    <span class="font-medium">Users</span>
+                </a>
+                
+                <a href="{{ url_for('admin.shipments') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 
+                  {% if request.endpoint.startswith('admin.shipment') and 'payment' not in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-box w-6"></i>
+                    <span class="font-medium">Shipments</span>
+                </a>
+
+                <a href="{{ url_for('admin.plans') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint.startswith('admin.plans') %}active{% endif %}">
+                    <i class="fas fa-crown w-6"></i>
+                    <span class="font-medium">Plans</span>
+                </a>
+                
+                <a href="{{ url_for('admin.all_payments') }}"
+                  class="sidebar-link flex items-center px-6 py-3 text-gray-700
+                  {% if request.endpoint in ['admin.all_payments', 'admin.payment_detail', 'admin.shipment_payment_detail'] %}active{% endif %}">
+                    <i class="fas fa-credit-card w-6"></i>
+                    <span class="font-medium">Payments</span>
+                    {% set total_pending = g.pending_payments|default(0) + g.pending_shipment_payments|default(0) %}
+                    {% if total_pending > 0 %}
+                    <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ total_pending }}</span>
+                    {% endif %}
+                </a>
+
+                <a href="{{ url_for('admin.payment_methods') }}"
+                  class="sidebar-link flex items-center px-6 py-3 text-gray-700
+                  {% if request.endpoint.startswith('admin.payment_method') or request.endpoint == 'admin.add_payment_method' %}active{% endif %}">
+                    <i class="fas fa-wallet w-6"></i>
+                    <span class="font-medium">Payment Methods</span>
+                </a>
+
+                <a href="{{ url_for('admin.tickets') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint.startswith('admin.ticket') %}active{% endif %}">
+                    <i class="fas fa-headset w-6"></i>
+                    <span class="font-medium">Support Tickets</span>
+                    {% if g.open_tickets|default(0) > 0 %}
+                    <span class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{{ g.open_tickets }}</span>
+                    {% endif %}
+                </a>
+                
+                <a href="{{ url_for('admin.live_chat_dashboard') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint == 'admin.live_chat_dashboard' %}active{% endif %}">
+                    <i class="fas fa-cog w-6"></i>
+                    <span class="font-medium">Live Chat</span>
+                </a>
+
+                <a href="{{ url_for('admin.settings') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint == 'admin.settings' %}active{% endif %}">
+                    <i class="fas fa-cog w-6"></i>
+                    <span class="font-medium">Settings</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-gray-200 hidden lg:block">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-10 h-10 rounded-full bg-[#f59e0b] text-white flex items-center justify-center font-semibold">
+                        {{ current_user.full_name[:2].upper() if current_user.full_name else 'A' }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ current_user.full_name }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ current_user.email }}</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="mt-3 flex items-center px-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">
+                    <i class="fas fa-sign-out-alt w-6"></i>Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 w-full relative" id="mainContent">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="p-4 lg:p-6 pb-0 space-y-2">
+                        {% for category, message in messages %}
+                            <div class="rounded-lg p-4 {% if category == 'error' %}bg-red-100 text-red-700 border border-red-200{% elif category == 'warning' %}bg-yellow-100 text-yellow-700 border border-yellow-200{% else %}bg-green-100 text-green-700 border border-green-200{% endif %} flex justify-between items-center text-sm lg:text-base">
+                                <span>{{ message }}</span>
+                                <button onclick="this.parentElement.remove()" class="opacity-75 hover:opacity-100 p-1"><i class="fas fa-times"></i></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block main_content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Bottom Navigation (mobile only, < 640px) -->
+    <nav class="bottom-nav sm:hidden">
+        <a href="{{ url_for('admin.dashboard') }}" class="bottom-nav-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+            <i class="fas fa-bank"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('admin.users') }}" class="bottom-nav-item {% if request.endpoint.startswith('admin.user') %}active{% endif %}">
+            <i class="fas fa-users"></i>
+            <span>Users</span>
+        </a>
+        <a href="{{ url_for('admin.shipments') }}" class="bottom-nav-item {% if request.endpoint.startswith('admin.shipment') %}active{% endif %}">
+            <i class="fas fa-box"></i>
+            <span>Shipments</span>
+        </a>
+        
+    </nav>
+
+    <script>
+        // Sidebar toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const body = document.body;
+            
+            if (sidebar.classList.contains('open')) {
+                closeSidebar();
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+                overlay.classList.remove('hidden');
+                body.classList.add('sidebar-open');
+            }
+        }
+        
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const body = document.body;
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+            
+            body.classList.remove('sidebar-open');
+        }
+        
+        // Close sidebar when window is resized to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                closeSidebar();
+            }
+        });
+        
+        // Close sidebar when clicking a link on mobile
+        document.querySelectorAll('#sidebar a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) {
+                    closeSidebar();
+                }
+            });
+        });
+        
+        // Swipe gesture support
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50;
+        
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+        
+        function handleSwipe() {
+            const swipeDistance = touchEndX - touchStartX;
+            const sidebar = document.getElementById('sidebar');
+            
+            // Swipe right from left edge to open
+            if (swipeDistance > minSwipeDistance && touchStartX < 50 && !sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+            
+            // Swipe left to close
+            if (swipeDistance < -minSwipeDistance && sidebar.classList.contains('open')) {
+                closeSidebar();
+            }
+        }
+        
+        // Show swipe hint briefly on first mobile load
+        if (window.innerWidth < 1024 && !localStorage.getItem('swipeHintShown')) {
+            setTimeout(() => {
+                document.getElementById('swipeHint').classList.add('visible');
+                setTimeout(() => {
+                    document.getElementById('swipeHint').classList.remove('visible');
+                }, 2000);
+                localStorage.setItem('swipeHintShown', 'true');
+            }, 1000);
+        }
+        
+        // Pull to refresh support
+        let pullStartY = 0;
+        let pullMoveY = 0;
+        const ptrIndicator = document.getElementById('ptrIndicator');
+        const mainContent = document.getElementById('mainContent');
+        let isPulling = false;
+        let isAtTop = false;
+        
+        mainContent.addEventListener('touchstart', e => {
+            if (mainContent.scrollTop === 0) {
+                pullStartY = e.touches[0].clientY;
+                isAtTop = true;
+                isPulling = true;
+            }
+        }, { passive: true });
+        
+        mainContent.addEventListener('touchmove', e => {
+            if (!isPulling || !isAtTop) return;
+            
+            pullMoveY = e.touches[0].clientY;
+            const pullDistance = pullMoveY - pullStartY;
+            
+            if (pullDistance > 0 && pullDistance < 150) {
+                ptrIndicator.style.transform = `translateX(-50%) translateY(${pullDistance * 0.5}px)`;
+                ptrIndicator.classList.add('visible');
+            }
+        }, { passive: true });
+        
+        mainContent.addEventListener('touchend', e => {
+            if (!isPulling) return;
+            
+            const pullDistance = pullMoveY - pullStartY;
+            
+            if (pullDistance > 100) {
+                ptrIndicator.classList.add('loading');
+                // Trigger refresh
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
+            } else {
+                ptrIndicator.classList.remove('visible');
+                ptrIndicator.style.transform = 'translateX(-50%) translateY(0)';
+            }
+            
+            isPulling = false;
+            isAtTop = false;
+        }, { passive: true });
+        
+        // Keyboard shortcut for sidebar (Escape to close)
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeSidebar();
+            }
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,427 @@
+{% extends "base_user.html" %}
+{% block title %}Create Shipment — Step 4 (Payment){% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create_shipment.css') }}" />
+<style>
+  .payment-methods {
+    display: grid;
+    gap: 12px;
+  }
+  .payment-method-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+  }
+  .payment-method-card:hover { border-color: var(--orange); }
+  .payment-method-card.selected {
+    border-color: var(--orange);
+    background: rgba(249,115,22,0.05);
+  }
+  .payment-method-card input { display: none; }
+  .method-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+  }
+  .method-info { flex: 1; }
+  .method-name { font-weight: 600; color: var(--text); font-size: 15px; }
+  .method-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .check-icon {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: transparent; transition: all 0.2s;
+  }
+  .payment-method-card.selected .check-icon {
+    background: var(--orange); border-color: var(--orange); color: white;
+  }
+
+  /* Modal */
+  .payment-modal {
+    display: none; position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+    z-index: 1000; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .payment-modal.active { display: flex; }
+  .modal-content {
+    background: var(--card); border-radius: var(--radius);
+    max-width: 520px; width: 90%; max-height: 90vh;
+    overflow-y: auto; border: 1px solid var(--border);
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+  }
+  .modal-header {
+    padding: 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--card); z-index: 1;
+  }
+  .modal-body { padding: 20px; }
+  .modal-footer {
+    padding: 20px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+    position: sticky; bottom: 0; background: var(--card); z-index: 1;
+  }
+
+  /* Payment summary */
+  .payment-summary {
+    background: var(--surface); border-radius: var(--radius-sm);
+    padding: 16px; margin: 16px 0;
+  }
+  .detail-row {
+    display: flex; justify-content: space-between;
+    margin-bottom: 8px; font-size: 13px;
+  }
+  .detail-row:last-child {
+    margin-bottom: 0; padding-top: 8px;
+    border-top: 1px solid var(--border); font-weight: 600;
+  }
+
+  /* Copy field */
+  .copy-field {
+    display: flex; align-items: center;
+    background: #0f172a; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; overflow: hidden; margin: 8px 0;
+  }
+  .copy-field-text {
+    flex: 1; padding: 10px 12px;
+    font-family: monospace; font-size: 13px;
+    color: #e2e8f0; word-break: break-all; line-height: 1.4;
+  }
+  .copy-field-btn {
+    flex-shrink: 0; padding: 10px 14px;
+    background: var(--orange); color: white;
+    border: none; cursor: pointer; font-size: 12px;
+    font-weight: 600; transition: background .15s;
+    display: flex; align-items: center; gap: 5px;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    align-self: stretch;
+  }
+  .copy-field-btn:hover { background: #ea6200; }
+  .copy-field-btn.copied { background: #16a34a; }
+
+  /* Info row (label + value) */
+  .info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; background: var(--surface);
+    border-radius: 6px; margin: 6px 0; font-size: 13px;
+  }
+  .info-row-label { color: var(--muted); }
+  .info-row-value { font-weight: 600; color: var(--text); }
+
+  /* QR code */
+  .qr-wrap {
+    width: 160px; height: 160px; margin: 0 auto 8px;
+    background: white; padding: 8px; border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qr-wrap img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
+  .qr-wrap i { font-size: 80px; color: #cbd5e1; }
+
+  /* Warning box */
+  .warning-box {
+    background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.25);
+    color: #ca8a04; padding: 12px 14px; border-radius: 8px;
+    font-size: 12px; margin-top: 14px; line-height: 1.5;
+  }
+  .info-box {
+    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+    color: #3b82f6; padding: 12px 14px; border-radius: 8px;
+    font-size: 12px; margin-top: 14px; line-height: 1.5;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; margin: 14px 0 6px;
+  }
+
+  /* Amount badge */
+  .amount-badge {
+    display: inline-block; background: rgba(249,115,22,0.1);
+    color: var(--orange); font-size: 20px; font-weight: 800;
+    padding: 6px 16px; border-radius: 8px; margin: 10px 0;
+  }
+</style>
+{% endblock %}
+
+{% block page_body %}
+<div class="cs-page">
+
+  <div class="cs-header">
+    <h1>Payment</h1>
+    <p>Select your preferred payment method for ${{ '{:,}'.format(cost) }}</p>
+  </div>
+
+  <div class="stepper">
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Route</span><div class="step-line"></div></div>
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Packages</span><div class="step-line"></div></div>
+    <div class="step-item done"><div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div><span class="step-label">Service</span><div class="step-line"></div></div>
+    <div class="step-item active"><div class="step-bubble">4</div><span class="step-label">Payment</span><div class="step-line"></div></div>
+    <div class="step-item"><div class="step-bubble">5</div><span class="step-label">Confirm</span></div>
+  </div>
+
+  <form method="POST" action="{{ url_for('user.create_shipment', step='4') }}" id="paymentForm">
+    <input type="hidden" name="payment_method_id" id="selectedMethodId" required>
+
+    <div class="cs-card">
+      <div class="cs-card-title">
+        <i class="fas fa-credit-card"></i>
+        Select Payment Method
+      </div>
+
+      <div class="payment-methods">
+        {% for method in payment_methods %}
+        <label class="payment-method-card"
+               onclick="selectMethod({{ method.id }}, '{{ method.method_type }}')"
+               id="method-{{ method.id }}">
+          <input type="radio" name="payment_method" value="{{ method.id }}" required>
+          <div class="method-icon"
+               style="background:{{ method.config.get('color','rgba(249,115,22,0.1)') }};
+                      color:{{ method.config.get('icon_color','var(--orange)') }}">
+            <i class="fas {{ method.icon }}"></i>
+          </div>
+          <div class="method-info">
+            <div class="method-name">{{ method.display_name or method.name }}</div>
+            <div class="method-desc">
+              {% if method.method_type == 'crypto' %}Instant confirmation · low fees{% endif %}
+              {% if method.method_type == 'bank_transfer' %}2-3 business days processing{% endif %}
+              {% if method.method_type == 'paypal' %}Fast and secure{% endif %}
+            </div>
+          </div>
+          <div class="check-icon"><i class="fas fa-check"></i></div>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="payment-summary">
+        <div class="detail-row"><span>Service Level</span><span>{{ service }}</span></div>
+        <div class="detail-row"><span>Shipping Cost</span><span>${{ '{:,}'.format(cost) }}</span></div>
+        <div class="detail-row">
+          <span>Total Due</span>
+          <span style="color:var(--orange);font-size:16px;">${{ '{:,}'.format(cost) }} USD</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-footer">
+      <a href="{{ url_for('user.create_shipment', step='3') }}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <button type="button" class="btn-next" id="continueBtn"
+              onclick="openPaymentModal()" disabled>
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Payment Details Modal -->
+<div class="payment-modal" id="paymentModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 style="margin:0;font-size:16px;">
+        <i class="fas fa-lock" style="color:var(--orange);margin-right:8px;"></i>Complete Payment
+      </h3>
+      <button onclick="closeModal()"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- Dynamic content -->
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-back" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn-next" onclick="confirmPayment()">
+        <i class="fas fa-check"></i> I've Made the Payment
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+let selectedMethod = null;
+
+function selectMethod(id, type) {
+  document.querySelectorAll('.payment-method-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`method-${id}`).classList.add('selected');
+  document.getElementById('selectedMethodId').value = id;
+  document.getElementById('continueBtn').disabled = false;
+  selectedMethod = { id, type };
+}
+
+function openPaymentModal() {
+  if (!selectedMethod) return;
+  fetch(`/user/api/payment-methods/${selectedMethod.id}?amount={{ cost }}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        renderPaymentDetails(data.method);
+        document.getElementById('paymentModal').classList.add('active');
+      }
+    })
+    .catch(() => {
+      // fallback: just open modal with whatever cached data
+      document.getElementById('paymentModal').classList.add('active');
+    });
+}
+
+function copyField(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+    }, 2000);
+  });
+}
+
+function makeCopyField(value, label) {
+  if (!value) return '';
+  return `
+    <div class="section-label">${label}</div>
+    <div class="copy-field">
+      <div class="copy-field-text">${value}</div>
+      <button type="button" class="copy-field-btn"
+              onclick="copyField('${value.replace(/'/g, "\\'")}', this)">
+        <i class="fas fa-copy"></i> Copy
+      </button>
+    </div>
+  `;
+}
+
+function renderPaymentDetails(method) {
+  const body = document.getElementById('modalBody');
+  const inst = method.instructions;
+  const amount = {{ cost }};
+
+  let html = `
+    <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      <div style="font-size:28px;margin-bottom:6px;"><i class="fas ${method.icon}"></i></div>
+      <div style="font-weight:700;font-size:16px;">${method.display_name}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">Ref: ${method.reference}</div>
+      <div class="amount-badge">$${amount.toLocaleString()} USD</div>
+    </div>
+  `;
+
+  if (inst.type === 'crypto') {
+    // QR Code (base64 or URL)
+    const qrContent = inst.qr_code
+      ? `<img src="${inst.qr_code}" alt="QR Code">`
+      : `<i class="fas fa-qrcode"></i>`;
+
+    html += `
+      <div style="text-align:center;margin-bottom:16px;">
+        <div class="qr-wrap">${qrContent}</div>
+        <div style="font-size:11px;color:var(--muted);">Scan QR code to get address</div>
+      </div>
+
+      ${makeCopyField(inst.address, 'Wallet Address')}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+        <div class="info-row">
+          <span class="info-row-label">Network</span>
+          <span class="info-row-value">${inst.network || '—'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-row-label">Amount</span>
+          <span class="info-row-value" style="color:var(--orange);">$${amount} USDT</span>
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <i class="fas fa-exclamation-triangle" style="margin-right:5px;"></i>
+        Send <strong>exactly $${amount} USDT</strong> on the
+        <strong>${inst.network || 'correct'}</strong> network only.
+        Sending to the wrong network may result in permanent loss of funds.
+      </div>
+    `;
+
+  } else if (inst.type === 'bank') {
+    html += `
+      ${makeCopyField(inst.bank_name,      'Bank Name')}
+      ${makeCopyField(inst.account_name,   'Account Name')}
+      ${makeCopyField(inst.account_number, 'Account Number')}
+      ${inst.swift_code ? makeCopyField(inst.swift_code, 'SWIFT / BIC') : ''}
+      ${inst.iban       ? makeCopyField(inst.iban,       'IBAN / Routing') : ''}
+      ${makeCopyField(inst.reference, 'Payment Reference')}
+
+      <div class="info-row" style="margin-top:10px;">
+        <span class="info-row-label">Amount to Transfer</span>
+        <span class="info-row-value" style="color:var(--orange);">$${amount} USD</span>
+      </div>
+
+      <div class="info-box">
+        <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+        Always include your <strong>reference number</strong> in the transfer description.
+        Transfers without a reference may be delayed or rejected.
+      </div>
+    `;
+
+  } else if (inst.type === 'paypal') {
+    html += `
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:52px;color:#0070ba;margin-bottom:12px;">
+          <i class="fab fa-paypal"></i>
+        </div>
+        <p style="margin-bottom:4px;color:var(--muted);font-size:13px;">Send payment to</p>
+      </div>
+
+      ${makeCopyField(inst.email, 'PayPal Email')}
+
+      <div class="info-row" style="margin-top:8px;">
+        <span class="info-row-label">Amount</span>
+        <span class="info-row-value" style="color:var(--orange);">$${amount} USD</span>
+      </div>
+
+      ${inst.link ? `
+      <div style="margin-top:16px;">
+        <a href="${inst.link}" target="_blank"
+           style="display:flex;align-items:center;justify-content:center;gap:8px;
+                  width:100%;padding:12px;background:#0070ba;color:white;
+                  border-radius:8px;font-weight:600;text-decoration:none;font-size:14px;
+                  transition:background .15s;"
+           onmouseover="this.style.background='#005ea6'"
+           onmouseout="this.style.background='#0070ba'">
+          <i class="fab fa-paypal"></i> Pay Directly with PayPal
+        </a>
+      </div>` : ''}
+
+      <div class="info-box">
+        <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+        After sending, click <strong>"I've Made the Payment"</strong> below and
+        upload your PayPal confirmation screenshot on the next step.
+      </div>
+    `;
+  }
+
+  body.innerHTML = html;
+}
+
+function closeModal() {
+  document.getElementById('paymentModal').classList.remove('active');
+}
+
+function confirmPayment() {
+  document.getElementById('paymentForm').submit();
+}
+
+// Close on outside click
+document.getElementById('paymentModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}
+
+

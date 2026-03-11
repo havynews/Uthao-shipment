@@ -1,0 +1,141 @@
+<!-- create shipment step 3 -->
+
+
+
+{% extends "base_user.html" %}
+{% block title %}Create Shipment — Step 3{% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create_shipment.css') }}" />
+{% endblock %}
+
+{% block page_body %}
+<div class="cs-page">
+
+  <!-- Header -->
+  <div class="cs-header">
+    <h1>Service Level</h1>
+    <p>Choose a delivery speed that works for you</p>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    <div class="step-item done">
+      <div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div>
+      <span class="step-label">Route & Contacts</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item done">
+      <div class="step-bubble"><i class="fas fa-check" style="font-size:11px"></i></div>
+      <span class="step-label">Package Details</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item active">
+      <div class="step-bubble">3</div>
+      <span class="step-label">Service Level</span>
+      <div class="step-line"></div>
+    </div>
+    <div class="step-item">
+      <div class="step-bubble">4</div>
+      <span class="step-label">Review & Confirm</span>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="POST" action="{{ url_for('user.create_shipment', step='3') }}" id="step3Form">
+
+    <div class="cs-card">
+      <div class="cs-card-title">
+        <i class="fas fa-shipping-fast"></i>
+        Select Service
+      </div>
+
+      {% if total_weight %}
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;
+                  background:var(--surface);border:1px solid var(--border);
+                  border-radius:var(--radius-sm);font-size:13px;color:var(--text2)">
+        <i class="fas fa-weight-hanging" style="color:var(--orange)"></i>
+        Total package weight: <strong style="color:var(--text)">{{ total_weight|round(2) }} kg</strong>
+      </div>
+      {% endif %}
+
+      <div class="service-grid">
+
+        <!-- Economy -->
+        <label class="service-card" id="card-Economy" onclick="selectService('Economy')">
+          <input type="radio" name="service" value="Economy" required />
+          <div class="service-check"><i class="fas fa-check"></i></div>
+          <div class="service-icon" style="background:rgba(148,163,184,0.1);color:#94a3b8">
+            <i class="fas fa-box"></i>
+          </div>
+          <div class="service-name">Economy</div>
+          <div class="service-days">7 – 10 business days</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;flex:1">
+            Budget-friendly option. Ideal for non-urgent cargo with flexible timelines.
+          </div>
+          <div class="service-price">$420</div>
+        </label>
+
+        <!-- Standard -->
+        <label class="service-card selected" id="card-Standard" onclick="selectService('Standard')">
+          <input type="radio" name="service" value="Standard" checked required />
+          <div class="service-check"><i class="fas fa-check"></i></div>
+          <div class="service-icon" style="background:var(--orange-glow);color:var(--orange)">
+            <i class="fas fa-truck"></i>
+          </div>
+          <div class="service-name">Standard</div>
+          <div class="service-days">3 – 5 business days</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;flex:1">
+            Our most popular service. Reliable delivery with full tracking included.
+          </div>
+          <div class="service-price">$680</div>
+        </label>
+
+        <!-- Express -->
+        <label class="service-card" id="card-Express" onclick="selectService('Express')">
+          <input type="radio" name="service" value="Express" required />
+          <div class="service-check"><i class="fas fa-check"></i></div>
+          <div class="service-icon" style="background:rgba(34,197,94,0.1);color:#22c55e">
+            <i class="fas fa-shipping-fast"></i>
+          </div>
+          <div class="service-name">Express</div>
+          <div class="service-days">1 – 2 business days</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5;flex:1">
+            Priority handling and fastest delivery. Best for urgent or time-sensitive cargo.
+          </div>
+          <div class="service-price">$1,150</div>
+        </label>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="cs-footer">
+      <a href="{{ url_for('user.create_shipment', step='2') }}" class="btn-back">
+        <i class="fas fa-arrow-left"></i> Back
+      </a>
+      <button type="submit" class="btn-next">
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+function selectService(name) {
+  // Clear all
+  document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+  // Select chosen
+  document.getElementById('card-' + name)?.classList.add('selected');
+  // Tick the hidden radio
+  const radio = document.querySelector(`input[name="service"][value="${name}"]`);
+  if (radio) radio.checked = true;
+}
+// Restore from previous visit (query param or session — keep Standard as default)
+const saved = '{{ session.get("service", "Standard") }}';
+if (saved) selectService(saved);
+</script>
+{% endblock %}

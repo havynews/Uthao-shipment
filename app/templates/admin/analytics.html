@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <h1 class="text-3xl font-bold mb-8">Analytics & Reports</h1>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-gray-500 text-sm">TOTAL SHIPMENTS</div>
+            <div class="text-3xl font-bold">12,482</div>
+            <div class="text-green-600 text-sm">+12.5% vs LW</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-gray-500 text-sm">ACTIVE DELIVERIES</div>
+            <div class="text-3xl font-bold">458</div>
+            <div class="text-green-600 text-sm">+3.2% vs LW</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-gray-500 text-sm">ON-TIME RATE</div>
+            <div class="text-3xl font-bold">98.4%</div>
+            <div class="text-gray-500 text-sm">No change</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-gray-500 text-sm">TOTAL SPEND</div>
+            <div class="text-3xl font-bold">$1.2M</div>
+            <div class="text-green-600 text-sm">+8.4% vs LW</div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-lg font-semibold mb-4">Shipping Volume vs. Cost</h2>
+        <div class="h-64 bg-gray-100 flex items-center justify-center text-gray-400">
+            [Chart: DAY 01 ... DAY 30]
+        </div>
+    </div>
+
+    <!-- Top Destinations & Cargo Distribution -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">Top Destinations</h2>
+            <ul class="space-y-2">
+                <li class="flex justify-between"><span>Dhaka</span><span>4,280 Shipments</span></li>
+                <li class="flex justify-between"><span>Chittagong</span><span>3,120 Shipments</span></li>
+                <li class="flex justify-between"><span>Sylhet</span><span>1,850 Shipments</span></li>
+                <li class="flex justify-between"><span>Rajshahi</span><span>940 Shipments</span></li>
+            </ul>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">Cargo Type Distribution</h2>
+            <ul class="space-y-2">
+                <li class="flex justify-between"><span>Textiles</span><span>64%</span></li>
+                <li class="flex justify-between"><span>Electronics</span><span>24%</span></li>
+                <li class="flex justify-between"><span>Perishables</span><span>12%</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Recent Reports Table -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Reports</h3>
+        </div>
+        <div class="border-t border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">REPORT NAME</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TYPE</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">GENERATED DATE</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SIZE</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ACTION</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td class="px-6 py-4">Monthly Operational Cost Q3</td>
+                        <td class="px-6 py-4">Financial</td>
+                        <td class="px-6 py-4">Oct 12, 2023</td>
+                        <td class="px-6 py-4">2.4 MB</td>
+                        <td class="px-6 py-4"><a href="#" class="text-blue-600">⬇️</a></td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4">Fleet Efficiency Performance</td>
+                        <td class="px-6 py-4">Operational</td>
+                        <td class="px-6 py-4">Oct 10, 2023</td>
+                        <td class="px-6 py-4">1.1 MB</td>
+                        <td class="px-6 py-4"><a href="#" class="text-blue-600">⬇️</a></td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4">Driver Safety Compliance Log</td>
+                        <td class="px-6 py-4">Safety</td>
+                        <td class="px-6 py-4">Oct 08, 2023</td>
+                        <td class="px-6 py-4">4.8 MB</td>
+                        <td class="px-6 py-4"><a href="#" class="text-blue-600">⬇️</a></td>
+                    </tr>
+                    <tr>
+                        <td class="px-6 py-4">Custom Client Success Report</td>
+                        <td class="px-6 py-4">Client-Facing</td>
+                        <td class="px-6 py-4">Oct 05, 2023</td>
+                        <td class="px-6 py-4">950 KB</td>
+                        <td class="px-6 py-4"><a href="#" class="text-blue-600">⬇️</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="px-4 py-3 bg-gray-50 text-right">
+            <a href="#" class="text-blue-600 font-semibold">VIEW ALL REPORTS →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

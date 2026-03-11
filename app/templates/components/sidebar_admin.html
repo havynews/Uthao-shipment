@@ -1,0 +1,72 @@
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <i class="fas fa-cube text-2xl"></i>
+    <span>Admin</span>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+      <a href="{{ url_for('admin.dashboard') }}" class="sidebar-item {{ 'active' if request.endpoint == 'admin.dashboard' }}">
+        <i class="fas fa-th-large"></i>
+        Dashboard
+      </a>
+      <a href="{{ url_for('admin.users') }}" class="sidebar-item {{ 'active' if 'admin.users' in request.endpoint }}">
+        <i class="fas fa-users"></i>
+        Users
+      </a>
+      <a href="{{ url_for('admin.shipments') }}" class="sidebar-item {{ 'active' if 'admin.shipments' in request.endpoint }}">
+        <i class="fas fa-box"></i>
+        Shipments
+      </a>
+
+      <a href="{{ url_for('admin.plans') }}" class="sidebar-item {{ 'active' if 'admin.plans' in request.endpoint }}">
+          <i class="fas fa-box"></i>
+          Plans
+      </a>
+    </div>
+    
+    <div class="sidebar-section">
+      <div class="sidebar-label">Finance</div>
+      <a href="{{ url_for('admin.payments') }}" class="sidebar-item {{ 'active' if 'admin.payments' in request.endpoint }}">
+        <i class="fas fa-credit-card"></i>
+        Payments
+        {% set pending_count = namespace(value=0) %}
+        {% if g.pending_payments_count %}
+          <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ g.pending_payments_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+    
+    <div class="sidebar-section">
+      <div class="sidebar-label">Support</div>
+      <a href="{{ url_for('admin.tickets') }}" class="sidebar-item {{ 'active' if 'admin.tickets' in request.endpoint }}">
+        <i class="fas fa-headset"></i>
+        Tickets
+        {% if g.open_tickets_count %}
+          <span class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">{{ g.open_tickets_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+    
+    <div class="sidebar-section">
+      <div class="sidebar-label">Configuration</div>
+      <a href="{{ url_for('admin.settings') }}" class="sidebar-item {{ 'active' if request.endpoint == 'admin.settings' }}">
+        <i class="fas fa-cog"></i>
+        Settings
+      </a>
+    </div>
+    
+    <div class="sidebar-section" style="margin-top: auto; padding-bottom: 1rem;">
+      <div class="border-t border-gray-200 my-4 mx-4"></div>
+      <a href="{{ url_for('user.dashboard') }}" class="sidebar-item">
+        <i class="fas fa-arrow-left"></i>
+        Back to App
+      </a>
+      <a href="{{ url_for('auth.logout') }}" class="sidebar-item text-red-600">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+      </a>
+    </div>
+  </nav>
+</aside>

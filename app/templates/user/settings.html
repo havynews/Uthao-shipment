@@ -1,0 +1,1734 @@
+{% extends "base_user.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block page_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}" />
+<style>
+/* Toast Notification System */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+.toast {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    min-width: 300px;
+    max-width: 400px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: toastSlideIn 0.3s ease;
+    pointer-events: all;
+}
+.toast.toast-success { border-left: 4px solid #22c55e; }
+.toast.toast-error { border-left: 4px solid #ef4444; }
+.toast.toast-info { border-left: 4px solid #3b82f6; }
+.toast.toast-warning { border-left: 4px solid #f59e0b; }
+.toast-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.toast-success .toast-icon { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.toast-error .toast-icon { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.toast-info .toast-icon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.toast-warning .toast-icon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.toast-content { flex: 1; }
+.toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.toast-message {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.toast-close:hover {
+    background: var(--surface);
+    color: var(--text);
+}
+
+/* Payment Method Selection Styles */
+.payment-methods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+.payment-method-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+.payment-method-card:hover {
+    border-color: var(--orange);
+    transform: translateY(-2px);
+}
+.payment-method-card.selected {
+    border-color: var(--orange);
+    background: rgba(249, 115, 22, 0.05);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.1);
+}
+.payment-method-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-size: 24px;
+    color: var(--orange);
+}
+.payment-method-card.selected .payment-method-icon {
+    background: var(--orange);
+    color: white;
+}
+.payment-method-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.payment-method-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+/* Payment Details Display */
+.payment-details-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+}
+.payment-details-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+.payment-qr-code {
+    width: 180px;
+    height: 180px;
+    background: white;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 0 auto 16px;
+    border: 1px solid var(--border);
+}
+.payment-qr-code img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.payment-instruction-step {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+}
+.payment-step-number {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.payment-step-content {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.5;
+}
+.payment-step-content code {
+    background: var(--surface3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+}
+.payment-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #f59e0b;
+}
+.payment-warning i {
+    margin-right: 8px;
+}
+
+/* Copy button */
+.copy-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s;
+    color: var(--text);
+}
+.copy-btn:hover {
+    background: var(--orange);
+    color: white;
+    border-color: var(--orange);
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+.modal {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
+.modal-overlay.active .modal {
+    transform: scale(1) translateY(0);
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.modal-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+.modal-icon.danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.modal-icon.warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.modal-icon.info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.modal-icon.success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text);
+}
+.modal-body {
+    color: var(--text2);
+    font-size: 14px;
+    line-height: 1.6;
+}
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+.modal-btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+.modal-btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+.modal-btn-secondary:hover {
+    background: var(--surface3);
+}
+.modal-btn-primary {
+    background: var(--orange);
+    color: white;
+}
+.modal-btn-primary:hover {
+    background: #ea580c;
+}
+.modal-btn-danger {
+    background: #ef4444;
+    color: white;
+}
+.modal-btn-danger:hover {
+    background: #dc2626;
+}
+
+/* Amount display in modal */
+.modal-amount-display {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+}
+.modal-amount-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.modal-amount-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--orange);
+    font-family: 'Syne', sans-serif;
+}
+
+/* Payment status styles */
+.payment-status-pending { color: #f59e0b; }
+.payment-status-approved { color: #22c55e; }
+.payment-status-rejected { color: #ef4444; }
+.payment-status-cancelled { color: #6b7280; }
+
+/* Bank details box */
+.bank-details {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin: 12px 0;
+}
+
+@keyframes toastSlideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+</style>
+{% endblock %}
+
+{% block page_body %}
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Payment Method Selection Modal -->
+<div id="paymentModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <div id="paymentModalIcon" class="modal-icon info">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <div id="paymentModalTitle" class="modal-title">Select Payment Method</div>
+        </div>
+        <div class="modal-body">
+            <div id="paymentModalContent">
+                <!-- Dynamic content loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="paymentModalCancel" class="modal-btn modal-btn-secondary">Cancel</button>
+            <button id="paymentModalConfirm" class="modal-btn modal-btn-primary" style="display:none;">Confirm Payment</button>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Details Modal (for viewing instructions) -->
+<div id="paymentDetailsModal" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+        <div class="modal-header">
+            <div class="modal-icon info">
+                <i class="fas fa-info-circle"></i>
+            </div>
+            <div class="modal-title">Payment Instructions</div>
+        </div>
+        <div class="modal-body" id="paymentDetailsContent">
+            <!-- Dynamic content -->
+        </div>
+        <div class="modal-footer">
+            <button onclick="closePaymentDetailsModal()" class="modal-btn modal-btn-secondary">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirmation Modal -->
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal" style="max-width: 400px;">
+        <div class="modal-header">
+            <div id="confirmModalIcon" class="modal-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div id="confirmModalTitle" class="modal-title">Confirm Action</div>
+        </div>
+        <div class="modal-body" id="confirmModalBody">
+            Are you sure you want to proceed?
+        </div>
+        <div class="modal-footer">
+            <button id="confirmModalCancel" class="modal-btn modal-btn-secondary">Cancel</button>
+            <button id="confirmModalConfirm" class="modal-btn modal-btn-primary">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="st-page">
+
+  <div class="st-topbar">
+    <div class="st-page-title">Account Settings</div>
+    <button class="btn-primary" id="saveBtn" onclick="submitActive()">
+      <i class="fas fa-save"></i>
+      <span class="btn-label">Save Changes</span>
+    </button>
+  </div>
+
+  <nav class="st-tabs">
+    <a href="#" class="st-tab {% if active_tab == 'profile' %}active{% endif %}" data-tab="profile">Profile</a>
+    <a href="#" class="st-tab {% if active_tab == 'security' %}active{% endif %}" data-tab="security">Security</a>
+    <a href="#" class="st-tab {% if active_tab == 'billing' %}active{% endif %}" data-tab="billing">Billing</a>
+    <a href="#" class="st-tab {% if active_tab == 'notifications' %}active{% endif %}" data-tab="notifications">Notifications</a>
+  </nav>
+
+  <div class="st-body">
+
+    {# PROFILE TAB #}
+    <div class="st-panel {% if active_tab == 'profile' %}active{% endif %}" id="tab-profile">
+      <form method="POST" action="{{ url_for('user.settings') }}?tab=profile"
+            enctype="multipart/form-data" id="profileForm">
+        <input type="hidden" name="form_type" value="profile" />
+
+        <div class="st-layout">
+          <div class="st-card">
+            <div class="st-card-title">Personal Information</div>
+
+            <div class="st-avatar-row">
+              <div class="st-avatar" id="avatarCircle">
+                {% if current_user.avatar_url %}
+                  <img src="{{ current_user.avatar_url }}" alt="" id="avatarImg" style="width:100%;height:100%;object-fit:cover;" />
+                {% else %}
+                  <span id="avatarInitials">{{ current_user.full_name[:2].upper() if current_user.full_name else 'UT' }}</span>
+                {% endif %}
+              </div>
+
+              <div>
+                <div class="st-avatar-name">{{ current_user.full_name }}</div>
+                <div class="st-avatar-sub">Update your photo and personal details here.</div>
+                <div class="st-avatar-btns">
+                  <button type="button" class="btn-upload-new"
+                          onclick="document.getElementById('avatarFileInput').click()">
+                    <i class="fas fa-camera"></i> Upload New
+                  </button>
+                  {% if current_user.avatar_url %}
+                  <button type="button" class="btn-remove-av" onclick="showRemoveAvatarModal()">
+                    <i class="fas fa-trash"></i> Remove
+                  </button>
+                  {% endif %}
+                  <input type="file" id="avatarFileInput" name="avatar"
+                         accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" 
+                         style="display:none"
+                         onchange="previewAvatar(this)" />
+                </div>
+                <div class="avatar-hint" style="font-size:11px;color:var(--muted);margin-top:6px;">
+                  JPG, PNG, GIF or WebP. Max 2MB.
+                </div>
+              </div>
+            </div>
+
+            <div class="st-form-grid">
+              <div class="st-field">
+                <label class="st-label" for="full_name">Full Name <span style="color:#ef4444">*</span></label>
+                <input class="st-input" type="text" id="full_name" name="full_name"
+                       value="{{ current_user.full_name or '' }}" placeholder="Your full name" required />
+              </div>
+
+              <div class="st-field">
+                <label class="st-label" for="email">Email Address <span style="color:#ef4444">*</span></label>
+                <input class="st-input" type="email" id="email" name="email"
+                       value="{{ current_user.email or '' }}" placeholder="you@example.com" required />
+              </div>
+
+              <div class="st-field">
+                <label class="st-label" for="company">Company Name</label>
+                <input class="st-input" type="text" id="company" name="company"
+                       value="{{ current_user.company or '' }}" placeholder="Your company" />
+              </div>
+
+              <div class="st-field">
+                <label class="st-label" for="phone">Phone Number</label>
+                <input class="st-input" type="tel" id="phone" name="phone"
+                       value="{{ current_user.phone or '' }}" placeholder="+1 234 567 8900" />
+              </div>
+
+              <div class="st-field">
+                <label class="st-label" for="currency">
+                  <i class="fas fa-coins" style="margin-right:4px;color:var(--orange)"></i>
+                  Preferred Currency
+                </label>
+                <select class="st-input" id="currency" name="currency" style="cursor:pointer;">
+                  {% for code, info in currencies.items() %}
+                  <option value="{{ code }}" {% if current_user.currency == code %}selected{% endif %}>
+                    {{ info.symbol }} {{ code }} — {{ info.name }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+                  Prices will be displayed in this currency
+                </div>
+              </div>
+
+              <div class="st-field st-col-full">
+                <label class="st-label" for="bio">Bio</label>
+                <textarea class="st-textarea" id="bio" name="bio" maxlength="500"
+                          placeholder="Tell us a little about yourself…">{{ current_user.bio or '' }}</textarea>
+                <div class="char-count"><span id="bioCount">0</span>/500</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="st-right">
+            <div class="st-card">
+              <div class="st-card-title">
+                <i class="fas fa-shield-alt st-card-title-icon" style="color:var(--orange)"></i>
+                Security
+              </div>
+              <div class="sec-toggle-row">
+                <div>
+                  <div class="sec-lbl">Two-Factor Authentication</div>
+                  <div class="sec-sub">Secure your account with 2FA</div>
+                </div>
+                <label class="tog">
+                  <input type="checkbox" disabled {% if current_user.two_fa_enabled %}checked{% endif %} />
+                  <span class="tog-track"></span>
+                </label>
+              </div>
+              <button type="button" class="btn-block" onclick="switchTab('security')">
+                Change Password
+              </button>
+            </div>
+
+            <div class="st-card">
+              <div class="st-card-title">
+                <i class="fas fa-credit-card st-card-title-icon" style="color:var(--orange)"></i>
+                Billing
+              </div>
+              <div class="plan-box">
+                <div>
+                  <div class="plan-tag">Current Plan</div>
+                  <div class="plan-name">
+                    {{ subscription.plan.name if subscription else 'Starter' }}
+                  </div>
+                  <div class="plan-renew">
+                    {% if subscription and subscription.renews_at %}
+                      Next renewal: {{ subscription.renews_at.strftime('%d %b %Y') }}
+                    {% else %}
+                      Free plan — no renewal
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="plan-badge">
+                  {{ (subscription.status or 'active').upper() if subscription else 'ACTIVE' }}
+                </div>
+              </div>
+              <button type="button" class="btn-block outline-orange"
+                      onclick="switchTab('billing')">
+                Manage Subscription
+              </button>
+            </div>
+
+            <div class="st-card">
+              <div class="st-card-title">
+                <i class="fas fa-bell st-card-title-icon" style="color:var(--orange)"></i>
+                Alerts
+              </div>
+              {% set prefs = current_user.get_notification_prefs() %}
+              <div class="alert-list">
+                <div class="alert-item">
+                  <div class="alert-dot {% if prefs.email_notif %}on{% else %}off{% endif %}"></div>
+                  Email notifications {% if prefs.email_notif %}enabled{% else %}disabled{% endif %}
+                </div>
+                <div class="alert-item">
+                  <div class="alert-dot {% if prefs.sms_notif %}on{% else %}off{% endif %}"></div>
+                  SMS alerts {% if prefs.sms_notif %}enabled{% else %}disabled{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {# SECURITY TAB #}
+    <div class="st-panel {% if active_tab == 'security' %}active{% endif %}" id="tab-security">
+      <form method="POST" action="{{ url_for('user.settings') }}?tab=security"
+            id="securityForm">
+        <input type="hidden" name="form_type" value="security" />
+
+        <div class="st-layout">
+          <div class="st-card">
+            <div class="st-card-title">
+              <i class="fas fa-lock st-card-title-icon" style="color:var(--orange)"></i>
+              Change Password
+            </div>
+
+            <div class="st-form-grid cols-1">
+              <div class="st-field">
+                <label class="st-label" for="current_pw">Current Password</label>
+                <input class="st-input" type="password" id="current_pw"
+                       name="current_password" placeholder="Enter your current password" 
+                       autocomplete="current-password" />
+              </div>
+
+              <div class="st-field">
+                <label class="st-label" for="new_pw">New Password</label>
+                <input class="st-input" type="password" id="new_pw"
+                       name="new_password" placeholder="At least 8 characters"
+                       oninput="checkStrength(this.value)" autocomplete="new-password" />
+                <div class="pw-bars">
+                  <div class="pw-bar" id="pwB1"></div>
+                  <div class="pw-bar" id="pwB2"></div>
+                  <div class="pw-bar" id="pwB3"></div>
+                  <div class="pw-bar" id="pwB4"></div>
+                </div>
+                <span class="pw-hint" id="pwHint"></span>
+              </div>
+
+              <div class="st-field">
+                <label class="st-label" for="confirm_pw">Confirm New Password</label>
+                <input class="st-input" type="password" id="confirm_pw"
+                       name="confirm_password" placeholder="Repeat new password"
+                       oninput="checkMatch()" autocomplete="new-password" />
+                <span class="pw-hint" id="matchHint"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="st-right">
+            <div class="st-card">
+              <div class="st-card-title">
+                <i class="fas fa-shield-alt st-card-title-icon" style="color:var(--orange)"></i>
+                Two-Factor Authentication
+              </div>
+              <div class="sec-toggle-row" style="margin-bottom:12px">
+                <div>
+                  <div class="sec-lbl">Enable 2FA</div>
+                  <div class="sec-sub">Extra layer of account security</div>
+                </div>
+                <label class="tog">
+                  <input type="checkbox" name="two_fa" {% if current_user.two_fa_enabled %}checked{% endif %} />
+                  <span class="tog-track"></span>
+                </label>
+              </div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.6">
+                When enabled, you'll be asked for a verification code each time you sign in.
+              </p>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {# BILLING TAB #}
+    <div class="st-panel {% if active_tab == 'billing' %}active{% endif %}" id="tab-billing">
+      
+      {# Pending Payment Section #}
+      {% if pending_payment %}
+      <div class="st-card" style="border: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.05); margin-bottom: 20px;">
+        <div class="st-card-title" style="color: #f59e0b;">
+          <i class="fas fa-clock"></i> Payment Pending Approval
+        </div>
+        <div style="padding: 16px 0;">
+          <div style="display: flex; gap: 20px; margin-bottom: 16px; flex-wrap: wrap;">
+            <div>
+              <div style="font-size: 11px; color: var(--muted);">Plan</div>
+              <div style="font-size: 16px; font-weight: 700; color: var(--text);">
+                {{ pending_payment.requested_plan_name }}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: var(--muted);">Amount</div>
+              <div style="font-size: 20px; font-weight: 700; color: var(--orange);">
+                {{ pending_payment.amount_display }}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: var(--muted);">Method</div>
+              <div style="font-size: 14px; color: var(--text);">
+                {% if pending_payment.payment_method %}
+                  <i class="fas {{ pending_payment.payment_method.icon }}" style="margin-right: 6px;"></i>
+                  {{ pending_payment.payment_method.display_name }}
+                {% else %}
+                  Not selected
+                {% endif %}
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 11px; color: var(--muted);">Status</div>
+              <div style="font-size: 14px; font-weight: 600; color: #f59e0b; text-transform: uppercase;">
+                {{ pending_payment.status }}
+              </div>
+            </div>
+          </div>
+          
+          {% if pending_payment.payment_method %}
+          <button type="button" class="btn-block" style="margin-bottom: 12px;" 
+                  onclick="showPaymentInstructions({{ pending_payment.payment_method.id }})">
+            <i class="fas fa-eye"></i> View Payment Instructions
+          </button>
+          {% endif %}
+          
+          {% if not pending_payment.payment_proof_url %}
+          <div style="background: var(--surface); border-radius: var(--radius-sm); padding: 16px; margin-top: 12px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 14px;">Upload Payment Proof</h4>
+            <form method="POST" action="{{ url_for('user.upload_payment_proof') }}" 
+                  enctype="multipart/form-data">
+              <input type="hidden" name="payment_id" value="{{ pending_payment.id }}" />
+              
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px;">Payment Proof (Screenshot/Receipt)</label>
+                <input type="file" name="payment_proof" accept="image/*,.pdf" class="st-input" required 
+                       style="padding: 8px;" />
+              </div>
+              
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px;">Transaction ID / Reference (optional)</label>
+                <input type="text" name="payment_notes" class="st-input" placeholder="e.g., TXN123456 or Bank Ref" />
+              </div>
+              
+              <button type="submit" class="btn-primary" style="width: 100%;">
+                <i class="fas fa-upload"></i> Upload Proof
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <div style="background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin-top: 12px;">
+            <i class="fas fa-check-circle" style="color: #22c55e; margin-right: 8px;"></i>
+            Payment proof uploaded on {{ pending_payment.created_at.strftime('%d %b %Y') }}. 
+            Awaiting review from support.
+          </div>
+          {% endif %}
+          
+          <button type="button" class="btn-block" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); margin-top: 12px;"
+                  onclick="showCancelPaymentModal({{ pending_payment.id }})">
+            <i class="fas fa-times"></i> Cancel Request
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="st-layout">
+        <div class="st-card">
+          <div class="st-card-title">
+            <i class="fas fa-credit-card st-card-title-icon" style="color:var(--orange)"></i>
+            Subscription Plan
+            <span style="float:right;font-size:12px;font-weight:500;color:var(--muted);">
+              Prices in {{ currencies[current_user.currency].symbol }} {{ current_user.currency }}
+            </span>
+          </div>
+
+                    <div id="planCards">
+            {% for plan_id, plan in plans.items() %}
+            {% set is_current = subscription and subscription.plan_id == plan_id %}
+            {% set has_pending = pending_payment and pending_payment.requested_plan_id == plan_id %}
+            {% set is_free_plan = plan.price_usd == 0 %}
+            
+            <div class="plan-option {{ 'plan-option--current' if is_current else '' }} {{ 'plan-option--pending' if has_pending else '' }}"
+                 id="planCard-{{ plan_id }}"
+                 style="
+                   background: var(--surface{% if is_current %}3{% endif %});
+                   border: {{ '2px solid var(--orange)' if is_current else '2px solid #f59e0b' if has_pending else '1px solid var(--border)' }};
+                   border-radius: var(--radius-sm);
+                   padding: 18px;
+                   margin-bottom: 12px;
+                   transition: border-color 0.2s, box-shadow 0.2s;
+                   {{ 'box-shadow: 0 0 20px var(--orange-glow);' if is_current else 'box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);' if has_pending else '' }}
+                 ">
+
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px">
+                <div>
+                  {% if is_current %}
+                  <div class="plan-tag">Current Plan</div>
+                  {% endif %}
+                  {% if has_pending %}
+                  <div class="plan-tag" style="background: #f59e0b; color: white; border-radius: 5px; padding: 5px;">Pending Approval</div>
+                  {% endif %}
+                  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;
+                               color:var(--text);margin-bottom:2px">{{ plan.name }}</div>
+                  <div style="font-size:12px;color:var(--muted)">
+                    {% if plan.shipments %}Up to {{ plan.shipments }} shipments/month
+                    {% else %}Unlimited shipments{% endif %}
+                  </div>
+                </div>
+
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:22px;
+                               color:{{ 'var(--orange)' if is_current else '#f59e0b' if has_pending else 'var(--text)' }}">
+                    {{ current_user.get_plan_price(plan_id) }}
+                  </div>
+                  {% if plan.price_usd and plan.price_usd > 0 %}
+                  <div style="font-size:11px;color:var(--muted)">/{{ plan.interval }}</div>
+                  {% endif %}
+
+                  {% if is_current %}
+                  <div class="plan-badge" style="margin-top:6px;display:inline-block">ACTIVE</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">
+                {% for f in plan.features %}
+                <span style="font-size:11px;padding:3px 9px;border-radius:4px;
+                             background:var(--surface2);border:1px solid var(--border);
+                             color:var(--muted)">
+                  <i class="fas fa-check" style="color:var(--green);margin-right:3px;font-size:9px"></i>{{ f }}
+                </span>
+                {% endfor %}
+              </div>
+
+              {# Action buttons #}
+              {% if is_current %}
+                <button class="btn-block" disabled style="opacity:0.45;cursor:default;pointer-events:none">
+                  <i class="fas fa-check-circle" style="color:var(--green)"></i>
+                  You're on this plan
+                </button>
+
+              {% elif has_pending %}
+                <button class="btn-block" disabled style="opacity:0.6;cursor:default;">
+                  <i class="fas fa-clock" style="color:#f59e0b;"></i>
+                  Awaiting Payment Approval
+                </button>
+
+              {% elif plan_id == 'enterprise' %}
+                <button class="btn-block" onclick="showContactSalesModal()">
+                  <i class="fas fa-envelope"></i> Contact Sales
+                </button>
+
+              {% elif pending_payment %}
+                <button class="btn-block" disabled style="opacity:0.45;cursor:default;">
+                  <i class="fas fa-lock"></i> Complete pending request first
+                </button>
+
+              {% else %}
+                {# Determine if upgrade or downgrade #}
+                {% set plan_order = {'free': 0, 'starter': 1, 'basic': 2, 'professional': 3, 'business': 4, 'enterprise': 5} %}
+                {% set current_rank = plan_order.get(subscription.plan_id if subscription else 'free', 0) %}
+                {% set this_rank = plan_order.get(plan_id, 0) %}
+                {% set is_upgrade = this_rank > current_rank %}
+                {% set is_downgrade = this_rank < current_rank %}
+
+                {% if is_free_plan and is_downgrade %}
+                  {# Free downgrade - no payment needed #}
+                  <button type="button" class="btn-block"
+                          onclick="showConfirmModal({
+                            title: 'Downgrade to {{ plan.name }}',
+                            body: 'Are you sure you want to downgrade to the {{ plan.name }} plan? You will lose access to premium features immediately.',
+                            icon: 'warning',
+                            confirmText: 'Downgrade',
+                            danger: true,
+                            onConfirm: function() {
+                              document.getElementById('planChangeInput').value = '{{ plan_id }}';
+                              document.getElementById('paymentMethodInput').value = '';
+                              document.getElementById('planChangeForm').submit();
+                            }
+                          })">
+                    <i class="fas fa-arrow-down"></i>
+                    Downgrade to {{ plan.name }}
+                  </button>
+                {% else %}
+                  {# Paid plan change - show payment modal #}
+                  <button type="button" class="btn-block {{ 'outline-orange' if is_upgrade else '' }}"
+                          onclick="showPaymentMethodModal('{{ plan_id }}', '{{ plan.name }}', '{{ current_user.get_plan_price(plan_id) }}', '{{ 'Upgrade to' if is_upgrade else 'Downgrade to' }}')">
+                    <i class="fas {{ 'fa-arrow-up' if is_upgrade else 'fa-arrow-down' }}"></i>
+                    {{ 'Upgrade to' if is_upgrade else 'Downgrade to' }} {{ plan.name }}
+                  </button>
+                {% endif %}
+              {% endif %}
+
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="st-right">
+          <div class="st-card">
+            <div class="st-card-title">
+              <i class="fas fa-file-invoice st-card-title-icon" style="color:var(--orange)"></i>
+              Billing Summary
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;font-size:13px">
+                <span style="color:var(--muted)">Current plan</span>
+                <span style="font-weight:600;color:var(--text)">
+                  {{ subscription.plan.name if subscription else 'Starter' }}
+                </span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:13px">
+                <span style="color:var(--muted)">Status</span>
+                <span style="font-weight:600;
+                  color:{{ 'var(--green)' if not subscription or subscription.is_active else '#ef4444' }}">
+                  {{ subscription.status.title() if subscription else 'Active' }}
+                </span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:13px">
+                <span style="color:var(--muted)">Next renewal</span>
+                <span style="font-weight:600;color:var(--text)">
+                  {% if subscription and subscription.renews_at %}
+                    {{ subscription.renews_at.strftime('%d %b %Y') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+
+            {% if subscription and subscription.plan.price_usd and subscription.renews_at %}
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
+                <i class="fas fa-credit-card" style="margin-right:5px"></i>
+                Payment method
+              </div>
+              <div style="font-size:13px;color:var(--text2)">•••• •••• •••• 4242</div>
+            </div>
+            {% endif %}
+          </div>
+
+          {# Payment History #}
+          {% if payment_history %}
+          <div class="st-card">
+            <div class="st-card-title">
+              <i class="fas fa-history st-card-title-icon" style="color:var(--muted)"></i>
+              Payment History
+            </div>
+            {% for payment in payment_history %}
+            <div style="display:flex;align-items:center;gap:8px;padding:12px 0;
+                        border-bottom:1px solid var(--border);font-size:13px
+                        {% if loop.last %};border-bottom:none{% endif %}">
+              <div style="flex:1;">
+                <div style="font-weight:600;color:var(--text);">{{ payment.requested_plan_name }}</div>
+                <div style="font-size:11px;color:var(--muted);">{{ payment.created_at.strftime('%d %b %Y') }}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:600;color:var(--text);">{{ payment.amount_display }}</div>
+                <div class="payment-status-{{ payment.status }}" style="font-size:10px;text-transform:uppercase;font-weight:600;">
+                  {{ payment.status }}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# NOTIFICATIONS TAB #}
+    <div class="st-panel {% if active_tab == 'notifications' %}active{% endif %}" id="tab-notifications">
+      <form method="POST" action="{{ url_for('user.settings') }}?tab=notifications"
+            id="notifForm">
+        <input type="hidden" name="form_type" value="notifications" />
+
+        <div class="st-layout">
+          <div class="st-card">
+            <div class="st-card-title">
+              <i class="fas fa-bell st-card-title-icon" style="color:var(--orange)"></i>
+              Notification Preferences
+            </div>
+
+            {% set prefs = notif_prefs or current_user.get_notification_prefs() %}
+            {% for field, lbl, sub, default_on in [
+              ('notif_booking',  'Shipment Created',      'When a new shipment is booked',                True),
+              ('notif_status',   'Status Updates',        'When your shipment status changes',            True),
+              ('notif_otd',      'Out for Delivery',      'When a package is on its way to you',          True),
+              ('notif_delivered','Delivery Confirmation', 'When your shipment is successfully delivered', True),
+              ('notif_delays',   'Delays & Exceptions',   'When there are unexpected delays',             True),
+              ('notif_news',     'News & Updates',        'Product updates and announcements',            False),
+            ] %}
+            <div class="notif-row">
+              <div>
+                <div class="notif-lbl">{{ lbl }}</div>
+                <div class="notif-sub">{{ sub }}</div>
+              </div>
+              <label class="tog">
+                <input type="checkbox" name="{{ field }}" 
+                       {% if prefs[field] %}checked{% endif %} />
+                <span class="tog-track"></span>
+              </label>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="st-right">
+            <div class="st-card">
+              <div class="st-card-title">
+                <i class="fas fa-envelope st-card-title-icon" style="color:var(--orange)"></i>
+                Email Alerts
+              </div>
+              <div class="notif-row" style="padding-top:0">
+                <div>
+                  <div class="notif-lbl">Email Notifications</div>
+                  <div class="notif-sub">{{ current_user.email }}</div>
+                </div>
+                <label class="tog">
+                  <input type="checkbox" name="email_notif" {% if prefs.email_notif %}checked{% endif %} />
+                  <span class="tog-track"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="st-card">
+              <div class="st-card-title">
+                <i class="fas fa-mobile-alt st-card-title-icon" style="color:var(--orange)"></i>
+                SMS Alerts
+              </div>
+              <div class="notif-row" style="padding-top:0;border-bottom:none">
+                <div>
+                  <div class="notif-lbl">SMS Notifications</div>
+                  <div class="notif-sub">{{ current_user.phone or 'No phone number set' }}</div>
+                </div>
+                <label class="tog">
+                  <input type="checkbox" name="sms_notif" {% if prefs.sms_notif %}checked{% endif %} />
+                  <span class="tog-track"></span>
+                </label>
+              </div>
+              {% if not current_user.phone %}
+              <a href="#" onclick="switchTab('profile')" style="font-size:12px;color:var(--orange);font-weight:600;margin-top:8px;display:inline-flex;align-items:center;gap:5px">
+                <i class="fas fa-plus" style="font-size:10px"></i>Add a phone number
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- Hidden form for plan change submission -->
+<form id="planChangeForm" method="POST" action="{{ url_for('user.request_plan_change') }}" style="display:none;">
+  <input type="hidden" name="plan_id" id="planChangeInput" />
+  <input type="hidden" name="payment_method_id" id="paymentMethodInput" />
+</form>
+
+<!-- Hidden form for cancel payment -->
+<form id="cancelPaymentForm" method="POST" action="{{ url_for('user.cancel_payment_request') }}" style="display:none;">
+  <input type="hidden" name="payment_id" id="cancelPaymentInput" />
+</form>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+(function () {
+  'use strict';
+
+  // Toast System
+  const toastContainer = document.getElementById('toastContainer');
+  
+  window.showToast = function(message, type = 'info', duration = 4000) {
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-exclamation-circle',
+      info: 'fa-info-circle',
+      warning: 'fa-exclamation-triangle'
+    };
+    
+    const titles = {
+      success: 'Success',
+      error: 'Error',
+      info: 'Information',
+      warning: 'Warning'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+      <div class="toast-icon">
+        <i class="fas ${icons[type]}"></i>
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">${titles[type]}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <button class="toast-close" onclick="this.parentElement.remove()">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'toastSlideIn 0.3s ease reverse';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  };
+
+  // Modal Systems
+  const paymentModal = document.getElementById('paymentModal');
+  const paymentDetailsModal = document.getElementById('paymentDetailsModal');
+  const confirmModal = document.getElementById('confirmModal');
+  
+  let selectedPlanId = null;
+  let selectedPaymentMethodId = null;
+  let confirmCallback = null;
+
+  // Generic Confirmation Modal
+  window.showConfirmModal = function(options) {
+    const { title, body, icon = 'warning', confirmText = 'Confirm', cancelText = 'Cancel', danger = false, onConfirm } = options;
+    
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalBody').innerHTML = body;
+    
+    const iconDiv = document.getElementById('confirmModalIcon');
+    iconDiv.className = `modal-icon ${icon}`;
+    iconDiv.innerHTML = `<i class="fas fa-${icon === 'danger' ? 'exclamation-triangle' : icon === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>`;
+    
+    const confirmBtn = document.getElementById('confirmModalConfirm');
+    confirmBtn.textContent = confirmText;
+    confirmBtn.className = `modal-btn ${danger ? 'modal-btn-danger' : 'modal-btn-primary'}`;
+    
+    document.getElementById('confirmModalCancel').textContent = cancelText;
+    
+    confirmCallback = onConfirm;
+    confirmModal.classList.add('active');
+  };
+
+  document.getElementById('confirmModalConfirm').addEventListener('click', () => {
+    confirmModal.classList.remove('active');
+    if (confirmCallback) confirmCallback();
+  });
+
+  document.getElementById('confirmModalCancel').addEventListener('click', () => {
+    confirmModal.classList.remove('active');
+    confirmCallback = null;
+  });
+
+  confirmModal.addEventListener('click', (e) => {
+    if (e.target === confirmModal) {
+      confirmModal.classList.remove('active');
+      confirmCallback = null;
+    }
+  });
+
+  // Payment Method Selection Modal
+  window.showPaymentMethodModal = function(planId, planName, price, action) {
+    selectedPlanId = planId;
+    
+    const modalTitle = document.getElementById('paymentModalTitle');
+    const modalContent = document.getElementById('paymentModalContent');
+    const confirmBtn = document.getElementById('paymentModalConfirm');
+    
+    modalTitle.textContent = `${action} ${planName}`;
+    
+    let methodsHtml = `
+      <div class="modal-amount-display">
+        <div class="modal-amount-label">Amount to Pay</div>
+        <div class="modal-amount-value">${price}</div>
+      </div>
+      <p style="margin-bottom: 12px; color: var(--muted);">Select your preferred payment method:</p>
+      <div class="payment-methods-grid">
+    `;
+    
+    {% for method in payment_methods %}
+    methodsHtml += `
+      <div class="payment-method-card" onclick="selectPaymentMethod({{ method.id }}, '{{ method.code }}')" data-method-id="{{ method.id }}">
+        <div class="payment-method-icon">
+          <i class="fas {{ method.icon }}"></i>
+        </div>
+        <div class="payment-method-name">{{ method.display_name }}</div>
+        <div class="payment-method-desc">{{ method.description }}</div>
+      </div>
+    `;
+    {% endfor %}
+    
+    methodsHtml += `</div><div id="paymentMethodDetails"></div>`;
+    
+    modalContent.innerHTML = methodsHtml;
+    confirmBtn.style.display = 'none';
+    paymentModal.classList.add('active');
+  };
+
+  window.selectPaymentMethod = function(methodId, methodCode) {
+    selectedPaymentMethodId = methodId;
+    
+    // Update UI
+    document.querySelectorAll('.payment-method-card').forEach(card => {
+      card.classList.remove('selected');
+    });
+    document.querySelector(`[data-method-id="${methodId}"]`).classList.add('selected');
+    
+    // Show confirm button
+    document.getElementById('paymentModalConfirm').style.display = 'block';
+    
+    // Load and display method details
+    const detailsDiv = document.getElementById('paymentMethodDetails');
+    
+    // Get method details from data attributes or fetch
+    let methodDetails = {};
+    {% for method in payment_methods %}
+    if (methodId === {{ method.id }}) {
+      methodDetails = {
+        code: '{{ method.code }}',
+        name: '{{ method.name }}',
+        display_name: '{{ method.display_name }}',
+        icon: '{{ method.icon }}',
+        wallet_address: '{{ method.wallet_address or "" }}',
+        network: '{{ method.network or "" }}',
+        bank_name: '{{ method.bank_name or "" }}',
+        account_name: '{{ method.account_name or "" }}',
+        account_number: '{{ method.account_number or "" }}',
+        paypal_email: '{{ method.paypal_email or "" }}',
+        paypal_link: '{{ method.paypal_link or "" }}',
+        qr_code_url: '{{ method.qr_code_url or "" }}'
+      };
+    }
+    {% endfor %}
+    
+    displayPaymentMethodDetails(methodDetails, methodId);
+  };
+
+  function displayPaymentMethodDetails(method, methodId) {
+    const detailsDiv = document.getElementById('paymentMethodDetails');
+    const reference = `UTH-{{ current_user.id }}-NEW`;
+    const amount = document.querySelector('.modal-amount-value').textContent;
+    
+    let detailsHtml = `<div class="payment-details-box">`;
+    
+    // QR Code for crypto
+    if ((method.code === 'usdt' || method.code === 'bitcoin') && method.qr_code_url) {
+      detailsHtml += `
+        <div class="payment-qr-code">
+          <img src="${method.qr_code_url}" alt="Payment QR Code" 
+               onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12px;\'>QR Code unavailable</div>';">
+        </div>
+      `;
+    }
+    
+    // Instructions based on method type
+    detailsHtml += `<div style="margin-top: 16px;">`;
+    
+    if (method.code === 'usdt') {
+      detailsHtml += `
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">1</div>
+          <div class="payment-step-content">Send exactly <strong>${amount}</strong> in USDT</div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">2</div>
+          <div class="payment-step-content">Network: <strong>${method.network || 'TRC20'}</strong></div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">3</div>
+          <div class="payment-step-content">
+            Wallet Address:<br>
+            <code>${method.wallet_address}</code>
+            <button class="copy-btn" onclick="copyToClipboard('${method.wallet_address}', this)">Copy</button>
+          </div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">4</div>
+          <div class="payment-step-content">Reference: <strong>${reference}</strong> (include in memo if possible)</div>
+        </div>
+      `;
+    } else if (method.code === 'bitcoin') {
+      detailsHtml += `
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">1</div>
+          <div class="payment-step-content">Send exactly <strong>${amount}</strong> worth of BTC</div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">2</div>
+          <div class="payment-step-content">Network: <strong>Bitcoin (BTC)</strong></div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">3</div>
+          <div class="payment-step-content">
+            Wallet Address:<br>
+            <code>${method.wallet_address}</code>
+            <button class="copy-btn" onclick="copyToClipboard('${method.wallet_address}', this)">Copy</button>
+          </div>
+        </div>
+      `;
+    } else if (method.code === 'bank_transfer') {
+      detailsHtml += `
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">1</div>
+          <div class="payment-step-content">Transfer exactly <strong>${amount}</strong></div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">2</div>
+          <div class="payment-step-content">Bank: <strong>${method.bank_name}</strong></div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">3</div>
+          <div class="payment-step-content">Account Name: <strong>${method.account_name}</strong></div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">4</div>
+          <div class="payment-step-content">
+            Account Number: <strong>${method.account_number}</strong>
+            <button class="copy-btn" onclick="copyToClipboard('${method.account_number}', this)">Copy</button>
+          </div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">5</div>
+          <div class="payment-step-content">Reference: <strong>${reference}</strong> (IMPORTANT)</div>
+        </div>
+      `;
+    } else if (method.code === 'paypal') {
+      detailsHtml += `
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">1</div>
+          <div class="payment-step-content">Send exactly <strong>${amount}</strong></div>
+        </div>
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">2</div>
+          <div class="payment-step-content">
+            PayPal Email: <strong>${method.paypal_email}</strong>
+            <button class="copy-btn" onclick="copyToClipboard('${method.paypal_email}', this)">Copy</button>
+          </div>
+        </div>
+        ${method.paypal_link ? `
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">3</div>
+          <div class="payment-step-content">
+            Or use direct link: <a href="${method.paypal_link}" target="_blank" style="color:var(--orange);">Pay Now <i class="fas fa-external-link-alt" style="font-size:10px;"></i></a>
+          </div>
+        </div>
+        ` : ''}
+        <div class="payment-instruction-step">
+          <div class="payment-step-number">${method.paypal_link ? '4' : '3'}</div>
+          <div class="payment-step-content">Reference: <strong>${reference}</strong> (in payment note)</div>
+        </div>
+      `;
+    }
+    
+    detailsHtml += `</div>`;
+    
+    // Warning
+    let warningText = '';
+    if (method.code === 'usdt') {
+      warningText = 'Only send USDT on the specified network. Sending on wrong network will result in loss of funds.';
+    } else if (method.code === 'bitcoin') {
+      warningText = 'Bitcoin transactions require confirmations. Your plan will be activated after 2 confirmations.';
+    } else if (method.code === 'bank_transfer') {
+      warningText = 'Include the reference number in your transfer description or your payment may be delayed.';
+    } else if (method.code === 'paypal') {
+      warningText = 'Send as "Friends and Family" to avoid fees, or include fees in your payment.';
+    }
+    
+    if (warningText) {
+      detailsHtml += `
+        <div class="payment-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          ${warningText}
+        </div>
+      `;
+    }
+    
+    detailsHtml += `</div>`;
+    detailsDiv.innerHTML = detailsHtml;
+  }
+
+  // Show payment instructions for pending payment
+  window.showPaymentInstructions = function(methodId) {
+    // Get method details
+    let methodDetails = {};
+    {% for method in payment_methods %}
+    if (methodId === {{ method.id }}) {
+      methodDetails = {
+        code: '{{ method.code }}',
+        name: '{{ method.name }}',
+        display_name: '{{ method.display_name }}',
+        icon: '{{ method.icon }}',
+        wallet_address: '{{ method.wallet_address or "" }}',
+        network: '{{ method.network or "" }}',
+        bank_name: '{{ method.bank_name or "" }}',
+        account_name: '{{ method.account_name or "" }}',
+        account_number: '{{ method.account_number or "" }}',
+        paypal_email: '{{ method.paypal_email or "" }}',
+        paypal_link: '{{ method.paypal_link or "" }}',
+        qr_code_url: '{{ method.qr_code_url or "" }}'
+      };
+    }
+    {% endfor %}
+    
+    const content = document.getElementById('paymentDetailsContent');
+    const reference = `UTH-{{ current_user.id }}-{% if pending_payment %}{{ pending_payment.id }}{% else %}PENDING{% endif %}`;
+    const amount = '{{ pending_payment.amount_display if pending_payment else "0.00" }}';
+    
+    let html = `
+      <div class="payment-details-box" style="margin: 0;">
+        <div class="payment-details-header">
+          <i class="fas ${methodDetails.icon}" style="font-size: 32px; color: var(--orange);"></i>
+          <div>
+            <div style="font-weight: 700; font-size: 18px; color: var(--text);">${methodDetails.display_name}</div>
+            <div style="font-size: 13px; color: var(--muted);">Reference: <strong>${reference}</strong></div>
+          </div>
+        </div>
+    `;
+    
+    if (methodDetails.qr_code_url && (methodDetails.code === 'usdt' || methodDetails.code === 'bitcoin')) {
+      html += `
+        <div class="payment-qr-code">
+          <img src="${methodDetails.qr_code_url}" alt="Payment QR Code">
+        </div>
+      `;
+    }
+    
+    html += `<div style="margin-top: 16px;">`;
+    
+    // Same instruction logic as above but for modal
+    if (methodDetails.code === 'usdt') {
+      html += `
+        <div class="payment-instruction-step"><div class="payment-step-number">1</div><div class="payment-step-content">Send exactly <strong>${amount}</strong> in USDT</div></div>
+        <div class="payment-instruction-step"><div class="payment-step-number">2</div><div class="payment-step-content">Network: <strong>${methodDetails.network || 'TRC20'}</strong></div></div>
+        <div class="payment-instruction-step"><div class="payment-step-number">3</div><div class="payment-step-content">Wallet: <code>${methodDetails.wallet_address}</code><button class="copy-btn" onclick="copyToClipboard('${methodDetails.wallet_address}', this)">Copy</button></div></div>
+      `;
+    } else if (methodDetails.code === 'bitcoin') {
+      html += `
+        <div class="payment-instruction-step"><div class="payment-step-number">1</div><div class="payment-step-content">Send <strong>${amount}</strong> worth of BTC</div></div>
+        <div class="payment-instruction-step"><div class="payment-step-number">2</div><div class="payment-step-content">Wallet: <code>${methodDetails.wallet_address}</code><button class="copy-btn" onclick="copyToClipboard('${methodDetails.wallet_address}', this)">Copy</button></div></div>
+      `;
+    } else if (methodDetails.code === 'bank_transfer') {
+      html += `
+        <div class="payment-instruction-step"><div class="payment-step-number">1</div><div class="payment-step-content">Transfer <strong>${amount}</strong></div></div>
+        <div class="payment-instruction-step"><div class="payment-step-number">2</div><div class="payment-step-content">Bank: <strong>${methodDetails.bank_name}</strong></div></div>
+        <div class="payment-instruction-step"><div class="payment-step-number">3</div><div class="payment-step-content">Account: <strong>${methodDetails.account_name}</strong> - ${methodDetails.account_number}</div></div>
+      `;
+    } else if (methodDetails.code === 'paypal') {
+      html += `
+        <div class="payment-instruction-step"><div class="payment-step-number">1</div><div class="payment-step-content">Send <strong>${amount}</strong> to <strong>${methodDetails.paypal_email}</strong></div></div>
+        ${methodDetails.paypal_link ? `<div class="payment-instruction-step"><div class="payment-step-number">2</div><div class="payment-step-content"><a href="${methodDetails.paypal_link}" target="_blank" style="color:var(--orange);">Pay Now <i class="fas fa-external-link-alt"></i></a></div></div>` : ''}
+      `;
+    }
+    
+    html += `</div></div>`;
+    content.innerHTML = html;
+    paymentDetailsModal.classList.add('active');
+  };
+
+  window.closePaymentDetailsModal = function() {
+    paymentDetailsModal.classList.remove('active');
+  };
+
+  // Payment modal controls
+  document.getElementById('paymentModalCancel').addEventListener('click', () => {
+    paymentModal.classList.remove('active');
+    selectedPlanId = null;
+    selectedPaymentMethodId = null;
+  });
+
+  document.getElementById('paymentModalConfirm').addEventListener('click', () => {
+    if (selectedPlanId && selectedPaymentMethodId) {
+      document.getElementById('planChangeInput').value = selectedPlanId;
+      document.getElementById('paymentMethodInput').value = selectedPaymentMethodId;
+      document.getElementById('planChangeForm').submit();
+    }
+  });
+
+  paymentModal.addEventListener('click', (e) => {
+    if (e.target === paymentModal) {
+      paymentModal.classList.remove('active');
+    }
+  });
+
+  // Specific Modal Functions
+  window.showRemoveAvatarModal = function() {
+    showConfirmModal({
+      title: 'Remove Profile Photo',
+      body: 'Are you sure you want to remove your profile photo? This action cannot be undone.',
+      icon: 'danger',
+      confirmText: 'Remove',
+      cancelText: 'Keep Photo',
+      danger: true,
+      onConfirm: performAvatarRemoval
+    });
+  };
+
+  window.showCancelPaymentModal = function(paymentId) {
+    showConfirmModal({
+      title: 'Cancel Payment Request',
+      body: 'Are you sure you want to cancel this payment request? You can create a new request anytime.',
+      icon: 'warning',
+      confirmText: 'Cancel Request',
+      cancelText: 'Keep Request',
+      danger: true,
+      onConfirm: () => {
+        document.getElementById('cancelPaymentInput').value = paymentId;
+        document.getElementById('cancelPaymentForm').submit();
+      }
+    });
+  };
+
+  window.showContactSalesModal = function() {
+    showConfirmModal({
+      title: 'Enterprise Plan',
+      body: `
+        <p>The Enterprise plan requires custom setup for your organization.</p>
+        <p style="margin-top: 12px; color: var(--muted);">Our sales team will contact you within 24 hours to discuss:</p>
+        <ul style="margin-top: 8px; padding-left: 20px; color: var(--muted);">
+          <li>Custom pricing and SLAs</li>
+          <li>API integrations</li>
+          <li>Dedicated account management</li>
+          <li>Volume discounts</li>
+        </ul>
+      `,
+      icon: 'info',
+      confirmText: 'Request Contact',
+      cancelText: 'Not Now',
+      onConfirm: () => {
+        showToast('Sales request submitted. We will contact you shortly.', 'success');
+      }
+    });
+  };
+
+  // Avatar removal logic
+  function performAvatarRemoval() {
+    const initials = '{{ current_user.full_name[:2].upper() if current_user.full_name else "UT" }}';
+    const circle = document.getElementById('avatarCircle');
+    circle.innerHTML = `<span id="avatarInitials">${initials}</span>`;
+    
+    const inp = document.getElementById('avatarFileInput');
+    if (inp) inp.value = '';
+    
+    const btnRemove = document.querySelector('.btn-remove-av');
+    if (btnRemove) btnRemove.remove();
+    
+    fetch('{{ url_for("user.remove_avatar") }}', { 
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      }
+    })
+      .then(() => showToast('Profile photo removed successfully', 'success'))
+      .catch(() => showToast('Failed to remove profile photo', 'error'));
+  }
+
+  // Copy to clipboard
+  window.copyToClipboard = function(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+      const original = button.textContent;
+      button.textContent = 'Copied!';
+      button.style.background = '#22c55e';
+      button.style.color = 'white';
+      button.style.borderColor = '#22c55e';
+      setTimeout(() => {
+        button.textContent = original;
+        button.style.background = '';
+        button.style.color = '';
+        button.style.borderColor = '';
+      }, 2000);
+    }).catch(() => {
+      showToast('Failed to copy to clipboard', 'error');
+    });
+  };
+
+  // Tab switching
+  window.switchTab = function (name) {
+    const url = new URL(window.location);
+    url.searchParams.set('tab', name);
+    window.history.pushState({}, '', url);
+
+    document.querySelectorAll('.st-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.st-panel').forEach(p =>
+      p.classList.toggle('active', p.id === 'tab-' + name));
+
+    const btn = document.getElementById('saveBtn');
+    if (btn) {
+      btn.style.opacity = name === 'billing' ? '0' : '1';
+      btn.style.pointerEvents = name === 'billing' ? 'none' : '';
+    }
+  };
+
+  document.querySelectorAll('.st-tab').forEach(tab =>
+    tab.addEventListener('click', e => { e.preventDefault(); switchTab(tab.dataset.tab); })
+  );
+
+  window.addEventListener('popstate', () => {
+    const urlTab = new URLSearchParams(window.location.search).get('tab') || 'profile';
+    switchTab(urlTab);
+  });
+
+  const urlTab = new URLSearchParams(window.location.search).get('tab');
+  if (urlTab) switchTab(urlTab);
+
+  // Form submission
+  window.submitActive = function () {
+    const panel = document.querySelector('.st-panel.active');
+    if (!panel) return;
+    const form = panel.querySelector('form');
+    if (form) {
+      const required = form.querySelectorAll('[required]');
+      let valid = true;
+      let firstError = null;
+
+      required.forEach(field => {
+        if (!field.value.trim()) {
+          field.style.borderColor = '#ef4444';
+          valid = false;
+          if (!firstError) firstError = field;
+        } else {
+          field.style.borderColor = '';
+        }
+      });
+
+      if (!valid) {
+        showToast('Please fill in all required fields', 'error');
+        if (firstError) firstError.focus();
+        return;
+      }
+      form.submit();
+    }
+  };
+
+  // Avatar preview
+  window.previewAvatar = function (input) {
+    if (!input.files?.[0]) return;
+    
+    const file = input.files[0];
+    
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Image must be less than 2MB', 'error');
+      input.value = '';
+      return;
+    }
+    
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Please use JPG, PNG, GIF, or WebP format', 'error');
+      input.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = e => {
+      const circle = document.getElementById('avatarCircle');
+      circle.innerHTML = `<img src="${e.target.result}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      
+      const btnRemove = document.querySelector('.btn-remove-av');
+      if (!btnRemove) {
+        const btnUpload = document.querySelector('.btn-upload-new');
+        const newBtn = document.createElement('button');
+        newBtn.type = 'button';
+        newBtn.className = 'btn-remove-av';
+        newBtn.innerHTML = '<i class="fas fa-trash"></i> Remove';
+        newBtn.onclick = showRemoveAvatarModal;
+        btnUpload.parentNode.insertBefore(newBtn, btnUpload.nextSibling);
+      }
+      
+      showToast('Photo selected. Click Save Changes to upload.', 'info');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Bio character count
+  const bioField = document.getElementById('bio');
+  const bioCount = document.getElementById('bioCount');
+  if (bioField && bioCount) {
+    bioCount.textContent = bioField.value.length;
+    bioField.addEventListener('input', () => {
+      bioCount.textContent = bioField.value.length;
+    });
+  }
+
+  // Password strength
+  window.checkStrength = function (val) {
+    const bars = [1,2,3,4].map(i => document.getElementById('pwB' + i));
+    const hint = document.getElementById('pwHint');
+    bars.forEach(b => b && (b.className = 'pw-bar'));
+    if (!val) { if (hint) hint.textContent = ''; return; }
+
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const cls = ['','weak','fair','good','strong'][score] || 'weak';
+    const label = {weak:'Too weak',fair:'Could be stronger',good:'Good password',strong:'Strong password ✓'}[cls] || '';
+    const color = {weak:'#ef4444',fair:'#f97316',good:'#fbbf24',strong:'#22c55e'}[cls] || '';
+
+    for (let i = 0; i < score; i++) if (bars[i]) bars[i].classList.add(cls);
+    if (hint) { 
+      hint.textContent = label; 
+      hint.style.color = color; 
+    }
+  };
+
+  window.checkMatch = function () {
+    const a = document.getElementById('new_pw')?.value;
+    const b = document.getElementById('confirm_pw')?.value;
+    const h = document.getElementById('matchHint');
+    if (!h || !b) return;
+    h.textContent = a === b ? 'Passwords match ✓' : 'Passwords do not match';
+    h.style.color = a === b ? '#22c55e' : '#ef4444';
+  };
+
+  // Handle flash messages from server
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        showToast('{{ message }}', '{{ category }}');
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+})();
+</script>
+{% endblock %}

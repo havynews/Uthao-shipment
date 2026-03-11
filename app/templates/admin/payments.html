@@ -1,0 +1,559 @@
+<!-- payments -->
+
+{% extends "admin/base_admin.html" %}
+{% block title %}Payments{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Mobile card styles */
+    @media (max-width: 1023px) {
+        .desktop-table {
+            display: none !important;
+        }
+        .mobile-cards {
+            display: block;
+        }
+    }
+    
+    @media (min-width: 1024px) {
+        .desktop-table {
+            display: block;
+        }
+        .mobile-cards {
+            display: none;
+        }
+    }
+    
+    .payment-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .payment-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        gap: 12px;
+    }
+    
+    .payment-card-plan {
+        font-weight: 600;
+        color: #111827;
+        font-size: 15px;
+    }
+    
+    .payment-card-id {
+        font-size: 12px;
+        color: #6b7280;
+        font-family: monospace;
+    }
+    
+    .payment-card-amount {
+        text-align: right;
+    }
+    
+    .payment-card-amount-main {
+        font-size: 20px;
+        font-weight: 700;
+        color: #111827;
+    }
+    
+    .payment-card-amount-local {
+        font-size: 12px;
+        color: #6b7280;
+    }
+    
+    .payment-card-customer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: #f9fafb;
+        border-radius: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .customer-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(to bottom right, #d97706, #9333ea);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+    
+    .customer-info {
+        min-width: 0;
+    }
+    
+    .customer-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .customer-email {
+        font-size: 12px;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .payment-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        align-items: center;
+    }
+    
+    .payment-method {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #f3f4f6;
+        border-radius: 20px;
+        font-size: 13px;
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    .payment-method i {
+        font-size: 16px;
+    }
+    
+    .payment-method.crypto i {
+        color: #f59e0b;
+    }
+    
+    .payment-method.bank i {
+        color: #3b82f6;
+    }
+    
+    .payment-method.paypal i {
+        color: #2563eb;
+    }
+    
+    .payment-date {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        padding: 6px 10px;
+        background: #f3f4f6;
+        border-radius: 6px;
+    }
+    
+    .payment-card-actions {
+        display: flex;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .payment-card-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .payment-card-btn.approve {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    
+    .payment-card-btn.approve:hover {
+        background: #16a34a;
+        color: white;
+    }
+    
+    .payment-card-btn.reject {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    
+    .payment-card-btn.reject:hover {
+        background: #dc2626;
+        color: white;
+    }
+    
+    .payment-card-btn.view {
+        background: #fff7ed;
+        color: #d97706;
+    }
+    
+    .payment-card-btn.view:hover {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    /* Status badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-approved {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    
+    .status-rejected {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+    
+    .status-pending {
+        background: #fef3c7;
+        color: #b45309;
+    }
+    
+    /* Status tabs mobile */
+    @media (max-width: 640px) {
+        .status-tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            gap: 4px;
+        }
+        
+        .status-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .status-tabs a {
+            white-space: nowrap;
+            padding: 12px 16px;
+            font-size: 13px;
+        }
+    }
+    
+    /* Pagination mobile */
+    .pagination-mobile {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+    }
+    
+    .pagination-mobile a, .pagination-mobile span {
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+    }
+    
+    .pagination-mobile .current {
+        background: #f59e0b;
+        color: white;
+        border-color: #f59e0b;
+    }
+    
+    /* Tablet optimizations */
+    @media (min-width: 768px) and (max-width: 1023px) {
+        .payment-card {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: start;
+        }
+        
+        .payment-card-main {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .payment-card-actions {
+            flex-direction: column;
+            min-width: 140px;
+            padding-top: 0;
+            border-top: none;
+        }
+    }
+    
+    /* Active tab orange color */
+    .status-tabs a.border-blue-600 {
+        border-color: #f59e0b !important;
+        color: #d97706 !important;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Payment Requests</h1>
+        <p class="text-gray-500 mt-1">Review and process payment requests</p>
+    </div>
+
+    <!-- Status Tabs -->
+    <div class="status-tabs flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
+        <a href="{{ url_for('admin.payments', status='pending') }}" class="px-4 py-3 text-sm font-medium border-b-2 transition {% if status == 'pending' %}border-blue-600 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            <i class="fas fa-clock mr-2"></i>Pending
+        </a>
+        <a href="{{ url_for('admin.payments', status='approved') }}" class="px-4 py-3 text-sm font-medium border-b-2 transition {% if status == 'approved' %}border-blue-600 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            <i class="fas fa-check mr-2"></i>Approved
+        </a>
+        <a href="{{ url_for('admin.payments', status='rejected') }}" class="px-4 py-3 text-sm font-medium border-b-2 transition {% if status == 'rejected' %}border-blue-600 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            <i class="fas fa-times mr-2"></i>Rejected
+        </a>
+        <a href="{{ url_for('admin.payments', status='all') }}" class="px-4 py-3 text-sm font-medium border-b-2 transition {% if status == 'all' %}border-blue-600 text-blue-600{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">
+            <i class="fas fa-list mr-2"></i>All
+        </a>
+    </div>
+
+    <!-- Desktop Table (lg and up) -->
+    <div class="desktop-table bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Request</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Method</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for payment in payments.items %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-4">
+                        <p class="font-medium text-gray-900">{{ payment.requested_plan_name }}</p>
+                        <p class="text-xs text-gray-500">ID: #{{ payment.id }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                {{ payment.user.full_name[:2].upper() if payment.user.full_name else 'U' }}
+                            </div>
+                            <span class="text-sm text-gray-700">{{ payment.user.full_name or payment.user.email }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-bold text-gray-900">${{ "%.2f"|format(payment.amount_usd) }}</p>
+                        {% if payment.amount_local and payment.currency != 'USD' %}
+                        <p class="text-xs text-gray-500">{{ "%.2f"|format(payment.amount_local) }} {{ payment.currency }}</p>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1 text-sm text-gray-700">
+                            {% if payment.payment_method == 'crypto' %}
+                            <i class="fab fa-bitcoin text-orange-500"></i>
+                            {% elif payment.payment_method == 'bank_transfer' %}
+                            <i class="fas fa-university text-blue-500"></i>
+                            {% elif payment.payment_method == 'paypal' %}
+                            <i class="fab fa-paypal text-blue-600"></i>
+                            {% else %}
+                            <i class="fas fa-money-bill text-green-500"></i>
+                            {% endif %}
+                            {{ payment.payment_method|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ payment.created_at.strftime('%d %b %Y') }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        {% if payment.status == 'pending' %}
+                        <div class="flex justify-end gap-2">
+                            <form method="POST" action="{{ url_for('admin.approve_payment', payment_id=payment.id) }}" class="inline">
+                                <button type="submit" class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-600 hover:text-white transition text-sm font-medium" onclick="return confirm('Approve this payment?')">
+                                    <i class="fas fa-check mr-1"></i>Approve
+                                </button>
+                            </form>
+                            <a href="{{ url_for('admin.payment_detail', payment_id=payment.id) }}" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-600 hover:text-white transition text-sm font-medium">
+                                <i class="fas fa-times mr-1"></i>Reject
+                            </a>
+                        </div>
+                        {% else %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium
+                            {% if payment.status == 'approved' %}bg-green-100 text-green-800
+                            {% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ payment.status|title }}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-check-circle text-4xl mb-3 text-gray-300"></i>
+                        <p>No {{ status }} payments found</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Desktop Pagination -->
+        {% if payments.pages > 1 %}
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+            <span class="text-sm text-gray-500">Page {{ payments.page }} of {{ payments.pages }}</span>
+            <div class="flex gap-2">
+                {% if payments.has_prev %}
+                <a href="{{ url_for('admin.payments', page=payments.prev_num, status=status) }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 transition">
+                    <i class="fas fa-chevron-left mr-1"></i> Prev
+                </a>
+                {% endif %}
+                {% if payments.has_next %}
+                <a href="{{ url_for('admin.payments', page=payments.next_num, status=status) }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 transition">
+                    Next <i class="fas fa-chevron-right ml-1"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Mobile Cards (sm and down) -->
+    <div class="mobile-cards">
+        {% for payment in payments.items %}
+        <div class="payment-card">
+            <div class="payment-card-header">
+                <div>
+                    <div class="payment-card-plan">
+                        <i class="fas fa-crown mr-2 text-[#f59e0b]"></i>
+                        {{ payment.requested_plan_name }}
+                    </div>
+                    <div class="payment-card-id mt-1">
+                        #{{ payment.id }}
+                    </div>
+                </div>
+                <div class="payment-card-amount">
+                    <div class="payment-card-amount-main">
+                        ${{ "%.2f"|format(payment.amount_usd) }}
+                    </div>
+                    {% if payment.amount_local and payment.currency != 'USD' %}
+                    <div class="payment-card-amount-local">
+                        {{ "%.2f"|format(payment.amount_local) }} {{ payment.currency }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="payment-card-customer">
+                <div class="customer-avatar">
+                    {{ payment.user.full_name[:2].upper() if payment.user.full_name else 'U' }}
+                </div>
+                <div class="customer-info">
+                    <div class="customer-name">{{ payment.user.full_name or 'Unknown' }}</div>
+                    <div class="customer-email">{{ payment.user.email }}</div>
+                </div>
+            </div>
+            
+            <div class="payment-card-meta">
+                <div class="payment-method 
+                    {% if payment.payment_method == 'crypto' %}crypto
+                    {% elif payment.payment_method == 'bank_transfer' %}bank
+                    {% elif payment.payment_method == 'paypal' %}paypal{% endif %}">
+                    {% if payment.payment_method == 'crypto' %}
+                    <i class="fab fa-bitcoin"></i>
+                    {% elif payment.payment_method == 'bank_transfer' %}
+                    <i class="fas fa-university"></i>
+                    {% elif payment.payment_method == 'paypal' %}
+                    <i class="fab fa-paypal"></i>
+                    {% else %}
+                    <i class="fas fa-money-bill"></i>
+                    {% endif %}
+                    {{ payment.payment_method|replace('_', ' ')|title }}
+                </div>
+                
+                <div class="payment-date">
+                    <i class="far fa-calendar-alt"></i>
+                    {{ payment.created_at.strftime('%d %b %Y') }}
+                </div>
+                
+                {% if payment.status != 'pending' %}
+                <span class="status-badge 
+                    {% if payment.status == 'approved' %}status-approved
+                    {% else %}status-rejected{% endif %}">
+                    {{ payment.status|title }}
+                </span>
+                {% endif %}
+            </div>
+            
+            {% if payment.status == 'pending' %}
+            <div class="payment-card-actions">
+                <form method="POST" action="{{ url_for('admin.approve_payment', payment_id=payment.id) }}" class="flex-1" onsubmit="return confirm('Approve this payment?')">
+                    <button type="submit" class="payment-card-btn approve w-full">
+                        <i class="fas fa-check"></i>
+                        Approve
+                    </button>
+                </form>
+                <a href="{{ url_for('admin.reject_payment', payment_id=payment.id) }}" class="payment-card-btn reject flex-1">
+                    <i class="fas fa-times"></i>
+                    Reject
+                </a>
+            </div>
+            {% else %}
+            <div class="payment-card-actions">
+                <a href="{{ url_for('admin.payment_detail', payment_id=payment.id) }}" class="payment-card-btn view w-full">
+                    <i class="fas fa-eye"></i>
+                    View Details
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
+            <i class="fas fa-check-circle text-4xl mb-3 text-gray-300"></i>
+            <p>No {{ status }} payments found</p>
+        </div>
+        {% endfor %}
+
+        <!-- Mobile Pagination -->
+        {% if payments.pages > 1 %}
+        <div class="pagination-mobile">
+            {% if payments.has_prev %}
+            <a href="{{ url_for('admin.payments', page=payments.prev_num, status=status) }}">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            <span class="current">
+                {{ payments.page }} / {{ payments.pages }}
+            </span>
+            
+            {% if payments.has_next %}
+            <a href="{{ url_for('admin.payments', page=payments.next_num, status=status) }}">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,845 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+      }
+      .hero-bg {
+        background-image: linear-gradient(
+            to right,
+            rgba(0, 0, 0, 0.7),
+            rgba(0, 0, 0, 0.3)
+          ),
+          url('https://images.unsplash.com/photo-1578575437130-527eed3abbec?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+        background-size: cover;
+        background-position: center;
+      }
+      .clip-slant {
+        clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+      }
+      .partner-logo {
+        filter: grayscale(100%);
+        opacity: 0.6;
+        transition: all 0.3s ease;
+      }
+      .partner-logo:hover {
+        filter: grayscale(0%);
+        opacity: 1;
+      }
+      .service-card:hover {
+        transform: translateY(-5px);
+      }
+      .tab-active {
+        background-color: #f97316;
+        color: white;
+      }
+      .tab-inactive {
+        background-color: #e5e7eb;
+        color: #6b7280;
+      }
+    </style>
+
+
+  <body class="bg-gray-50">
+
+    {% include 'components/header.html' %}
+    
+    <!-- Hero Section -->
+    <section class="hero-bg min-h-screen flex items-center pt-20 relative">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <!-- Left Content -->
+          <div class="text-white space-y-6">
+            <div
+              class="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full"
+            >
+              <span
+                class="w-2 h-2 bg-green-400 rounded-full animate-pulse"
+              ></span>
+              <span class="text-sm font-medium tracking-wide"
+                >Established Worldwide Reach</span
+              >
+            </div>
+            <h1
+              class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+            >
+              Global ocean cargo<br />
+              <span class="text-orange-400">— Efficient, on time</span><br />
+              and trusted
+            </h1>
+          </div>
+
+          <!-- Right Content - Tracking Widget -->
+          <div class="glass-panel rounded-2xl p-6 shadow-2xl max-w-md ml-auto w-full">
+            <!-- Tabs -->
+            <div class="flex space-x-2 mb-6">
+              <button
+                onclick="switchTab('tracking')"
+                id="tab-tracking"
+                class="flex-1 py-2 px-4 rounded-lg font-medium text-sm transition tab-active"
+              >
+                Track Shipment
+              </button>
+              <button
+                onclick="switchTab('schedules')"
+                id="tab-schedules"
+                class="flex-1 py-2 px-4 rounded-lg font-medium text-sm transition tab-inactive"
+              >
+                Schedules
+              </button>
+            </div>
+
+            <!-- Tracking Form -->
+            <div id="content-tracking" class="space-y-4">
+              <div class="relative">
+                <div
+                  class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                >
+                  <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input
+                  type="text"
+                  id="trackingId"
+                  placeholder="Enter Tracking ID (e.g., TRK123456789)"
+                  class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm uppercase"
+                  maxlength="20"
+                />
+              </div>
+
+              <!-- Tracking Result Container (Hidden by default) -->
+              <div id="trackingResult" class="hidden space-y-3">
+                <!-- Loading State -->
+                <div id="trackingLoading" class="hidden text-center py-4">
+                  <i class="fas fa-spinner fa-spin text-orange-500 text-2xl"></i>
+                  <p class="text-sm text-gray-500 mt-2">Tracking your shipment...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="trackingError" class="hidden bg-red-50 border border-red-200 rounded-lg p-3">
+                  <div class="flex items-center space-x-2">
+                    <i class="fas fa-exclamation-circle text-red-500"></i>
+                    <p class="text-sm text-red-700" id="errorMessage">Tracking ID not found</p>
+                  </div>
+                </div>
+
+                <!-- Success State - Shipment Info -->
+                <div id="trackingSuccess" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-green-600 uppercase tracking-wide">Status</span>
+                    <span id="shipmentStatus" class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      In Transit
+                    </span>
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Tracking ID:</span>
+                      <span id="resultTrackingId" class="font-medium text-gray-900 uppercase"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Origin:</span>
+                      <span id="shipmentOrigin" class="font-medium text-gray-900"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Destination:</span>
+                      <span id="shipmentDestination" class="font-medium text-gray-900"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Estimated Arrival:</span>
+                      <span id="shipmentEta" class="font-medium text-gray-900"></span>
+                    </div>
+                  </div>
+
+                  <!-- Progress Bar -->
+                  <div class="pt-2">
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Progress</span>
+                      <span id="progressPercent">60%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div id="progressBar" class="bg-orange-500 h-2 rounded-full transition-all duration-500" style="width: 60%"></div>
+                    </div>
+                  </div>
+
+                  <!-- Latest Update -->
+                  <div class="border-t border-green-200 pt-3 mt-2">
+                    <p class="text-xs text-gray-500 mb-1">Latest Update</p>
+                    <p id="latestUpdate" class="text-sm text-gray-700">Container loaded at Port of Singapore</p>
+                    <p id="updateTime" class="text-xs text-gray-400 mt-1">2 hours ago</p>
+                  </div>
+
+                  <button onclick="viewFullDetails()" class="w-full mt-2 bg-white border border-green-300 text-green-700 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition">
+                    View Full Details
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onclick="trackShipment()"
+                id="trackButton"
+                class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-medium transition flex items-center justify-center space-x-2 mt-2"
+              >
+                <span>Track Now</span>
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+
+            <!-- Schedules Form (Hidden by default) -->
+            <div id="content-schedules" class="space-y-4 hidden">
+              <div class="relative">
+                <div
+                  class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                >
+                  <i class="fas fa-ship text-gray-400"></i>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Vessel Name or IMO"
+                  class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+                />
+              </div>
+              <div class="relative">
+                <div
+                  class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                >
+                  <i class="fas fa-route text-gray-400"></i>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Route (e.g., Asia-Europe)"
+                  class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 text-sm"
+                />
+              </div>
+              <button
+                class="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-medium transition flex items-center justify-center space-x-2 mt-2"
+              >
+                <span>Find Schedules</span>
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scroll indicator -->
+      <div
+        class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce"
+      >
+        <i class="fas fa-chevron-down text-2xl opacity-70"></i>
+      </div>
+    </section>
+
+    <!-- Partners Section -->
+    <section class="py-16 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <p
+          class="text-center text-gray-500 text-sm font-medium mb-8 tracking-wide uppercase"
+        >
+          Partners of world leading companies
+        </p>
+        <div
+          class="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-70"
+        >
+          <!-- Ferrari -->
+          <div
+            class="partner-logo flex items-center space-x-1 text-2xl font-bold text-gray-800"
+          >
+            <i class="fas fa-horse-head"></i>
+            <span>Ferrari</span>
+          </div>
+          <!-- Toyota -->
+          <div
+            class="partner-logo flex items-center space-x-1 text-2xl font-bold text-gray-800"
+          >
+            <i class="fas fa-circle text-xs"></i>
+            <span>TOYOTA</span>
+          </div>
+          <!-- Tesla -->
+          <div
+            class="partner-logo flex items-center space-x-1 text-2xl font-bold text-gray-800"
+          >
+            <i class="fas fa-bolt"></i>
+            <span>TESLA</span>
+          </div>
+          <!-- Higer -->
+          <div
+            class="partner-logo flex items-center space-x-1 text-xl font-bold text-gray-800"
+          >
+            <span class="italic">HIGER</span>
+          </div>
+          <!-- Marcopolo -->
+          <div
+            class="partner-logo flex items-center space-x-1 text-xl font-bold text-gray-800"
+          >
+            <i class="fas fa-bus"></i>
+            <span>Marcopolo</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="py-20 bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+          <span
+            class="inline-block bg-orange-100 text-orange-600 px-4 py-1 rounded-full text-sm font-semibold mb-4"
+            >Ocean Freight</span
+          >
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900">
+            Our ocean freight services
+          </h2>
+        </div>
+
+        <!-- LCL Service Card -->
+        <div
+          class="bg-white rounded-3xl shadow-xl overflow-hidden service-card transition-all duration-300 max-w-5xl mx-auto"
+        >
+          <div class="grid md:grid-cols-2">
+            <!-- Image Side -->
+            <div class="relative h-64 md:h-auto bg-gray-100">
+              <img
+                src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                alt="Shipping Container"
+                class="w-full h-full object-cover"
+              />
+              <div
+                class="absolute top-4 left-4 bg-orange-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg"
+              >
+                Uthao
+              </div>
+            </div>
+
+            <!-- Content Side -->
+            <div class="p-8 md:p-12 flex flex-col justify-center">
+              <h3 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                Less than Container Load (LCL)
+              </h3>
+              <ul class="space-y-3 mb-8">
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-orange-500 mt-1 mr-3"></i>
+                  <span class="text-gray-600"
+                    >Share a container with other shipments</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-orange-500 mt-1 mr-3"></i>
+                  <span class="text-gray-600"
+                    >Pay only for the space you use</span
+                  >
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-orange-500 mt-1 mr-3"></i>
+                  <span class="text-gray-600"
+                    >Requires proper packaging and sealing</span
+                  >
+                </li>
+              </ul>
+              <div class="flex space-x-4">
+                <button
+                  class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg"
+                >
+                  Ship now
+                </button>
+                <button
+                  class="border-2 border-orange-500 text-orange-500 hover:bg-orange-50 px-6 py-3 rounded-lg font-medium transition"
+                >
+                  Learn more
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Service Cards Grid -->
+        <div class="grid md:grid-cols-3 gap-8 mt-12">
+          <!-- FCL Card -->
+          <div
+            class="bg-white rounded-2xl shadow-lg p-8 service-card transition-all duration-300"
+          >
+            <div
+              class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6"
+            >
+              <i class="fas fa-box text-blue-600 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-3">
+              Full Container Load (FCL)
+            </h3>
+            <p class="text-gray-600 mb-6">
+              Exclusive use of an entire container for your shipment. Best for
+              large volume cargo.
+            </p>
+            <a
+              href="#"
+              class="text-orange-500 font-medium hover:text-orange-600 flex items-center"
+            >
+              Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+            </a>
+          </div>
+
+          <!-- Reefer Card -->
+          <div
+            class="bg-white rounded-2xl shadow-lg p-8 service-card transition-all duration-300"
+          >
+            <div
+              class="w-14 h-14 bg-cyan-100 rounded-xl flex items-center justify-center mb-6"
+            >
+              <i class="fas fa-snowflake text-cyan-600 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-3">Reefer Cargo</h3>
+            <p class="text-gray-600 mb-6">
+              Temperature-controlled shipping for perishable goods and
+              pharmaceuticals.
+            </p>
+            <a
+              href="#"
+              class="text-orange-500 font-medium hover:text-orange-600 flex items-center"
+            >
+              Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+            </a>
+          </div>
+
+          <!-- Break Bulk Card -->
+          <div
+            class="bg-white rounded-2xl shadow-lg p-8 service-card transition-all duration-300"
+          >
+            <div
+              class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6"
+            >
+              <i class="fas fa-ship text-purple-600 text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-3">Break Bulk</h3>
+            <p class="text-gray-600 mb-6">
+              Specialized handling for oversized cargo that doesn't fit standard
+              containers.
+            </p>
+            <a
+              href="#"
+              class="text-orange-500 font-medium hover:text-orange-600 flex items-center"
+            >
+              Learn more <i class="fas fa-arrow-right ml-2 text-sm"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cargo Showcase (Dark) -->
+    <section class="py-20 bg-gray-900 text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-8 items-center">
+          <div class="space-y-6">
+            <h2 class="text-3xl md:text-4xl font-bold">
+              How we move
+              <br />your cargo across the skies
+            </h2>
+            <p class="text-gray-300">Fast, secure and fully tracked shipment solutions — tailored for every type of cargo.</p>
+          </div>
+
+          <div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div class="relative rounded-lg overflow-hidden shadow-lg">
+                <img src="https://images.unsplash.com/photo-1542736667-069246bdbc78?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" class="w-full h-40 object-cover" alt="ocean shipment" />
+                <div class="absolute bottom-3 left-3 bg-black/60 text-white px-3 py-2 rounded-md text-sm font-semibold">Ocean Shipment</div>
+              </div>
+
+              <div class="relative rounded-lg overflow-hidden shadow-lg">
+                <img src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" class="w-full h-40 object-cover" alt="pack label" />
+                <div class="absolute bottom-3 left-3 bg-black/60 text-white px-3 py-2 rounded-md text-sm font-semibold">Pack, Label & Export</div>
+              </div>
+
+              <div class="relative rounded-lg overflow-hidden shadow-lg">
+                <img src="https://images.unsplash.com/photo-1504731234866-8b6b2b6f3f63?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" class="w-full h-40 object-cover" alt="containers" />
+                <div class="absolute bottom-3 left-3 bg-black/60 text-white px-3 py-2 rounded-md text-sm font-semibold">Export & Loading</div>
+              </div>
+
+              <div class="relative rounded-lg overflow-hidden shadow-lg">
+                <img src="https://images.unsplash.com/photo-1504151932400-72d4384f04b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" class="w-full h-40 object-cover" alt="port arrival" />
+                <div class="absolute bottom-3 left-3 bg-black/60 text-white px-3 py-2 rounded-md text-sm font-semibold">Sea Transit & Arrival</div>
+              </div>
+
+              <div class="relative rounded-lg overflow-hidden shadow-lg md:col-span-2">
+                <img src="https://images.unsplash.com/photo-1496171367470-9ed9a91ea931?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=60" class="w-full h-40 object-cover" alt="import delivery" />
+                <div class="absolute bottom-3 left-3 bg-black/60 text-white px-3 py-2 rounded-md text-sm font-semibold">Import & Delivery</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="py-16 bg-white">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Benefits of our ocean freight services</h3>
+        <p class="text-gray-500 mb-8">Reliable logistics built around your timetable and budget.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div class="p-6 bg-gray-50 rounded-xl shadow-sm">
+            <div class="w-12 h-12 mx-auto bg-white rounded-full flex items-center justify-center mb-4 text-orange-500 shadow">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h4 class="font-bold text-gray-900">Safety & top quality</h4>
+          </div>
+
+          <div class="p-6 bg-orange-50 rounded-xl shadow-sm">
+            <div class="w-12 h-12 mx-auto bg-white rounded-full flex items-center justify-center mb-4 text-orange-500 shadow">
+              <i class="fas fa-clock"></i>
+            </div>
+            <h4 class="font-bold text-gray-900">On time delivery</h4>
+          </div>
+
+          <div class="p-6 bg-gray-50 rounded-xl shadow-sm">
+            <div class="w-12 h-12 mx-auto bg-white rounded-full flex items-center justify-center mb-4 text-orange-500 shadow">
+              <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <h4 class="font-bold text-gray-900">Insurance coverage</h4>
+          </div>
+
+          <div class="p-6 bg-gray-50 rounded-xl shadow-sm">
+            <div class="w-12 h-12 mx-auto bg-white rounded-full flex items-center justify-center mb-4 text-orange-500 shadow">
+              <i class="fas fa-headset"></i>
+            </div>
+            <h4 class="font-bold text-gray-900">24/7 customer support</h4>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonial / Growth Section -->
+    <section class="py-16 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-3 gap-8 items-center">
+          <div class="lg:col-span-2 bg-gray-900 text-white rounded-2xl p-10 shadow-lg">
+            <h3 class="text-2xl font-bold mb-4">Delivering growth across ocean cargo</h3>
+            <p class="text-gray-300 mb-6">We combine a global network with local experts to deliver dependable ocean freight services that scale with your needs.</p>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <div class="bg-white/10 px-6 py-4 rounded-lg text-center">
+                <div class="text-2xl font-bold text-orange-400">16k</div>
+                <div class="text-gray-300 text-sm">Shipments handled</div>
+              </div>
+              <div class="bg-white/10 px-6 py-4 rounded-lg text-center">
+                <div class="text-2xl font-bold text-orange-400">89%</div>
+                <div class="text-gray-300 text-sm">Customer satisfaction</div>
+              </div>
+              <div class="bg-white/10 px-6 py-4 rounded-lg text-center">
+                <div class="text-2xl font-bold text-green-400">+250%</div>
+                <div class="text-gray-300 text-sm">Growth year‑on‑year</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden lg:block">
+            <div class="w-full h-full bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
+              <img src="https://images.unsplash.com/photo-1544723795-3fb6469f5b39?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=60" alt="executive" class="w-full h-full object-cover filter blur-sm"/>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="py-20 bg-gray-900 text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div>
+            <div class="text-4xl md:text-5xl font-bold text-orange-500 mb-2">
+              150+
+            </div>
+            <div class="text-gray-400">Countries Served</div>
+          </div>
+          <div>
+            <div class="text-4xl md:text-5xl font-bold text-orange-500 mb-2">
+              2M+
+            </div>
+            <div class="text-gray-400">Containers Shipped</div>
+          </div>
+          <div>
+            <div class="text-4xl md:text-5xl font-bold text-orange-500 mb-2">
+              99%
+            </div>
+            <div class="text-gray-400">On-Time Delivery</div>
+          </div>
+          <div>
+            <div class="text-4xl md:text-5xl font-bold text-orange-500 mb-2">
+              24/7
+            </div>
+            <div class="text-gray-400">Customer Support</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 bg-orange-500">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+          Ready to ship your cargo?
+        </h2>
+        <p class="text-orange-100 text-lg mb-8">
+          Join thousands of businesses trusting Uthao for their global logistics
+          needs.
+        </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+          <button
+            class="bg-white text-orange-500 px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-100 transition shadow-lg"
+          >
+            Get Started Now
+          </button>
+          <button
+            class="border-2 border-white text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-white/10 transition"
+          >
+            Contact Sales
+          </button>
+        </div>
+      </div>
+    </section>
+
+
+    <footer class="bg-gray-800 text-white mt-12">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Company</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-300 hover:text-white">About Us</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Our Fleet</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Sustainability</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Solutions</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-300 hover:text-white">Ocean Freight</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Air Freight</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Warehousing</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Support</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-300 hover:text-white">Contact Center</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Help Center</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Tracking</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Legal</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-300 hover:text-white">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                © 2023 Uthao Global Logistics. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+      // Mobile menu toggle
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn')
+      const mobileMenu = document.getElementById('mobile-menu')
+
+      mobileMenuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden')
+      })
+
+      function switchTab(tab) {
+        // Update tab buttons
+        document.getElementById('tab-tracking').className = tab === 'tracking' 
+          ? 'flex-1 py-2 px-4 rounded-lg font-medium text-sm transition tab-active'
+          : 'flex-1 py-2 px-4 rounded-lg font-medium text-sm transition tab-inactive';
+        
+        document.getElementById('tab-schedules').className = tab === 'schedules'
+          ? 'flex-1 py-2 px-4 rounded-lg font-medium text-sm transition tab-active'
+          : 'flex-1 py-2 px-4 rounded-lg font-medium text-sm transition tab-inactive';
+        
+        // Show/hide content
+        document.getElementById('content-tracking').classList.toggle('hidden', tab !== 'tracking');
+        document.getElementById('content-schedules').classList.toggle('hidden', tab !== 'schedules');
+        
+        // Reset tracking result when switching away
+        if (tab !== 'tracking') {
+          resetTracking();
+        }
+      }
+
+      // Track shipment function
+      async function trackShipment() {
+        const trackingId = document.getElementById('trackingId').value.trim().toUpperCase();
+        
+        if (!trackingId) {
+          showError('Please enter a tracking ID');
+          return;
+        }
+        
+        // Show loading state
+        document.getElementById('trackingResult').classList.remove('hidden');
+        document.getElementById('trackingLoading').classList.remove('hidden');
+        document.getElementById('trackingError').classList.add('hidden');
+        document.getElementById('trackingSuccess').classList.add('hidden');
+        document.getElementById('trackButton').disabled = true;
+        
+        try {
+          const response = await fetch(`/api/track/${trackingId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            displayTrackingResult(data.data);
+          } else {
+            showError(data.message || 'Tracking ID not found. Please check and try again.');
+          }
+          
+        } catch (error) {
+          console.error('Tracking error:', error);
+          showError('Unable to track shipment. Please try again later.');
+        } finally {
+          document.getElementById('trackingLoading').classList.add('hidden');
+          document.getElementById('trackButton').disabled = false;
+        }
+      }
+
+      // Update displayTrackingResult to handle the actual API response format:
+      function displayTrackingResult(data) {
+        document.getElementById('trackingSuccess').classList.remove('hidden');
+        document.getElementById('trackingError').classList.add('hidden');
+        
+        // Populate data - handle missing fields gracefully
+        document.getElementById('resultTrackingId').textContent = data.trackingId || 'N/A';
+        document.getElementById('shipmentStatus').textContent = data.status || 'Unknown';
+        document.getElementById('shipmentOrigin').textContent = data.origin || 'Unknown';
+        document.getElementById('shipmentDestination').textContent = data.destination || 'Unknown';
+        document.getElementById('shipmentEta').textContent = data.eta ? formatDate(data.eta) : 'N/A';
+        document.getElementById('progressPercent').textContent = (data.progress || 0) + '%';
+        document.getElementById('progressBar').style.width = (data.progress || 0) + '%';
+        document.getElementById('latestUpdate').textContent = data.latestUpdate || 'No updates';
+        document.getElementById('updateTime').textContent = data.updateTime || 'Just now';
+        
+        // Update status color based on status
+        const statusEl = document.getElementById('shipmentStatus');
+        const statusColors = {
+          'Delivered': 'bg-green-100 text-green-800',
+          'In Transit': 'bg-blue-100 text-blue-800',
+          'At Port': 'bg-yellow-100 text-yellow-800',
+          'Customs Hold': 'bg-red-100 text-red-800',
+          'Pending': 'bg-gray-100 text-gray-800'
+        };
+        statusEl.className = `px-2 py-1 rounded-full text-xs font-medium ${statusColors[data.status] || 'bg-blue-100 text-blue-800'}`;
+      }
+
+      // Display tracking result
+      function displayTrackingResult(data) {
+        document.getElementById('trackingSuccess').classList.remove('hidden');
+        document.getElementById('trackingError').classList.add('hidden');
+        
+        // Populate data
+        document.getElementById('resultTrackingId').textContent = data.trackingId;
+        document.getElementById('shipmentStatus').textContent = data.status;
+        document.getElementById('shipmentOrigin').textContent = data.origin;
+        document.getElementById('shipmentDestination').textContent = data.destination;
+        document.getElementById('shipmentEta').textContent = formatDate(data.eta);
+        document.getElementById('progressPercent').textContent = data.progress + '%';
+        document.getElementById('progressBar').style.width = data.progress + '%';
+        document.getElementById('latestUpdate').textContent = data.latestUpdate;
+        document.getElementById('updateTime').textContent = data.updateTime;
+        
+        // Update status color based on status
+        const statusEl = document.getElementById('shipmentStatus');
+        const statusColors = {
+          'Delivered': 'bg-green-100 text-green-800',
+          'In Transit': 'bg-blue-100 text-blue-800',
+          'At Port': 'bg-yellow-100 text-yellow-800',
+          'Customs Hold': 'bg-red-100 text-red-800',
+          'Pending': 'bg-gray-100 text-gray-800'
+        };
+        statusEl.className = `px-2 py-1 rounded-full text-xs font-medium ${statusColors[data.status] || 'bg-blue-100 text-blue-800'}`;
+      }
+
+      // Show error message
+      function showError(message) {
+        document.getElementById('trackingResult').classList.remove('hidden');
+        document.getElementById('trackingLoading').classList.add('hidden');
+        document.getElementById('trackingSuccess').classList.add('hidden');
+        document.getElementById('trackingError').classList.remove('hidden');
+        document.getElementById('errorMessage').textContent = message;
+      }
+
+      // Reset tracking form
+      function resetTracking() {
+        document.getElementById('trackingResult').classList.add('hidden');
+        document.getElementById('trackingId').value = '';
+      }
+
+      // View full details
+      function viewFullDetails() {
+        const trackingId = document.getElementById('trackingId').value.trim().toUpperCase();
+        // Redirect to detailed tracking page
+        window.location.href = `/tracking/details/${trackingId}`;
+      }
+
+      // Format date
+      function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid Date';
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString('en-US', options);
+      }
+
+      // Allow Enter key to trigger tracking
+      document.getElementById('trackingId').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          trackShipment();
+        }
+      });
+
+      // Smooth scroll for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault()
+          const target = document.querySelector(this.getAttribute('href'))
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            })
+          }
+        })
+      })
+
+      // Navbar scroll effect
+      window.addEventListener('scroll', () => {
+        const nav = document.querySelector('nav')
+        if (window.scrollY > 50) {
+          nav.classList.add('shadow-md')
+        } else {
+          nav.classList.remove('shadow-md')
+        }
+      })
+    </script>
+{% endblock %}

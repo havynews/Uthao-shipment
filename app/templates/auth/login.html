@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="relative min-h-screen flex items-center justify-center overflow-hidden px-2 bg-background-light dark:bg-background-dark">
+    <!-- Background -->
+    <div class="absolute inset-0 z-0">
+        <div class="absolute inset-0 bg-gradient-to-br from-background-dark/90 via-background-dark/70 to-primary/20 z-10"></div>
+        <div class="w-full h-full bg-cover bg-center opacity-60" 
+            style="background-image: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1920&q=80');">
+        </div>
+    </div>
+
+    <main class="relative z-20 w-full max-w-sm">
+        <!-- Glass Panel -->
+        <div class="glass-panel rounded-xl p-3 shadow-2xl border border-primary/10 bg-background-dark/70 backdrop-blur-md">
+            
+            <!-- Header -->
+            <div class="flex flex-col items-center mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="text-primary">
+                        <svg class="size-6" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M39.5563 34.1455V13.8546C39.5563 15.708 36.8773 17.3437 32.7927 18.3189C30.2914 18.916 27.263 19.2655 24 19.2655C20.737 19.2655 17.7086 18.916 15.2073 18.3189C11.1227 17.3437 8.44365 15.708 8.44365 13.8546V34.1455C8.44365 35.9988 11.1227 37.6346 15.2073 38.6098C17.7086 39.2069 20.737 39.5564 24 39.5564C27.1288 39.5564 30.2914 39.2069 32.7927 38.6098C36.8773 37.6346 39.5563 35.9988 39.5563 34.1455Z" fill="currentColor"></path>
+                            <path clip-rule="evenodd" d="M10.4485 13.8519C10.4749 13.9271 10.6203 14.246 11.379 14.7361C12.298 15.3298 13.7492 15.9145 15.6717 16.3735C18.0007 16.9296 20.8712 17.2655 24 17.2655C27.1288 17.2655 29.9993 16.9296 32.3283 16.3735C34.2508 15.9145 35.702 15.3298 36.621 14.7361C37.3796 14.246 37.5251 13.9271 37.5515 13.8519C37.5287 13.7876 37.4333 13.5973 37.0635 13.2931C36.5266 12.8516 35.6288 12.3647 34.343 11.9175C31.79 11.0295 28.1333 10.4437 24 10.4437C19.8667 10.4437 16.2099 11.0295 13.657 11.9175C12.3712 12.3647 11.4734 12.8516 10.9365 13.2931C10.5667 13.5973 10.4713 13.7876 10.4485 13.8519ZM37.5563 18.7877C36.3176 19.3925 34.8502 19.8839 33.2571 20.2642C30.5836 20.9025 27.3973 21.2655 24 21.2655C20.6027 21.2655 17.4164 20.9025 14.7429 20.2642C13.1498 19.8839 11.6824 19.3925 10.4436 18.7877V34.1275C10.4515 34.1545 10.5427 34.4867 11.379 35.027C12.298 35.6207 13.7492 36.2054 15.6717 36.6644C18.0007 37.2205 20.8712 37.5564 24 37.5564C27.1288 37.5564 29.9993 37.2205 32.3283 36.6644C34.2508 36.2054 35.702 35.6207 36.621 35.027C37.4573 34.4867 37.5485 34.1546 37.5563 34.1275V18.7877ZM41.5563 13.8546V34.1455C41.5563 36.1078 40.158 37.5042 38.7915 38.3869C37.3498 39.3182 35.4192 40.0389 33.2571 40.5551C30.5836 41.1934 27.3973 41.5564 24 41.5564C20.6027 41.5564 17.4164 41.1934 14.7429 40.5551C12.5808 40.0389 10.6502 39.3182 9.20848 38.3869C7.84205 37.5042 6.44365 36.1078 6.44365 34.1455L6.44365 13.8546C6.44365 12.2684 7.37223 11.0454 8.39581 10.2036C9.43325 9.3505 10.8137 8.67141 12.343 8.13948C15.4203 7.06909 19.5418 6.44366 24 6.44366C28.4582 6.44366 32.5797 7.06909 35.657 8.13948C37.1863 8.67141 38.5667 9.3505 39.6042 10.2036C40.6278 11.0454 41.5563 12.2684 41.5563 13.8546Z" fill="currentColor" fill-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <h1 class="text-xl font-black tracking-tight text-white">Uthao Logistics</h1>
+                </div>
+                <h2 class="text-lg font-bold text-slate-100">Welcome Back</h2>
+                <p class="text-primary/80 text-xs mt-0.5">Efficiently moving the world</p>
+            </div>
+
+            <!-- Alert Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="mb-2 p-2 rounded text-xs font-medium flex items-center gap-1 
+                            {% if category == 'error' %}bg-red-500/20 border border-red-500/30 text-red-200
+                            {% else %}bg-green-500/20 border border-green-500/30 text-green-200{% endif %}">
+                            <span class="material-symbols-outlined text-xs">
+                                {% if category == 'error' %}error{% else %}check_circle{% endif %}
+                            </span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Login Form -->
+            <form class="space-y-3" method="POST" action="{{ url_for('auth.login') }}" id="login-form">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1 ml-1">Email Address</label>
+                    <div class="relative group">
+                        <input type="email" name="email" required 
+                            class="w-full bg-background-dark/50 border border-primary/20 rounded-lg py-2 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all hover:border-primary/40 text-sm"
+                            placeholder="name@company.com" value="{{ request.form.email }}">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-slate-500 text-xs group-focus-within:text-primary transition-colors">alternate_email</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1 ml-1">
+                        <label class="text-xs font-medium text-slate-300">Password</label>
+                        <a href="{{ url_for('auth.forgot_password') }}" class="text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors">Forgot?</a>
+                    </div>
+                    <div class="relative group">
+                        <input type="password" name="password" required id="password-input"
+                            class="w-full bg-background-dark/50 border border-primary/20 rounded-lg py-2 px-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all hover:border-primary/40 text-sm"
+                            placeholder="••••••••">
+                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-primary transition-colors group-focus-within:text-primary">
+                            <span class="material-symbols-outlined text-base" id="password-toggle-icon">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember-me" name="remember" class="h-3.5 w-3.5 rounded border-primary/30 bg-background-dark/50 text-primary focus:ring-primary/50 cursor-pointer">
+                    <label for="remember-me" class="ml-2 block text-xs text-slate-400 cursor-pointer select-none">Remember this device</label>
+                </div>
+
+                <button type="submit" id="submit-btn"
+                    class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2.5 rounded-lg shadow-lg shadow-primary/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 group text-sm">
+                    <span id="btn-text">Sign In</span>
+                    <span class="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform" id="btn-icon">arrow_forward</span>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="mt-4 relative">
+                <div aria-hidden="true" class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-primary/10"></div>
+                </div>
+                <div class="relative flex justify-center text-xs">
+                    <span class="px-2 bg-background-dark/50 text-slate-500 font-medium rounded-full border border-primary/10 backdrop-blur-sm">Or create account</span>
+                </div>
+            </div>
+
+            <!-- Register Link -->
+            <div class="mt-4 text-center">
+                <p class="text-xs text-slate-400">
+                    Don't have an account? 
+                    <a href="{{ url_for('auth.register') }}" class="text-primary font-bold hover:underline transition-all hover:text-primary/80">Create one now</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-4 flex justify-between items-center px-2">
+            <p class="text-[9px] text-slate-500 uppercase tracking-widest">© 2024 Uthao Logistics Inc.</p>
+            <div class="flex gap-2">
+                <a href="#" class="text-[9px] text-slate-500 hover:text-primary transition-colors uppercase tracking-widest">Privacy</a>
+                <a href="#" class="text-[9px] text-slate-500 hover:text-primary transition-colors uppercase tracking-widest">Terms</a>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Stats (visible on larger screens) -->
+    <div class="absolute bottom-10 left-10 hidden xl:flex items-center gap-4 animate-pulse p-2">
+        <div class="flex flex-col">
+            <span class="text-primary text-2xl font-black">2.4k+</span>
+            <span class="text-slate-400 text-xs font-medium uppercase tracking-tighter">Deliveries Today</span>
+        </div>
+        <div class="h-8 w-px bg-primary/20"></div>
+        <div class="flex flex-col">
+            <span class="text-primary text-2xl font-black">99.9%</span>
+            <span class="text-slate-400 text-xs font-medium uppercase tracking-tighter">On-time rate</span>
+        </div>
+    </div>
+</div>
+
+<style>
+    .glass-panel {
+        background: rgba(34, 25, 16, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+    
+    /* Loading animation */
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+        animation: spin 1s linear infinite;
+    }
+</style>
+
+<script>
+    function togglePassword() {
+        const input = document.getElementById('password-input');
+        const icon = document.getElementById('password-toggle-icon');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = 'visibility';
+        } else {
+            input.type = 'password';
+            icon.textContent = 'visibility_off';
+        }
+    }
+
+    // Form submission handling
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+        const btn = document.getElementById('submit-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnIcon = document.getElementById('btn-icon');
+        
+        // Show loading state
+        btn.disabled = true;
+        btnText.textContent = 'Signing in...';
+        btnIcon.textContent = 'progress_activity';
+        btnIcon.classList.add('animate-spin-slow');
+        
+        // Form submits normally, this is just for UX
+    });
+
+    // Check for dark mode preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+    }
+</script>
+{% endblock %}
