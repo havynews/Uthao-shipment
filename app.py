@@ -96,10 +96,10 @@ def create_app():
         db.session.commit()
         print(f"Admin created: {email}")
 
-    with app.app_context():
-        db.create_all()
-        from socket_events import init_socket_events
-        init_socket_events(socketio)
+    # with app.app_context():
+    #     db.create_all()
+    #     from socket_events import init_socket_events
+    #     init_socket_events(socketio)
 
     return app
 
