@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask
-from app.config import Config
+fconfig import Config
 from flask_socketio import SocketIO
 import os
 
@@ -9,7 +9,7 @@ socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=Tru
 def create_app():
     from werkzeug.security import generate_password_hash
     import click
-    from app.extensions import db, mail, login_manager, migrate
+    fextensions import db, mail, login_manager, migrate
 
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -28,10 +28,10 @@ def create_app():
 
     socketio.init_app(app)
 
-    from app.blueprints.main import main_bp
-    from app.blueprints.auth import auth_bp
-    from app.blueprints.user import user_bp
-    from app.blueprints.admin import admin_bp
+    from blueprints.main import main_bp
+    from blueprints.auth import auth_bp
+    from blueprints.user import user_bp
+    from blueprints.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -98,7 +98,7 @@ def create_app():
 
 def _seed_default_users(db, generate_password_hash):
     """Create default admin and normal user if they don't exist."""
-    from app.models import User
+    from models import User
     from datetime import datetime
 
     # ── Default admin ────────────────────────────────────────────────
