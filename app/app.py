@@ -1,20 +1,22 @@
-# app.py
+# # app.py
 from flask import Flask
-config import Config
+from app.config import Config
 from flask_socketio import SocketIO
 import os
 
+# Single SocketIO instance — created here, used everywhere
 socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=True, engineio_logger=True)
 
 def create_app():
     from werkzeug.security import generate_password_hash
     import click
-    fextensions import db, mail, login_manager, migrate
+    from app.extensions import db, mail, login_manager, migrate
 
     app = Flask(__name__)
     app.config.from_object(Config)
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
+    # Mail config
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
     app.config['MAIL_USE_TLS'] = True
@@ -26,21 +28,25 @@ def create_app():
     mail.init_app(app)
     migrate.init_app(app, db)
 
+    # ── Step 1: attach socketio to app ──────────────────────────────
     socketio.init_app(app)
 
-    from blueprints.main import main_bp
-    from blueprints.auth import auth_bp
-    from blueprints.user import user_bp
-    from blueprints.admin import admin_bp
+    # ── Step 2: register blueprints ─────────────────────────────────
+    from app.blueprints.main import main_bp
+    from app.blueprints.auth import auth_bp
+    from app.blueprints.user import user_bp
+    from app.blueprints.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(user_bp, url_prefix='/user')
     app.register_blueprint(admin_bp, url_prefix='/admin')
 
+    # ── Step 3: register socket events AFTER init_app ───────────────
     from app.socket_events import init_socket_events
     init_socket_events(socketio)
 
+    # ── Login manager ────────────────────────────────────────────────
     from flask_login import LoginManager
     login_mgr = LoginManager()
     login_mgr.init_app(app)
@@ -51,6 +57,7 @@ def create_app():
         from app.models import User
         return User.query.get(int(user_id))
 
+    # ── Uploads route ────────────────────────────────────────────────
     from flask import send_from_directory
 
     @app.route('/uploads/<path:filename>')
@@ -91,43 +98,11 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-        _seed_default_users(db, generate_password_hash)
+    #     from app.socket_events import init_socket_events
+    #     init_socket_events(socketio)
 
     return app
 
-
-def _seed_default_users(db, generate_password_hash):
-    """Create default admin and normal user if they don't exist."""
-    from models import User
-    from datetime import datetime
-
-    # ── Default admin ────────────────────────────────────────────────
-    if not User.query.filter_by(email='admin@uthao.com').first():
-        admin = User(
-            email='admin@uthao.com',
-            password_hash=generate_password_hash('Admin@1234'),
-            full_name='Admin User',
-            is_admin=True,
-            is_active=True,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(admin)
-        print('✓ Default admin created → admin@uthao.com / Admin@1234')
-
-    # ── Default normal user ──────────────────────────────────────────
-    if not User.query.filter_by(email='1stpassabite@gmail.com').first():
-        user = User(
-            email='1stpassabite@gmail.com',
-            password_hash=generate_password_hash('User@1234'),
-            full_name='Test User',
-            is_admin=False,
-            is_active=True,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(user)
-        print('✓ Default user created → 1stpassabite@gmail.com / User@1234')
-
-    db.session.commit()
 
 
 # from flask import Flask

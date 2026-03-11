@@ -15,9 +15,9 @@ from datetime import datetime, timedelta
 from flask import jsonify, request, session
 from flask_mail import Message
 import pyotp
-from extensions import db, mail, login_manager, migrate
+from app.extensions import db, mail, login_manager, migrate
 
-from models import User, Shipment, ShipmentEvent, Package, Subscription, PLANS, \
+from app.models import User, Shipment, ShipmentEvent, Package, Subscription, PLANS, \
     NotificationPreference, CURRENCIES, PaymentRequest, PaymentMethod, SupportTicket, Notification
 
 auth_bp = Blueprint('auth', __name__)

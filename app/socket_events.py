@@ -4,6 +4,7 @@ from flask_login import current_user
 from flask import request
 from functools import wraps
 from datetime import datetime
+from app.extensions import db
 
 socketio = None
 
@@ -229,7 +230,7 @@ def _register_events(sio):
         if not current_user.is_authenticated:
             emit('error', {'message': 'Authentication required'})
             return
-        from models import LiveChatSession, db
+        from app.models import LiveChatSession
 
         subject = data.get('subject', 'General Inquiry')
         is_ai_topic = subject in AI_TOPICS
@@ -298,7 +299,7 @@ def _register_events(sio):
     def handle_get_all_chats():
         if not current_user.is_authenticated or not current_user.is_admin:
             return
-        from models import LiveChatSession
+        from app.models import LiveChatSession
         from datetime import timedelta
 
         admin_id = current_user.id
@@ -343,7 +344,7 @@ def _register_events(sio):
         if not current_user.is_authenticated:
             return
         
-        from models import LiveChatSession, LiveChatMessage, db
+        from app.models import LiveChatSession, LiveChatMessage
         
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
@@ -390,7 +391,7 @@ def _register_events(sio):
         if not current_user.is_authenticated:
             emit('error', {'message': 'Authentication required'})
             return
-        from models import LiveChatMessage, LiveChatSession, db
+        from app.models import LiveChatMessage, LiveChatSession
 
         session_id = data.get('session_id')
         message_text = data.get('message', '').strip()
@@ -443,7 +444,7 @@ def _register_events(sio):
         """User wants to talk to a real agent from AI chat."""
         if not current_user.is_authenticated:
             return
-        from models import LiveChatSession, db
+        from app.models import LiveChatSession
 
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
@@ -477,7 +478,7 @@ def _register_events(sio):
     def handle_user_typing(data):
         if not current_user.is_authenticated:
             return
-        from models import LiveChatSession
+        from app.models import LiveChatSession
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
         if chat_session and chat_session.admin_id and not chat_session.is_ai_chat:
@@ -490,7 +491,7 @@ def _register_events(sio):
     def handle_user_cancel_chat(data):
         if not current_user.is_authenticated:
             return
-        from models import LiveChatSession, db
+        from app.models import LiveChatSession
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
         if chat_session and chat_session.user_id == current_user.id and chat_session.status == 'waiting':
@@ -505,7 +506,7 @@ def _register_events(sio):
     def handle_user_rejoin_chat(data):
         if not current_user.is_authenticated:
             return
-        from models import LiveChatSession
+        from app.models import LiveChatSession
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
         if not chat_session or chat_session.user_id != current_user.id:
@@ -524,7 +525,7 @@ def _register_events(sio):
         if not current_user.is_authenticated or not current_user.is_admin:
             emit('error', {'message': 'Admin access required'})
             return
-        from models import LiveChatSession, LiveChatMessage, db
+        from app.models import LiveChatSession, LiveChatMessage
 
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
@@ -593,7 +594,7 @@ def _register_events(sio):
     def handle_admin_typing(data):
         if not current_user.is_authenticated or not current_user.is_admin:
             return
-        from models import LiveChatSession
+        from app.models import LiveChatSession
         session_id = data.get('session_id')
         chat_session = LiveChatSession.query.get(session_id)
         if chat_session:
@@ -608,7 +609,7 @@ def _register_events(sio):
         if not current_user.is_authenticated or not current_user.is_admin:
             return
         
-        from models import LiveChatMessage, LiveChatSession, db
+        from app.models import LiveChatMessage, LiveChatSession
 
         session_id = data.get('session_id')
         resolution = data.get('resolution', 'resolved')
@@ -654,7 +655,7 @@ def _register_events(sio):
     def handle_mark_read(data):
         if not current_user.is_authenticated:
             return
-        from models import LiveChatMessage, db
+        from app.models import LiveChatMessage
         session_id = data.get('session_id')
         message_ids = data.get('message_ids', [])
         if message_ids:
@@ -670,7 +671,7 @@ def _register_events(sio):
         if not current_user.is_authenticated or not current_user.is_admin:
             return
         
-        from models import LiveChatMessage, LiveChatSession, db
+        from app.models import LiveChatMessage, LiveChatSession
         from notification import create_notification
 
         session_id = data.get('session_id')
@@ -761,7 +762,7 @@ def _get_ai_response(message_text, subject):
 
 def _handle_ai_response(chat_session, user_message, session_id, db_instance):
     """Get hardcoded AI response and emit it INSTANTLY."""
-    from models import LiveChatMessage
+    from app.models import LiveChatMessage
     from flask import current_app
     
     try:
@@ -809,8 +810,8 @@ def _notify_admins_new_chat(chat_session, user, subject):
     def run():
         with app.app_context():
             try:
-                from models import User
-                from notification import create_notification
+                from app.models import User
+                from app.notification import create_notification
 
                 admins = User.query.filter_by(is_admin=True, is_active=True).all()
                 for admin in admins:
@@ -839,7 +840,7 @@ def _notify_admins_new_chat(chat_session, user, subject):
 
 
 def get_queue_position(session_id):
-    from models import LiveChatSession
+    from app.models import LiveChatSession
     waiting = LiveChatSession.query.filter_by(status='waiting').order_by(
         LiveChatSession.created_at.asc()
     ).all()
@@ -850,7 +851,7 @@ def get_queue_position(session_id):
 
 
 def get_queue_data():
-    from models import LiveChatSession
+    from app.models import LiveChatSession
     waiting = LiveChatSession.query.filter_by(status='waiting').order_by(
         LiveChatSession.created_at.asc()
     ).all()

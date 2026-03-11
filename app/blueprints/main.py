@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, jsonify, request, abort, current_app
-from models import Shipment, ShipmentEvent
-from extensions import db
+from app.models import Shipment, ShipmentEvent
+from app.extensions import db
 from datetime import datetime
 import traceback
 

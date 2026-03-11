@@ -10,9 +10,9 @@ from flask import Blueprint, render_template, session, redirect, url_for, \
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import Shipment, ShipmentEvent, Package, Subscription, PLANS, \
+from app.models import Shipment, ShipmentEvent, Package, Subscription, PLANS, \
     NotificationPreference, CURRENCIES, PaymentRequest, PaymentMethod, SupportTicket, Notification, PackageImage, ShipmentPayment
-from extensions import db, mail, login_manager, migrate
+from app.extensions import db, mail, login_manager, migrate
 from datetime import datetime, timedelta
 import random
 import string
@@ -546,7 +546,7 @@ def _handle_profile_update(request):
     # Handle email change
     new_email = request.form.get('email', '').strip().lower()
     if new_email and new_email != current_user.email:
-        from models import User
+        from app.models import User
         if User.query.filter_by(email=new_email).first():
             flash('That email address is already in use.', 'error')
             return redirect(url_for('user.settings', tab='profile'))
