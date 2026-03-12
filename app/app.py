@@ -1,6 +1,6 @@
 # # app.py
 from flask import Flask
-from app.config import Config
+from .config import Config
 from flask_socketio import SocketIO
 import os
 
@@ -10,7 +10,7 @@ socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=Tru
 def create_app():
     from werkzeug.security import generate_password_hash
     import click
-    from app.extensions import db, mail, login_manager, migrate
+    from .extensions import db, mail, login_manager, migrate
 
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -32,10 +32,10 @@ def create_app():
     socketio.init_app(app)
 
     # ── Step 2: register blueprints ─────────────────────────────────
-    from app.blueprints.main import main_bp
-    from app.blueprints.auth import auth_bp
-    from app.blueprints.user import user_bp
-    from app.blueprints.admin import admin_bp
+    from .blueprints.main import main_bp
+    from .blueprints.auth import auth_bp
+    from .blueprints.user import user_bp
+    from .blueprints.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -78,7 +78,7 @@ def create_app():
     @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
     @click.option("--name", default="Admin User")
     def reset_admin(email, password, name):
-        from app.models import User
+        from .models import User
         from datetime import datetime
         existing = User.query.filter_by(email=email).first()
         if existing:
