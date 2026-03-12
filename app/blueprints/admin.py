@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 import json
 
-from app.models import (
+from models import (
     User, Shipment, ShipmentEvent, Package, Subscription, 
     PaymentRequest, PaymentMethod, SupportTicket, TicketReply, ShipmentPayment,
     Notification, Plan, PLANS, CURRENCIES

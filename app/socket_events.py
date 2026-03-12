@@ -4,7 +4,7 @@ from flask_login import current_user
 from flask import request
 from functools import wraps
 from datetime import datetime
-from app.extensions import db
+from extensions import db
 
 socketio = None
 
