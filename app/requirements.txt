@@ -28,4 +28,7 @@ wsproto
 wtforms
 pyotp
 gunicorn
-eventlet
+geven
+gevent-websocket
+gunicorn
+flask-socketio
