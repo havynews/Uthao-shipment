@@ -19,9 +19,9 @@ from models import (
     Notification, Plan, PLANS, CURRENCIES
 )
 
-from app.extensions import db, mail, login_manager, migrate
+from extensions import db, mail, login_manager, migrate
 
-from app.notification import create_notification
+from notification import create_notification
 
 
 
