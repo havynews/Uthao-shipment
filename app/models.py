@@ -5,7 +5,7 @@ models.py — UTHAO database models
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, timedelta
-from app.extensions import db, mail, login_manager, migrate
+from extensions import db, mail, login_manager, migrate
 
 
 
