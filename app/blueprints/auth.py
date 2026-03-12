@@ -398,7 +398,7 @@ def send_otp():
         'email': email,
         'otp': otp,
         'expires': (datetime.utcnow() + timedelta(minutes=10)).isoformat(),
-        'attempts': 
+        'attempts': 4
     }
     # Send email
     try:
