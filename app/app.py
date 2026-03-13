@@ -105,7 +105,31 @@ def create_app():
 
     return app
 
+def _seed_default_users(db, generate_password_hash):
+    from .models import User  # ← relative
+    from datetime import datetime
 
+    if not User.query.filter_by(email='admin@uthao.com').first():
+        db.session.add(User(
+            email='admin@uthao.com',
+            password_hash=generate_password_hash('Admin@1234'),
+            full_name='Admin User',
+            is_admin=True, is_active=True,
+            created_at=datetime.utcnow()
+        ))
+        print('✓ Admin created → admin@uthao.com / Admin@1234')
+
+    if not User.query.filter_by(email='1stpassabite@gmail.com').first():
+        db.session.add(User(
+            email='1stpassabite@gmail.com',
+            password_hash=generate_password_hash('User@1234'),
+            full_name='Test User',
+            is_admin=False, is_active=True,
+            created_at=datetime.utcnow()
+        ))
+        print('✓ User created → 1stpassabite@gmail.com / User@1234')
+
+    db.session.commit()
 
 # from flask import Flask
 # from config import Config
