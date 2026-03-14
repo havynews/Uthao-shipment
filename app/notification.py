@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from app.models import db, Notification, User
+from models import db, Notification, User
 
 logger = logging.getLogger(__name__)
 
