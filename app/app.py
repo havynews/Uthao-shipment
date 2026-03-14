@@ -3,7 +3,7 @@ from flask import Flask
 from config import Config
 from flask_socketio import SocketIO
 import os
-
+from models import User  
 # Single SocketIO instance — created here, used everywhere
 # socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=True, engineio_logger=True)
 
@@ -108,7 +108,6 @@ def create_app():
     
 
 def _seed_default_users(db, generate_password_hash):
-    from .models import User  # ← relative
     from datetime import datetime
 
     if not User.query.filter_by(email='admin@uthao.com').first():

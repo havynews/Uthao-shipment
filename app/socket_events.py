@@ -5,7 +5,7 @@ from flask import request, current_app
 from functools import wraps
 from datetime import datetime, timedelta
 from extensions import db
-from app.models import LiveChatSession, LiveChatMessage, User
+from models import LiveChatSession, LiveChatMessage, User
 from notification import create_notification
 import re
 import random
