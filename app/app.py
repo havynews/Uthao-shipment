@@ -101,6 +101,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _seed_default_users()
     #     from app.socket_events import init_socket_events
     #     init_socket_events(socketio)
 
