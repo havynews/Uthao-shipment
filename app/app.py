@@ -1,9 +1,15 @@
 # # app.py
 from flask import Flask
-from config import Config
+from app.config import Config
 from flask_socketio import SocketIO
 import os
 from models import User  
+from extensions import db, mail, login_manager, migrate
+from socket_events import init_socket_events
+from werkzeug.security import generate_password_hash
+from datetime import datetime
+
+
 # Single SocketIO instance — created here, used everywhere
 # socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=True, engineio_logger=True)
 
@@ -11,9 +17,7 @@ socketio = SocketIO(cors_allowed_origins="*", async_mode='gevent', logger=True, 
 
 
 def create_app():
-    from werkzeug.security import generate_password_hash
     import click
-    from extensions import db, mail, login_manager, migrate
 
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -32,13 +36,13 @@ def create_app():
     migrate.init_app(app, db)
 
     # ── Step 1: attach socketio to app ──────────────────────────────
-    socketio.init_app(app)
+    # socketio.init_app(app)
 
     # ── Step 2: register blueprints ─────────────────────────────────
-    from blueprints.main import main_bp
-    from blueprints.auth import auth_bp
-    from blueprints.user import user_bp
-    from blueprints.admin import admin_bp
+    from app.blueprints.main import main_bp
+    from app.blueprints.auth import auth_bp
+    from app.blueprints.user import user_bp
+    from app.blueprints.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -46,7 +50,6 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/admin')
 
     # ── Step 3: register socket events AFTER init_app ───────────────
-    from socket_events import init_socket_events
     init_socket_events(socketio)
 
     # ── Login manager ────────────────────────────────────────────────
@@ -57,7 +60,6 @@ def create_app():
 
     @login_mgr.user_loader
     def load_user(user_id):
-        from models import User
         return User.query.get(int(user_id))
 
     # ── Uploads route ────────────────────────────────────────────────
@@ -73,7 +75,6 @@ def create_app():
 
     @app.context_processor
     def utility_processor():
-        from datetime import datetime
         return dict(now=datetime.utcnow)
 
     @app.cli.command("reset-admin")
@@ -81,8 +82,6 @@ def create_app():
     @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)
     @click.option("--name", default="Admin User")
     def reset_admin(email, password, name):
-        from models import User
-        from datetime import datetime
         existing = User.query.filter_by(email=email).first()
         if existing:
             db.session.delete(existing)
@@ -106,15 +105,13 @@ def create_app():
     with app.app_context():
         db.create_all()
         _seed_default_users()
-    #     from app.socket_events import init_socket_events
-    #     init_socket_events(socketio)
+        # init_socket_events(socketio)
 
     return app
     
 
 def _seed_default_users():
     from werkzeug.security import generate_password_hash
-    from extensions import db  # or however you access db
     from datetime import datetime
 
     if not User.query.filter_by(email='admin@uthao.com').first():
