@@ -5,9 +5,10 @@ from flask_socketio import SocketIO
 import os
 
 # Single SocketIO instance — created here, used everywhere
-socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=True, engineio_logger=True)
+# socketio = SocketIO(cors_allowed_origins="*", async_mode='threading', logger=True, engineio_logger=True)
 
-# socketio = SocketIO(cors_allowed_origins="*", async_mode='gevent', logger=True, engineio_logger=True)
+socketio = SocketIO(cors_allowed_origins="*", async_mode='gevent', logger=True, engineio_logger=True)
+
 
 def create_app():
     from werkzeug.security import generate_password_hash
