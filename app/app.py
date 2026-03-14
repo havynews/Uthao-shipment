@@ -99,6 +99,10 @@ def create_app():
         db.session.commit()
         print(f"Admin created: {email}")
 
+    # with app.app_context():
+    #     db.create_all()
+    #     _seed_default_users()
+
     with app.app_context():
         db.create_all()
         _seed_default_users()
@@ -108,7 +112,9 @@ def create_app():
     return app
     
 
-def _seed_default_users(db, generate_password_hash):
+def _seed_default_users():
+    from werkzeug.security import generate_password_hash
+    from extensions import db  # or however you access db
     from datetime import datetime
 
     if not User.query.filter_by(email='admin@uthao.com').first():
