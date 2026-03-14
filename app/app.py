@@ -39,10 +39,10 @@ def create_app():
     socketio.init_app(app)
 
     # ── Step 2: register blueprints ─────────────────────────────────
-    from app.blueprints.main import main_bp
-    from app.blueprints.auth import auth_bp
-    from app.blueprints.user import user_bp
-    from app.blueprints.admin import admin_bp
+    from blueprints.main import main_bp
+    from blueprints.auth import auth_bp
+    from blueprints.user import user_bp
+    from blueprints.admin import admin_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
