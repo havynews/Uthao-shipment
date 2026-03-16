@@ -31,46 +31,91 @@ def allowed_file(filename):
 # FIXED: Improved file upload helper
 # ────────────────────────────────────────────
 
+# def save_uploaded_file(file, folder, prefix):
+#     """Save uploaded file and return URL path. FIXED version with proper validation."""
+#     if not file:
+#         raise ValueError('No file provided')
+    
+#     if not file.filename or not file.filename.strip():
+#         raise ValueError('No file selected')
+    
+#     # Check extension before reading stream
+#     if not allowed_file(file.filename):
+#         raise ValueError('Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP, PDF')
+    
+#     # Read content for size validation (this consumes the stream)
+#     file_content = file.read()
+    
+#     if not file_content:
+#         raise ValueError('Empty file')
+    
+#     size = len(file_content)
+#     if size > MAX_FILE_SIZE:
+#         raise ValueError(f'File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024):.1f}MB')
+    
+#     # Generate secure filename
+#     ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
+#     filename = f"{prefix}_{current_user.id}_{secrets.token_hex(8)}.{ext}"
+    
+#     upload_folder = current_app.config.get(
+#         'UPLOAD_FOLDER', 
+#         os.path.join(current_app.root_path, 'static', 'uploads')
+#     )
+#     upload_path = os.path.join(upload_folder, folder)
+#     os.makedirs(upload_path, exist_ok=True)
+    
+#     filepath = os.path.join(upload_path, filename)
+    
+#     # Write the content we already read
+#     with open(filepath, 'wb') as f:
+#         f.write(file_content)
+    
+#     return f"/uploads/{folder}/{filename}"
+
+
 def save_uploaded_file(file, folder, prefix):
-    """Save uploaded file and return URL path. FIXED version with proper validation."""
-    if not file:
-        raise ValueError('No file provided')
-    
-    if not file.filename or not file.filename.strip():
+    if not file or not file.filename or not file.filename.strip():
         raise ValueError('No file selected')
-    
-    # Check extension before reading stream
     if not allowed_file(file.filename):
         raise ValueError('Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP, PDF')
-    
-    # Read content for size validation (this consumes the stream)
+
     file_content = file.read()
-    
     if not file_content:
         raise ValueError('Empty file')
-    
-    size = len(file_content)
-    if size > MAX_FILE_SIZE:
+    if len(file_content) > MAX_FILE_SIZE:
         raise ValueError(f'File too large. Maximum size: {MAX_FILE_SIZE / (1024*1024):.1f}MB')
-    
-    # Generate secure filename
+
+    if os.environ.get('CLOUDINARY_CLOUD_NAME'):
+        import cloudinary
+        import cloudinary.uploader
+        import io
+
+        cloudinary.config(
+            cloud_name=os.environ['CLOUDINARY_CLOUD_NAME'],
+            api_key=os.environ['CLOUDINARY_API_KEY'],
+            api_secret=os.environ['CLOUDINARY_API_SECRET']
+        )
+        public_id = f"uthao/{folder}/{prefix}_{current_user.id}_{secrets.token_hex(8)}"
+        result = cloudinary.uploader.upload(
+            io.BytesIO(file_content),
+            public_id=public_id,
+            resource_type='auto'
+        )
+        return result['secure_url']
+
+    # Local fallback (development)
     ext = secure_filename(file.filename).rsplit('.', 1)[1].lower()
     filename = f"{prefix}_{current_user.id}_{secrets.token_hex(8)}.{ext}"
-    
     upload_folder = current_app.config.get(
-        'UPLOAD_FOLDER', 
+        'UPLOAD_FOLDER',
         os.path.join(current_app.root_path, 'static', 'uploads')
     )
     upload_path = os.path.join(upload_folder, folder)
     os.makedirs(upload_path, exist_ok=True)
-    
-    filepath = os.path.join(upload_path, filename)
-    
-    # Write the content we already read
-    with open(filepath, 'wb') as f:
+    with open(os.path.join(upload_path, filename), 'wb') as f:
         f.write(file_content)
-    
     return f"/uploads/{folder}/{filename}"
+    
 
 def shipment_to_dict(s, include_events=False):
     """Serialize a Shipment model to a JSON-safe dict."""
