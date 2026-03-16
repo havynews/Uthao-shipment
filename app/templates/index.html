@@ -155,12 +155,11 @@
 
   /* Logo */
   .site-logo {
-    height: 38px;
+    height: 34px;
     width: auto;
     display: block;
     filter: none;
     transition: opacity 0.25s ease;
-    margin-top: 12px;
   }
   .site-logo:hover { opacity: 0.75; }
 
@@ -214,7 +213,7 @@
 <!-- Mobile Menu Overlay -->
 <div id="mobile-menu">
   <div class="absolute top-5 left-5">
-    <img src="{{ url_for('static', filename='images/uthao_logo.png') }}" alt="Uthao" class="site-logo" style="height:28px;" />
+    <img src="{{ url_for('static', filename='images/uthao_logo.png') }}" alt="Uthao" class="site-logo" style="height:26px;" />
   </div>
   <button onclick="closeMobileMenu()" class="absolute top-5 right-5 text-white text-2xl">
     <i class="fas fa-times"></i>
@@ -328,6 +327,7 @@
                 <i class="fas fa-barcode text-gray-400 group-focus-within:text-orange-500 transition text-sm"></i>
               </div>
               <input type="text" id="trackingId" placeholder="Enter Tracking ID"
+                oninput="this.value=this.value.toUpperCase().replace(/\s+/g,'')"
                 class="w-full pl-10 pr-3 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition uppercase tracking-wider font-mono text-sm" />
             </div>
 
@@ -705,6 +705,7 @@
           <div class="relative flex-1">
             <i class="fas fa-barcode absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
             <input type="text" id="sectionTrackingId" placeholder="e.g. UTH-123456"
+              oninput="this.value=this.value.toUpperCase().replace(/\s+/g,'')"
               class="w-full pl-10 pr-3 py-3 bg-gray-800/70 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition uppercase tracking-wider font-mono text-sm" />
           </div>
           <button onclick="trackSectionShipment()" id="sectionTrackButton"
@@ -1103,7 +1104,7 @@
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-8">
       <div class="col-span-2 lg:col-span-2">
         <div class="flex items-center mb-4">
-          <img src="{{ url_for('static', filename='images/uthao_logo.png') }}" alt="Uthao" class="site-logo" style="height:34px;" />
+          <img src="{{ url_for('static', filename='images/uthao_logo.png') }}" alt="Uthao" class="site-logo" style="height:26px;" />
         </div>
         <p class="text-gray-400 text-sm mb-4 max-w-xs">Global ocean freight solutions with real-time tracking, competitive rates, and unmatched reliability.</p>
         <div class="flex space-x-3">

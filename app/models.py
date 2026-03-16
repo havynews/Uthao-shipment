@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 from extensions import db, mail, login_manager, migrate
+from flask import url_for
 
 
 

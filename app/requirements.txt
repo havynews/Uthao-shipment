@@ -27,7 +27,7 @@ werkzeug
 wsproto
 wtforms
 pyotp
-
+psycopg2-binary
 python-socketio
 python-engineio
 

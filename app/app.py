@@ -36,7 +36,7 @@ def create_app():
     migrate.init_app(app, db)
 
     # ── Step 1: attach socketio to app ──────────────────────────────
-    socketio.init_app(app)
+    # socketio.init_app(app)
 
     # ── Step 2: register blueprints ─────────────────────────────────
     from blueprints.main import main_bp
@@ -105,7 +105,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         _seed_default_users()
-        # init_socket_events(socketio)
+        init_socket_events(socketio)
 
     return app
     

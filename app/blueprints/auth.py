@@ -26,7 +26,7 @@ auth_bp = Blueprint('auth', __name__)
 # User Authentication (Existing)
 # ────────────────────────────────────────────
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/login/', methods=['GET', 'POST'])
 def login():
     """User login with email and password."""
     # If already authenticated, redirect appropriately
@@ -166,7 +166,7 @@ def forgot_password():
 # Admin Authentication
 # ────────────────────────────────────────────
 
-@auth_bp.route('/admin/login', methods=['GET', 'POST'])
+@auth_bp.route('/admin/login/', methods=['GET', 'POST'])
 def admin_login():
     """Admin-only login portal."""
     # If already logged in as admin, redirect to admin dashboard

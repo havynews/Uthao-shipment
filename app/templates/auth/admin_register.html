@@ -1,7 +1,35 @@
+<!-- Admin Register -->
+
 {% extends "base.html" %}
 
 {% block content %}
 <div class="relative min-h-screen flex items-center justify-center overflow-hidden px-2 bg-background-light dark:bg-background-dark">
+
+    <!-- ── Home Button ── -->
+    <a href="{{ url_for('main.index') }}" title="Back to homepage"
+       style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;
+              padding:6px 12px 6px 8px;
+              background:rgba(15,23,42,0.75);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+              border:1px solid rgba(239,68,68,0.2);border-radius:999px;
+              color:#94a3b8;text-decoration:none;font-size:11px;font-weight:500;font-family:'Inter',sans-serif;
+              box-shadow:0 4px 14px rgba(0,0,0,0.3);transition:all 0.25s ease;">
+        <span style="width:20px;height:20px;border-radius:50%;background:rgba(239,68,68,0.12);
+                     display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.25s ease;">
+            <i class="fas fa-arrow-left" style="font-size:9px;"></i>
+        </span>
+        <i class="fas fa-house" style="font-size:10px;"></i>
+        <span>Home</span>
+    </a>
+    <style>
+        a[title="Back to homepage"]:hover {
+            background: rgba(239,68,68,0.15) !important;
+            border-color: rgba(239,68,68,0.45) !important;
+            color: #f87171 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 18px rgba(239,68,68,0.2) !important;
+        }
+    </style>
+
     <!-- Background -->
     <div class="absolute inset-0 z-0">
         <div class="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-background-dark/90 to-red-900/20 z-10"></div>
@@ -218,10 +246,7 @@
 </div>
 
 <style>
-    .glass-panel {
-        background: rgba(15, 23, 42, 0.8);
-        backdrop-filter: blur(12px);
-    }
+    .glass-panel { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); }
 </style>
 
 <script>
@@ -234,79 +259,53 @@
 
     function goToStep2(e) {
         e.preventDefault();
-        
-        // Validate step 1
         const form = document.getElementById('step1-form');
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return false;
-        }
-        
-        // Transfer values
+        if (!form.checkValidity()) { form.reportValidity(); return false; }
         document.getElementById('hidden-key').value = document.getElementById('admin-key').value;
         document.getElementById('hidden-name').value = form.full_name.value;
         document.getElementById('hidden-email').value = form.email.value;
         document.getElementById('hidden-level').value = form.admin_level.value;
-        
-        // Switch steps
         document.getElementById('step1-form').classList.add('hidden');
         document.getElementById('step2-form').classList.remove('hidden');
-        
-        // Update progress
-        document.getElementById('progress-1').classList.remove('bg-red-500');
-        document.getElementById('progress-1').classList.add('bg-slate-700');
-        document.getElementById('progress-2').classList.remove('bg-slate-700');
-        document.getElementById('progress-2').classList.add('bg-red-500');
+        document.getElementById('progress-1').classList.replace('bg-red-500','bg-slate-700');
+        document.getElementById('progress-2').classList.replace('bg-slate-700','bg-red-500');
         document.getElementById('step-num').textContent = '2';
-        
         return false;
     }
 
     function goBack() {
         document.getElementById('step2-form').classList.add('hidden');
         document.getElementById('step1-form').classList.remove('hidden');
-        
-        document.getElementById('progress-2').classList.remove('bg-red-500');
-        document.getElementById('progress-2').classList.add('bg-slate-700');
-        document.getElementById('progress-1').classList.remove('bg-slate-700');
-        document.getElementById('progress-1').classList.add('bg-red-500');
+        document.getElementById('progress-2').classList.replace('bg-red-500','bg-slate-700');
+        document.getElementById('progress-1').classList.replace('bg-slate-700','bg-red-500');
         document.getElementById('step-num').textContent = '1';
     }
 
-    // Password strength
     document.getElementById('password-input').addEventListener('input', function() {
         const v = this.value;
         const s = (v.length >= 12) + /[A-Z]/.test(v) + /[0-9]/.test(v) + /[^A-Za-z0-9]/.test(v);
-        
-        const c = ['bg-slate-700', 'bg-red-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
+        const c = ['bg-slate-700','bg-red-500','bg-yellow-500','bg-blue-500','bg-green-500'];
         for (let i = 1; i <= 4; i++) {
             document.getElementById(`str-${i}`).className = `flex-1 rounded-full transition-all ${i <= s ? c[s] : 'bg-slate-700'}`;
         }
-        
         document.getElementById('req-len').className = v.length >= 12 ? 'text-green-400' : 'text-slate-500';
         document.getElementById('req-cap').className = /[A-Z]/.test(v) ? 'text-green-400' : 'text-slate-500';
         document.getElementById('req-num').className = /[0-9]/.test(v) ? 'text-green-400' : 'text-slate-500';
         document.getElementById('req-sym').className = /[^A-Za-z0-9]/.test(v) ? 'text-green-400' : 'text-slate-500';
     });
 
-    // Match check
     document.getElementById('confirm-pass').addEventListener('input', function() {
         const match = this.value === document.getElementById('password-input').value;
         document.getElementById('match-err').classList.toggle('hidden', match || !this.value);
     });
 
-    // Submit validation
     document.getElementById('step2-form').addEventListener('submit', function(e) {
         const p = document.getElementById('password-input').value;
         if (p !== document.getElementById('confirm-pass').value) {
-            e.preventDefault();
-            document.getElementById('match-err').classList.remove('hidden');
-            return;
+            e.preventDefault(); document.getElementById('match-err').classList.remove('hidden'); return;
         }
         if (p.length < 12 || !/[A-Z]/.test(p) || !/[0-9]/.test(p) || !/[^A-Za-z0-9]/.test(p)) {
-            e.preventDefault();
-            alert('Password requirements not met');
-            return;
+            e.preventDefault(); alert('Password requirements not met'); return;
         }
         document.getElementById('submit-btn').innerHTML = '<span class="material-symbols-outlined animate-spin text-xs">progress_activity</span> Creating...';
     });

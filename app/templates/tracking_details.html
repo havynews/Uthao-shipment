@@ -336,305 +336,335 @@
     </div>
   </div>
 
-  <!-- Hero -->
-  <div class="hero">
-    <div class="hero-grid">
-      <div>
-        <div class="hero-label">Tracking Number</div>
-        <div class="hero-tracking" id="trackNum">{{ shipment.tracking_number }}</div>
-        <div class="pills-row">
-          {% set s = shipment.status %}
-          <span class="status-pill {% if s=='Delivered' %}pill-delivered{% elif s=='In Transit' %}pill-transit{% elif s=='At Port' %}pill-port{% elif s=='Customs Hold' %}pill-customs{% elif s=='Out for Delivery' %}pill-delivery{% else %}pill-default{% endif %}">
-            <span class="dot" style="background:currentColor;"></span>
-            {{ shipment.status }}
-          </span>
-          {% if shipment.service_level %}
-          <span class="service-pill">{{ shipment.service_level|upper }}</span>
+
+  {% if not shipment %}
+    <div class="page-wrap" style="padding-top: 80px;">
+      <div class="top-nav">
+        <a href="/" class="back-link"><i class="fas fa-chevron-left"></i> Track another</a>
+      </div>
+
+      <div style="text-align:center; padding: 80px 20px;">
+        <div style="font-size: 56px; margin-bottom: 20px;">📦</div>
+        <h2 style="font-family: var(--sys-font); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 10px;">
+          Shipment Not Found
+        </h2>
+        {% if error %}
+        <p style="font-family: var(--sys-font); font-size: 15px; color: var(--muted); max-width: 400px; margin: 0 auto 28px; line-height: 1.5;">
+          {{ error|safe }}
+        </p>
+        {% endif %}
+        {% if tracking_number %}
+        <p style="font-family: var(--sys-mono); font-size: 12px; color: var(--muted); margin-bottom: 28px; letter-spacing: 0.04em;">
+          Searched for: {{ tracking_number }}
+        </p>
+        {% endif %}
+        <a href="/" class="btn-help" style="display:inline-flex;">
+          <i class="fas fa-search"></i> Try Again
+        </a>
+      </div>
+    </div>
+  {% else %}
+
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="hero-label">Tracking Number</div>
+          <div class="hero-tracking" id="trackNum">{{ shipment.tracking_number }}</div>
+          <div class="pills-row">
+            {% set s = shipment.status %}
+            <span class="status-pill {% if s=='Delivered' %}pill-delivered{% elif s=='In Transit' %}pill-transit{% elif s=='At Port' %}pill-port{% elif s=='Customs Hold' %}pill-customs{% elif s=='Out for Delivery' %}pill-delivery{% else %}pill-default{% endif %}">
+              <span class="dot" style="background:currentColor;"></span>
+              {{ shipment.status }}
+            </span>
+            {% if shipment.service_level %}
+            <span class="service-pill">{{ shipment.service_level|upper }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="hero-eta">
+          {% if shipment.estimated_delivery %}
+          <div class="hero-label">Est. Delivery</div>
+          <div class="hero-eta-date">{{ shipment.estimated_delivery.strftime('%b %d') }}</div>
+          <div class="hero-eta-day">{{ shipment.estimated_delivery.strftime('%A, %Y') }}</div>
+          {% endif %}
+          <div class="hero-created">Created {{ shipment.created_at.strftime('%d %b %Y') }}</div>
+        </div>
+      </div>
+
+      <div class="hero-progress">
+        <div class="progress-labels">
+          <span class="progress-label">{{ shipment.origin }}</span>
+          <span class="progress-pct">{{ progress_percent }}% complete</span>
+          <span class="progress-label">{{ shipment.destination }}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:{{ progress_percent }}%"></div>
+        </div>
+        <div class="progress-stages">
+          {% for name, threshold in [('Booking', 0), ('Picked Up', 20), ('In Transit', 40), ('At Port', 60), ('Out for Del.', 80), ('Delivered', 100)] %}
+          <div class="progress-stage">
+            <div class="stage-dot {% if progress_percent >= threshold %}done{% else %}pending{% endif %}"></div>
+            <span class="stage-name">{{ name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Route bar -->
+    <div class="route-bar">
+      <div class="route-end">
+        <div class="route-end-label">From</div>
+        <div class="route-end-place">{{ shipment.origin }}</div>
+      </div>
+      <div class="route-middle">
+        <div class="route-dots">
+          {% for i in range(5) %}
+          <div class="route-dot" style="background:{% if i < (progress_percent // 20) %}var(--orange){% else %}var(--border){% endif %};"></div>
+          {% endfor %}
+        </div>
+        <span class="route-plane">✈</span>
+        <span class="route-pct">{{ progress_percent }}%</span>
+      </div>
+      <div class="route-end dest">
+        <div class="route-end-label">To</div>
+        <div class="route-end-place">{{ shipment.destination }}</div>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip">
+      <div class="stat-cell">
+        <div class="stat-val">{{ shipment.weight|round(1) if shipment.weight else '—' }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> kg</span></div>
+        <div class="stat-label">Weight</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">{{ shipment.packages|length }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> pkg</span></div>
+        <div class="stat-label">Packages</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">{{ shipment.events|length }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> evt</span></div>
+        <div class="stat-label">Events</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val" style="color:var(--orange);">{% if shipment.cost %}${{ "%.0f"|format(shipment.cost) }}{% else %}—{% endif %}</div>
+        <div class="stat-label">Cost</div>
+      </div>
+    </div>
+
+    <!-- Sender / Receiver -->
+    <div class="info-grid">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--orange);"></i> Sender</div>
+        {% if shipment.sender_name %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-user"></i></div>
+          <div><div class="info-label">Name</div><div class="info-value">{{ shipment.sender_name }}</div></div>
+        </div>
+        {% endif %}
+        {% if shipment.sender_phone %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-phone"></i></div>
+          <div><div class="info-label">Phone</div><div class="info-value">{{ shipment.sender_phone }}</div></div>
+        </div>
+        {% endif %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-map-pin"></i></div>
+          <div><div class="info-label">Location</div><div class="info-value">{{ shipment.origin }}</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-title"><i class="fas fa-inbox" style="color:var(--green);"></i> Receiver</div>
+        {% if shipment.receiver_name %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-user"></i></div>
+          <div><div class="info-label">Name</div><div class="info-value">{{ shipment.receiver_name }}</div></div>
+        </div>
+        {% endif %}
+        {% if shipment.receiver_company %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-building"></i></div>
+          <div><div class="info-label">Company</div><div class="info-value">{{ shipment.receiver_company }}</div></div>
+        </div>
+        {% endif %}
+        {% if shipment.receiver_phone %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-phone"></i></div>
+          <div><div class="info-label">Phone</div><div class="info-value">{{ shipment.receiver_phone }}</div></div>
+        </div>
+        {% endif %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-map-pin"></i></div>
+          <div><div class="info-label">Location</div><div class="info-value">{{ shipment.destination }}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shipment Details -->
+    <div class="card">
+      <div class="card-title"><i class="fas fa-cube" style="color:var(--blue);"></i> Shipment Details</div>
+      <div class="info-grid" style="margin-bottom:0;">
+        {% if shipment.commodity %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-tag"></i></div>
+          <div><div class="info-label">Commodity</div><div class="info-value">{{ shipment.commodity }}</div></div>
+        </div>
+        {% endif %}
+        {% if shipment.dimensions %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-ruler-combined"></i></div>
+          <div><div class="info-label">Dimensions</div><div class="info-value">{{ shipment.dimensions }}</div></div>
+        </div>
+        {% endif %}
+        {% if shipment.service_level %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--yellow-light);color:var(--yellow);"><i class="fas fa-bolt"></i></div>
+          <div><div class="info-label">Service Level</div><div class="info-value">{{ shipment.service_level|title }}</div></div>
+        </div>
+        {% endif %}
+        {% if shipment.cost %}
+        <div class="info-row">
+          <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-dollar-sign"></i></div>
+          <div>
+            <div class="info-label">Shipping Cost</div>
+            <div class="info-value" style="font-size:18px;font-weight:700;color:var(--orange);letter-spacing:-0.02em;">${{ "%.2f"|format(shipment.cost) }}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Packages -->
+    {% if shipment.packages %}
+      <div class="card">
+        <div class="card-title"><i class="fas fa-boxes" style="color:var(--orange);"></i> Packages — {{ shipment.packages|length }} item{{ 's' if shipment.packages|length != 1 }}</div>
+        {% for pkg in shipment.packages %}
+        <div class="pkg-card">
+          <div class="pkg-row" style="border:none;padding:0;margin-bottom:0;border-radius:0;">
+            <div class="pkg-icon"><i class="fas fa-box"></i></div>
+            <div class="pkg-info">
+              <div class="pkg-name">{{ pkg.description or ('Package ' ~ loop.index) }}</div>
+              <div class="pkg-dims">
+                {% if pkg.length and pkg.width and pkg.height %}{{ pkg.dimensions_str }}{% endif %}
+                {% if pkg.volume_cbm %} · {{ "%.4f"|format(pkg.volume_cbm) }} m³{% endif %}
+              </div>
+            </div>
+            <div class="pkg-right">
+              <div class="pkg-weight">{{ pkg.weight or '—' }} <span style="font-size:11px;font-weight:400;color:var(--muted);">kg</span></div>
+              <div class="pkg-tags">
+                {% if pkg.fragile %}<span class="pkg-tag tag-fragile">Fragile</span>{% endif %}
+                {% if pkg.stackable %}<span class="pkg-tag tag-stack">Stackable</span>{% endif %}
+              </div>
+            </div>
+          </div>
+          {% if pkg.images %}
+          <div class="pkg-images">
+            {% for img in pkg.images %}
+            <div class="pkg-img-wrap" onclick="openLightbox('{{ img.image_url }}', '{{ pkg.description or 'Package' }}')">
+              <img src="{{ img.image_url }}" alt="Package image" loading="lazy">
+              <div class="pkg-img-overlay"><i class="fas fa-expand-alt"></i></div>
+            </div>
+            {% endfor %}
+          </div>
           {% endif %}
         </div>
-      </div>
-      <div class="hero-eta">
-        {% if shipment.estimated_delivery %}
-        <div class="hero-label">Est. Delivery</div>
-        <div class="hero-eta-date">{{ shipment.estimated_delivery.strftime('%b %d') }}</div>
-        <div class="hero-eta-day">{{ shipment.estimated_delivery.strftime('%A, %Y') }}</div>
-        {% endif %}
-        <div class="hero-created">Created {{ shipment.created_at.strftime('%d %b %Y') }}</div>
-      </div>
-    </div>
-
-    <div class="hero-progress">
-      <div class="progress-labels">
-        <span class="progress-label">{{ shipment.origin }}</span>
-        <span class="progress-pct">{{ progress_percent }}% complete</span>
-        <span class="progress-label">{{ shipment.destination }}</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width:{{ progress_percent }}%"></div>
-      </div>
-      <div class="progress-stages">
-        {% for name, threshold in [('Booking', 0), ('Picked Up', 20), ('In Transit', 40), ('At Port', 60), ('Out for Del.', 80), ('Delivered', 100)] %}
-        <div class="progress-stage">
-          <div class="stage-dot {% if progress_percent >= threshold %}done{% else %}pending{% endif %}"></div>
-          <span class="stage-name">{{ name }}</span>
-        </div>
+        {% if not loop.last %}<div style="height:1px;background:var(--border);margin:4px 0 16px;"></div>{% endif %}
         {% endfor %}
       </div>
-    </div>
-  </div>
-
-  <!-- Route bar -->
-  <div class="route-bar">
-    <div class="route-end">
-      <div class="route-end-label">From</div>
-      <div class="route-end-place">{{ shipment.origin }}</div>
-    </div>
-    <div class="route-middle">
-      <div class="route-dots">
-        {% for i in range(5) %}
-        <div class="route-dot" style="background:{% if i < (progress_percent // 20) %}var(--orange){% else %}var(--border){% endif %};"></div>
-        {% endfor %}
-      </div>
-      <span class="route-plane">✈</span>
-      <span class="route-pct">{{ progress_percent }}%</span>
-    </div>
-    <div class="route-end dest">
-      <div class="route-end-label">To</div>
-      <div class="route-end-place">{{ shipment.destination }}</div>
-    </div>
-  </div>
-
-  <!-- Stats strip -->
-  <div class="stats-strip">
-    <div class="stat-cell">
-      <div class="stat-val">{{ shipment.weight|round(1) if shipment.weight else '—' }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> kg</span></div>
-      <div class="stat-label">Weight</div>
-    </div>
-    <div class="stat-cell">
-      <div class="stat-val">{{ shipment.packages|length }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> pkg</span></div>
-      <div class="stat-label">Packages</div>
-    </div>
-    <div class="stat-cell">
-      <div class="stat-val">{{ shipment.events|length }}<span style="font-size:13px;font-weight:400;color:var(--muted);"> evt</span></div>
-      <div class="stat-label">Events</div>
-    </div>
-    <div class="stat-cell">
-      <div class="stat-val" style="color:var(--orange);">{% if shipment.cost %}${{ "%.0f"|format(shipment.cost) }}{% else %}—{% endif %}</div>
-      <div class="stat-label">Cost</div>
-    </div>
-  </div>
-
-  <!-- Sender / Receiver -->
-  <div class="info-grid">
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-title"><i class="fas fa-paper-plane" style="color:var(--orange);"></i> Sender</div>
-      {% if shipment.sender_name %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-user"></i></div>
-        <div><div class="info-label">Name</div><div class="info-value">{{ shipment.sender_name }}</div></div>
-      </div>
-      {% endif %}
-      {% if shipment.sender_phone %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-phone"></i></div>
-        <div><div class="info-label">Phone</div><div class="info-value">{{ shipment.sender_phone }}</div></div>
-      </div>
-      {% endif %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-map-pin"></i></div>
-        <div><div class="info-label">Location</div><div class="info-value">{{ shipment.origin }}</div></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:0;">
-      <div class="card-title"><i class="fas fa-inbox" style="color:var(--green);"></i> Receiver</div>
-      {% if shipment.receiver_name %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-user"></i></div>
-        <div><div class="info-label">Name</div><div class="info-value">{{ shipment.receiver_name }}</div></div>
-      </div>
-      {% endif %}
-      {% if shipment.receiver_company %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-building"></i></div>
-        <div><div class="info-label">Company</div><div class="info-value">{{ shipment.receiver_company }}</div></div>
-      </div>
-      {% endif %}
-      {% if shipment.receiver_phone %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-phone"></i></div>
-        <div><div class="info-label">Phone</div><div class="info-value">{{ shipment.receiver_phone }}</div></div>
-      </div>
-      {% endif %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--green-light);color:var(--green);"><i class="fas fa-map-pin"></i></div>
-        <div><div class="info-label">Location</div><div class="info-value">{{ shipment.destination }}</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Shipment Details -->
-  <div class="card">
-    <div class="card-title"><i class="fas fa-cube" style="color:var(--blue);"></i> Shipment Details</div>
-    <div class="info-grid" style="margin-bottom:0;">
-      {% if shipment.commodity %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-tag"></i></div>
-        <div><div class="info-label">Commodity</div><div class="info-value">{{ shipment.commodity }}</div></div>
-      </div>
-      {% endif %}
-      {% if shipment.dimensions %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--blue-light);color:var(--blue);"><i class="fas fa-ruler-combined"></i></div>
-        <div><div class="info-label">Dimensions</div><div class="info-value">{{ shipment.dimensions }}</div></div>
-      </div>
-      {% endif %}
-      {% if shipment.service_level %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--yellow-light);color:var(--yellow);"><i class="fas fa-bolt"></i></div>
-        <div><div class="info-label">Service Level</div><div class="info-value">{{ shipment.service_level|title }}</div></div>
-      </div>
-      {% endif %}
-      {% if shipment.cost %}
-      <div class="info-row">
-        <div class="info-icon" style="background:var(--orange-light);color:var(--orange);"><i class="fas fa-dollar-sign"></i></div>
-        <div>
-          <div class="info-label">Shipping Cost</div>
-          <div class="info-value" style="font-size:18px;font-weight:700;color:var(--orange);letter-spacing:-0.02em;">${{ "%.2f"|format(shipment.cost) }}</div>
-        </div>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Packages -->
-  {% if shipment.packages %}
-  <div class="card">
-    <div class="card-title"><i class="fas fa-boxes" style="color:var(--orange);"></i> Packages — {{ shipment.packages|length }} item{{ 's' if shipment.packages|length != 1 }}</div>
-    {% for pkg in shipment.packages %}
-    <div class="pkg-card">
-      <div class="pkg-row" style="border:none;padding:0;margin-bottom:0;border-radius:0;">
-        <div class="pkg-icon"><i class="fas fa-box"></i></div>
-        <div class="pkg-info">
-          <div class="pkg-name">{{ pkg.description or ('Package ' ~ loop.index) }}</div>
-          <div class="pkg-dims">
-            {% if pkg.length and pkg.width and pkg.height %}{{ pkg.dimensions_str }}{% endif %}
-            {% if pkg.volume_cbm %} · {{ "%.4f"|format(pkg.volume_cbm) }} m³{% endif %}
-          </div>
-        </div>
-        <div class="pkg-right">
-          <div class="pkg-weight">{{ pkg.weight or '—' }} <span style="font-size:11px;font-weight:400;color:var(--muted);">kg</span></div>
-          <div class="pkg-tags">
-            {% if pkg.fragile %}<span class="pkg-tag tag-fragile">Fragile</span>{% endif %}
-            {% if pkg.stackable %}<span class="pkg-tag tag-stack">Stackable</span>{% endif %}
-          </div>
-        </div>
-      </div>
-      {% if pkg.images %}
-      <div class="pkg-images">
-        {% for img in pkg.images %}
-        <div class="pkg-img-wrap" onclick="openLightbox('{{ img.image_url }}', '{{ pkg.description or 'Package' }}')">
-          <img src="{{ img.image_url }}" alt="Package image" loading="lazy">
-          <div class="pkg-img-overlay"><i class="fas fa-expand-alt"></i></div>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-    {% if not loop.last %}<div style="height:1px;background:var(--border);margin:4px 0 16px;"></div>{% endif %}
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- Lightbox -->
-  <div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:20px;">
-    <button onclick="closeLightbox()" style="position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
-      <i class="fas fa-times"></i>
-    </button>
-    <div style="text-align:center;max-width:90vw;" onclick="event.stopPropagation()">
-      <img id="lightboxImg" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;">
-      <div id="lightboxCaption" style="color:rgba(255,255,255,0.6);font-family:var(--sys-mono);font-size:12px;margin-top:12px;letter-spacing:0.04em;"></div>
-    </div>
-  </div>
-
-  <!-- Timeline -->
-  <div class="card">
-    <div class="card-title" style="margin-bottom:20px;">
-      <i class="fas fa-stream" style="color:var(--orange);"></i>
-      Timeline — {{ shipment.events|length }} event{{ 's' if shipment.events|length != 1 }}
-    </div>
-    {% if shipment.events %}
-    <div>
-      {% for event in shipment.events %}
-      <div class="tl-item">
-        <div class="tl-time">
-          <div class="tl-date">{{ event.timestamp.strftime('%b %d') }}</div>
-          <div class="tl-hour">{{ event.timestamp.strftime('%H:%M') }}</div>
-        </div>
-        <div class="tl-spine">
-          <div class="tl-dot {% if loop.first %}active{% elif not loop.last %}done{% endif %}"></div>
-          {% if not loop.last %}<div class="tl-line"></div>{% endif %}
-        </div>
-        <div class="tl-content">
-          <div class="tl-status">
-            {{ event.status }}
-            {% if loop.first %}<span class="tl-latest">Latest</span>{% endif %}
-          </div>
-          {% if event.description %}<div class="tl-desc">{{ event.description }}</div>{% endif %}
-          {% if event.location %}<div class="tl-loc"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>{% endif %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div style="text-align:center;padding:40px;color:var(--muted);">
-      <i class="fas fa-clock" style="font-size:32px;opacity:0.3;display:block;margin-bottom:10px;"></i>
-      <p style="font-family:var(--sys-mono);font-size:12px;letter-spacing:0.04em;">No events recorded yet</p>
-    </div>
     {% endif %}
+
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;padding:20px;">
+      <button onclick="closeLightbox()" style="position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-times"></i>
+      </button>
+      <div style="text-align:center;max-width:90vw;" onclick="event.stopPropagation()">
+        <img id="lightboxImg" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;">
+        <div id="lightboxCaption" style="color:rgba(255,255,255,0.6);font-family:var(--sys-mono);font-size:12px;margin-top:12px;letter-spacing:0.04em;"></div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:20px;">
+        <i class="fas fa-stream" style="color:var(--orange);"></i>
+        Timeline — {{ shipment.events|length }} event{{ 's' if shipment.events|length != 1 }}
+      </div>
+      {% if shipment.events %}
+      <div>
+        {% for event in shipment.events %}
+        <div class="tl-item">
+          <div class="tl-time">
+            <div class="tl-date">{{ event.timestamp.strftime('%b %d') }}</div>
+            <div class="tl-hour">{{ event.timestamp.strftime('%H:%M') }}</div>
+          </div>
+          <div class="tl-spine">
+            <div class="tl-dot {% if loop.first %}active{% elif not loop.last %}done{% endif %}"></div>
+            {% if not loop.last %}<div class="tl-line"></div>{% endif %}
+          </div>
+          <div class="tl-content">
+            <div class="tl-status">
+              {{ event.status }}
+              {% if loop.first %}<span class="tl-latest">Latest</span>{% endif %}
+            </div>
+            {% if event.description %}<div class="tl-desc">{{ event.description }}</div>{% endif %}
+            {% if event.location %}<div class="tl-loc"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:40px;color:var(--muted);">
+        <i class="fas fa-clock" style="font-size:32px;opacity:0.3;display:block;margin-bottom:10px;"></i>
+        <p style="font-family:var(--sys-mono);font-size:12px;letter-spacing:0.04em;">No events recorded yet</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Help bar -->
+    <div class="help-bar">
+      <div class="help-text"><strong>Need help?</strong> Our support team is available 24/7 for urgent shipment issues.</div>
+      <a href="/user/support" class="btn-help"><i class="fas fa-headset"></i> Contact Support</a>
+    </div>
+  {% endif %}
   </div>
 
-  <!-- Help bar -->
-  <div class="help-bar">
-    <div class="help-text"><strong>Need help?</strong> Our support team is available 24/7 for urgent shipment issues.</div>
-    <a href="/user/support" class="btn-help"><i class="fas fa-headset"></i> Contact Support</a>
-  </div>
+  <script>
+    function copyId(btn) {
+      navigator.clipboard.writeText(document.getElementById('trackNum').textContent.trim()).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> <span class="btn-label">Copied!</span>';
+        btn.style.background = '#1a7a4a';
+        btn.style.borderColor = '#1a7a4a';
+        btn.style.color = 'white';
+        setTimeout(() => {
+          btn.innerHTML = orig;
+          btn.style.background = '';
+          btn.style.borderColor = '';
+          btn.style.color = '';
+        }, 2000);
+      });
+    }
 
-</div>
+    function openLightbox(url, caption) {
+      const lb = document.getElementById('lightbox');
+      document.getElementById('lightboxImg').src = url;
+      document.getElementById('lightboxCaption').textContent = caption;
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
 
-<script>
-function copyId(btn) {
-  navigator.clipboard.writeText(document.getElementById('trackNum').textContent.trim()).then(() => {
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check"></i> <span class="btn-label">Copied!</span>';
-    btn.style.background = '#1a7a4a';
-    btn.style.borderColor = '#1a7a4a';
-    btn.style.color = 'white';
-    setTimeout(() => {
-      btn.innerHTML = orig;
-      btn.style.background = '';
-      btn.style.borderColor = '';
-      btn.style.color = '';
-    }, 2000);
-  });
-}
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
 
-function openLightbox(url, caption) {
-  const lb = document.getElementById('lightbox');
-  document.getElementById('lightboxImg').src = url;
-  document.getElementById('lightboxCaption').textContent = caption;
-  lb.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeLightbox();
-});
-</script>
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLightbox();
+    });
+  </script>
 
 {% endblock %}

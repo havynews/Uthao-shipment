@@ -7,55 +7,42 @@ import traceback
 
 main_bp = Blueprint('main', __name__)
 
-@main_bp.route('/')
-def index():
-    return render_template('index.html')
-
-@main_bp.route('/process')
-def process():
-    return render_template('process.html')
-
-@main_bp.route('/tracking')
-def tracking_page():
-    return render_template('tracking.html')
-
-
-# NEW: Detailed tracking page route
-# routes.py
-
-
-main_bp = Blueprint('main', __name__)
-
-# Progress mapping based on status
+# ── Progress mapping ──────────────────────────────────────────────────────────
 STATUS_PROGRESS = {
-    'Booking Created': 5,
-    'Pending': 10,
-    'Picked Up': 25,
-    'In Transit': 50,
-    'At Port': 75,
-    'Customs Hold': 60,
+    'Booking Created':   5,
+    'Pending':          10,
+    'Picked Up':        25,
+    'In Transit':       50,
+    'At Port':          75,
+    'Customs Hold':     60,
     'Out for Delivery': 90,
-    'Delivered': 100
+    'Delivered':       100,
 }
 
-def get_progress_from_status(status):
-    """Calculate progress percentage from shipment status."""
-    if not status:
-        return 0
-    return STATUS_PROGRESS.get(status, 0)
 
-def _format_time_ago(timestamp):
-    """Format timestamp as 'X hours/days ago'."""
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _normalize_tracking(raw: str) -> str:
+    """Strip whitespace and uppercase — makes lookup case-insensitive."""
+    return raw.strip().upper() if raw else ''
+
+
+def _get_progress(shipment) -> int:
+    """Return progress % from shipment.progress_percent or derive from status."""
+    if hasattr(shipment, 'progress_percent') and shipment.progress_percent is not None:
+        return int(shipment.progress_percent)
+    return STATUS_PROGRESS.get(shipment.status, 0)
+
+
+def _format_time_ago(timestamp) -> str:
+    """Return a human-friendly '2 hours ago' string from a datetime."""
     if not timestamp:
         return 'Unknown'
-    
     try:
         now = datetime.utcnow()
         if hasattr(timestamp, 'tzinfo') and timestamp.tzinfo:
             now = datetime.now(timestamp.tzinfo)
-        
         diff = now - timestamp
-        
         if diff.days > 0:
             return f"{diff.days} day{'s' if diff.days > 1 else ''} ago"
         hours = diff.seconds // 3600
@@ -66,106 +53,136 @@ def _format_time_ago(timestamp):
     except Exception:
         return 'Unknown'
 
+
+def _safe_iso(value) -> str | None:
+    """Return ISO string from a datetime/date, or None."""
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, 'isoformat') else str(value)
+
+
+# ── Page routes ───────────────────────────────────────────────────────────────
+
 @main_bp.route('/')
 def index():
     return render_template('index.html')
 
+
 @main_bp.route('/process')
 def process():
     return render_template('process.html')
+
 
 @main_bp.route('/tracking')
 def tracking_page():
     return render_template('tracking.html')
 
 
-@main_bp.route('/tracking/details/<tracking_number>')
+@main_bp.route('/tracking/details/<path:tracking_number>')
 def tracking_details(tracking_number):
-    """Detailed tracking page for a specific shipment."""
     try:
-        tracking_number = tracking_number.strip().upper()
-        
-        shipment = Shipment.query.filter_by(tracking_number=tracking_number).first_or_404()
-        
-        # Calculate progress dynamically
-        progress = get_progress_from_status(shipment.status)
-        
-        return render_template('tracking_details.html', shipment=shipment, progress_percent=progress)
-        
+        tn = _normalize_tracking(tracking_number)
+        if not tn:
+            return render_template('tracking_details.html', shipment=None, error="Please provide a valid tracking number.")
+
+        shipment = (
+            Shipment.query
+            .filter(Shipment.tracking_number.ilike(tn))
+            .first()
+        )
+
+        if not shipment:
+            return render_template(
+                'tracking_details.html',
+                shipment=None,
+                error=f"No shipment found for tracking number <strong>{tn}</strong>. Please check and try again.",
+                tracking_number=tn
+            )
+
+        progress = _get_progress(shipment)
+        return render_template(
+            'tracking_details.html',
+            shipment=shipment,
+            progress_percent=progress,
+        )
+
     except Exception as e:
-        current_app.logger.error(f"Error in tracking_details: {str(e)}")
+        current_app.logger.error(f"tracking_details error: {e}")
         current_app.logger.error(traceback.format_exc())
-        abort(500)
+        return render_template(
+            'tracking_details.html',
+            shipment=None,
+            error="Something went wrong. Please try again later."
+        )
 
 
-@main_bp.route('/api/track/<tracking_number>')
+# ── API ───────────────────────────────────────────────────────────────────────
+
+@main_bp.route('/api/track/<path:tracking_number>')
 def track_shipment(tracking_number):
+    """
+    JSON tracking endpoint.
+    Accepts any casing — UTH-123, uth-123, Uth-123 all resolve to the same shipment.
+    """
+    tn = _normalize_tracking(tracking_number)
 
-    # Normalize tracking number
-    tracking_number = tracking_number.strip().upper()
-
-    s = Shipment.query.filter_by(tracking_number=tracking_number).first()
-
-    if not s:
+    if not tn:
         return jsonify({
-            "success": False,
-            "error": "Shipment not found",
-            "message": "Tracking ID not found. Please check and try again."
+            'success': False,
+            'message': 'Please provide a tracking ID.',
+        }), 400
+
+    # Case-insensitive lookup (works on PostgreSQL and SQLite)
+    shipment = (
+        Shipment.query
+        .filter(Shipment.tracking_number.ilike(tn))
+        .first()
+    )
+
+    if not shipment:
+        return jsonify({
+            'success': False,
+            'error': 'Shipment not found',
+            'message': 'Tracking ID not found. Please check and try again.',
         }), 404
 
-    # Get latest event for update info
-    latest_event = s.events[0] if hasattr(s, 'events') and s.events else None
-
-    # Calculate progress if not set
-    progress = s.progress_percent if hasattr(s, 'progress_percent') and s.progress_percent else 0
-
-    # Format ETA
-    eta = None
-    if hasattr(s, 'estimated_delivery') and s.estimated_delivery:
-        eta = s.estimated_delivery.isoformat() if hasattr(s.estimated_delivery, 'isoformat') else str(s.estimated_delivery)
+    # Latest event
+    events = getattr(shipment, 'events', []) or []
+    latest_event = events[0] if events else None
 
     return jsonify({
-        "success": True,
-        "data": {
-            "trackingId": s.tracking_number,
-            "status": s.status if hasattr(s, 'status') else 'Pending',
-            "origin": s.origin if hasattr(s, 'origin') else 'Unknown',
-            "destination": s.destination if hasattr(s, 'destination') else 'Unknown',
-            "eta": eta,
-            "progress": progress,
-            "latestUpdate": latest_event.description if latest_event else (s.description if hasattr(s, 'description') else 'Shipment created'),
-            "updateTime": _format_time_ago(latest_event.timestamp) if latest_event else 'Just now',
-            "vessel": s.vessel_name if hasattr(s, 'vessel_name') else None,
-            "containerNumber": s.container_number if hasattr(s, 'container_number') else None,
-            "recipient": {
-                "name": s.receiver_name if hasattr(s, 'receiver_name') else '',
-                "company": s.receiver_company if hasattr(s, 'receiver_company') else ''
+        'success': True,
+        'data': {
+            'trackingId':       shipment.tracking_number,
+            'status':           getattr(shipment, 'status', 'Pending'),
+            'origin':           getattr(shipment, 'origin', 'Unknown'),
+            'destination':      getattr(shipment, 'destination', 'Unknown'),
+            'eta':              _safe_iso(getattr(shipment, 'estimated_delivery', None)),
+            'progress':         _get_progress(shipment),
+            'latestUpdate':     (
+                                    latest_event.description
+                                    if latest_event
+                                    else getattr(shipment, 'description', 'Shipment created')
+                                ),
+            'updateTime':       (
+                                    _format_time_ago(latest_event.timestamp)
+                                    if latest_event
+                                    else 'Just now'
+                                ),
+            'vessel':           getattr(shipment, 'vessel_name', None),
+            'containerNumber':  getattr(shipment, 'container_number', None),
+            'recipient': {
+                'name':    getattr(shipment, 'receiver_name', ''),
+                'company': getattr(shipment, 'receiver_company', ''),
             },
-            "events": [
+            'events': [
                 {
-                    "status": e.status,
-                    "location": e.location if hasattr(e, 'location') else '',
-                    "description": e.description,
-                    "timestamp": e.timestamp.isoformat() if hasattr(e.timestamp, 'isoformat') else str(e.timestamp)
-                } for e in (s.events if hasattr(s, 'events') else [])
-            ]
-        }
+                    'status':      e.status,
+                    'location':    getattr(e, 'location', ''),
+                    'description': e.description,
+                    'timestamp':   _safe_iso(e.timestamp),
+                }
+                for e in events
+            ],
+        },
     })
-
-def _format_time_ago(timestamp):
-    """Format timestamp as 'X hours/days ago'."""
-    from datetime import datetime
-    now = datetime.utcnow()
-    if hasattr(timestamp, 'replace'):
-        # Ensure both are naive or both are aware
-        if timestamp.tzinfo:
-            now = datetime.now(timestamp.tzinfo)
-    diff = now - timestamp
-    
-    if diff.days > 0:
-        return f"{diff.days} day{'s' if diff.days > 1 else ''} ago"
-    hours = diff.seconds // 3600
-    if hours > 0:
-        return f"{hours} hour{'s' if hours > 1 else ''} ago"
-    minutes = diff.seconds // 60
-    return f"{minutes} minute{'s' if minutes > 1 else ''} ago"

@@ -1110,6 +1110,7 @@ def upload_shipment_receipt(shipment_id):
         current_app.logger.error(f"Receipt upload error: {e}")
         return jsonify({'success': False, 'error': 'Upload failed'}), 500
 
+
 # ────────────────────────────────────────────
 # JSON API
 # ────────────────────────────────────────────
