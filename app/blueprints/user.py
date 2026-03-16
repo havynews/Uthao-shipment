@@ -115,7 +115,7 @@ def save_uploaded_file(file, folder, prefix):
     with open(os.path.join(upload_path, filename), 'wb') as f:
         f.write(file_content)
     return f"/uploads/{folder}/{filename}"
-    
+
 
 def shipment_to_dict(s, include_events=False):
     """Serialize a Shipment model to a JSON-safe dict."""

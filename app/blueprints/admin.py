@@ -9,7 +9,7 @@ from flask import (
 )
 from flask_login import login_required, current_user, login_user, logout_user
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from sqlalchemy import func
 import json
 
@@ -139,8 +139,14 @@ def dashboard():
         Shipment.created_at >= thirty_days_ago
     ).group_by(func.date(Shipment.created_at)).all()
     
+    # chart_labels = [
+    #     datetime.strptime(d[0], '%Y-%m-%d').strftime('%d %b')
+    #     if d[0] else ''
+    #     for d in daily_shipments
+    # ]
+
     chart_labels = [
-        datetime.strptime(d[0], '%Y-%m-%d').strftime('%d %b')
+        (d[0].strftime('%d %b') if isinstance(d[0], date) else datetime.strptime(d[0], '%Y-%m-%d').strftime('%d %b'))
         if d[0] else ''
         for d in daily_shipments
     ]

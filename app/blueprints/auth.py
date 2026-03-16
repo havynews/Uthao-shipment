@@ -32,7 +32,7 @@ def login():
     # If already authenticated, redirect appropriately
     if current_user.is_authenticated:
         if current_user.is_admin:
-            return redirect(url_for('admin.dashboard'))
+            flash('Admin accounts must use the admin login page.', 'warning')
         return redirect(url_for('user.dashboard'))
     
     if request.method == 'POST':
