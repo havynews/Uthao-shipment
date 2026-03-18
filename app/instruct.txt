@@ -1,6 +1,7 @@
 when hosting to render.
 
-remove app while importing. example instead of from app.models import User use from models import User.
 
 and use this to start the app.
 gunicorn "wsgi:app" --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 --bind 0.0.0.0:8000
+
+move the __init__.py to the app/ folder

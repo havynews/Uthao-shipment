@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, jsonify, request, abort, current_app
 from models import Shipment, ShipmentEvent
 from extensions import db
+from decorators import with_db_retry
+
 from datetime import datetime
 import traceback
 
@@ -79,6 +81,7 @@ def tracking_page():
 
 
 @main_bp.route('/tracking/details/<path:tracking_number>')
+@with_db_retry(max_retries=3)
 def tracking_details(tracking_number):
     try:
         tn = _normalize_tracking(tracking_number)
@@ -119,6 +122,7 @@ def tracking_details(tracking_number):
 # ── API ───────────────────────────────────────────────────────────────────────
 
 @main_bp.route('/api/track/<path:tracking_number>')
+@with_db_retry(max_retries=3)
 def track_shipment(tracking_number):
     """
     JSON tracking endpoint.

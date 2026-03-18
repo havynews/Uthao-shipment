@@ -20,6 +20,8 @@ from models import (
 )
 
 from extensions import db, mail, login_manager, migrate
+from models import ShipmentPayment, Notification, PackageImage, Package
+from decorators import with_db_retry
 
 from notification import create_notification
 from sqlalchemy.orm import joinedload  # Add this import at the top
@@ -34,7 +36,6 @@ import cloudinary.api
 import requests
 from io import BytesIO
 from sqlalchemy.orm import joinedload
-import requests
 import base64
 
 
@@ -652,91 +653,91 @@ def shipments():
 #     return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
 
 
-# @admin_bp.route('/shipments/<int:shipment_id>/update-status', methods=['POST'])
-# @login_required
-# @admin_required
-# def update_shipment_status(shipment_id):
-#     """Update shipment status and notify user."""
-#     # Eager load the customer relationship to ensure it's available
-#     shipment = Shipment.query.options(
-#         joinedload(Shipment.customer)
-#     ).get_or_404(shipment_id)
+@admin_bp.route('/shipments/<int:shipment_id>/update-status', methods=['POST'])
+@login_required
+@admin_required
+def update_shipment_status(shipment_id):
+    """Update shipment status and notify user."""
+    # Eager load the customer relationship to ensure it's available
+    shipment = Shipment.query.options(
+        joinedload(Shipment.customer)
+    ).get_or_404(shipment_id)
     
-#     new_status = request.form.get('status')
-#     location = request.form.get('location', '').strip()
-#     description = request.form.get('description', '').strip()
-#     notify_user = request.form.get('notify_user') == 'on'
+    new_status = request.form.get('status')
+    location = request.form.get('location', '').strip()
+    description = request.form.get('description', '').strip()
+    notify_user = request.form.get('notify_user') == 'on'
 
-#     # Debug prints
-#     print(f'Form data: {dict(request.form)}')
-#     print(f'notify_user raw: {request.form.get("notify_user")}')
-#     print(f'notify_user bool: {notify_user}')
-#     print(f'shipment.user_id: {shipment.user_id}')
-#     print(f'shipment.customer: {shipment.customer}')
-#     if shipment.customer:
-#         print(f'shipment.customer.email: {shipment.customer.email}')
-#     else:
-#         print('CUSTOMER IS NONE - attempting to load manually...')
-#         # Fallback: manually load the user if relationship failed
-#         customer = User.query.get(shipment.user_id)
-#         print(f'Manually loaded customer: {customer}')
-#         if customer:
-#             shipment.customer = customer  # Attach for email function
+    # Debug prints
+    print(f'Form data: {dict(request.form)}')
+    print(f'notify_user raw: {request.form.get("notify_user")}')
+    print(f'notify_user bool: {notify_user}')
+    print(f'shipment.user_id: {shipment.user_id}')
+    print(f'shipment.customer: {shipment.customer}')
+    if shipment.customer:
+        print(f'shipment.customer.email: {shipment.customer.email}')
+    else:
+        print('CUSTOMER IS NONE - attempting to load manually...')
+        # Fallback: manually load the user if relationship failed
+        customer = User.query.get(shipment.user_id)
+        print(f'Manually loaded customer: {customer}')
+        if customer:
+            shipment.customer = customer  # Attach for email function
 
-#     if not new_status:
-#         flash('Status is required.', 'error')
-#         return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+    if not new_status:
+        flash('Status is required.', 'error')
+        return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
     
-#     old_status = shipment.status
-#     shipment.status = new_status
+    old_status = shipment.status
+    shipment.status = new_status
 
-#     # Update ETA if provided
-#     new_eta = request.form.get('estimated_delivery')
-#     if new_eta:
-#         from datetime import datetime
-#         shipment.estimated_delivery = datetime.strptime(new_eta, '%Y-%m-%d')
+    # Update ETA if provided
+    new_eta = request.form.get('estimated_delivery')
+    if new_eta:
+        from datetime import datetime
+        shipment.estimated_delivery = datetime.strptime(new_eta, '%Y-%m-%d')
     
-#     # Add tracking event
-#     event = ShipmentEvent(
-#         shipment_id=shipment.id,
-#         status=new_status,
-#         location=location,
-#         description=description or f'Status updated to {new_status}',
-#         timestamp=datetime.utcnow()
-#     )
-#     db.session.add(event)
+    # Add tracking event
+    event = ShipmentEvent(
+        shipment_id=shipment.id,
+        status=new_status,
+        location=location,
+        description=description or f'Status updated to {new_status}',
+        timestamp=datetime.utcnow()
+    )
+    db.session.add(event)
     
-#     # In-app notification
-#     notification = Notification(
-#         user_id=shipment.user_id,
-#         title=f'Shipment {new_status}',
-#         message=f'Your shipment {shipment.tracking_number} is now {new_status}.',
-#         notification_type=f'shipment_{new_status.lower().replace(" ", "_")}',
-#         related_shipment_id=shipment.id,
-#         link=f'/tracking?q={shipment.tracking_number}',
-#         priority='high' if new_status == 'Delivered' else 'normal'
-#     )
-#     db.session.add(notification)
-#     db.session.commit()
+    # In-app notification
+    notification = Notification(
+        user_id=shipment.user_id,
+        title=f'Shipment {new_status}',
+        message=f'Your shipment {shipment.tracking_number} is now {new_status}.',
+        notification_type=f'shipment_{new_status.lower().replace(" ", "_")}',
+        related_shipment_id=shipment.id,
+        link=f'/tracking?q={shipment.tracking_number}',
+        priority='high' if new_status == 'Delivered' else 'normal'
+    )
+    db.session.add(notification)
+    db.session.commit()
 
-#     # Send email via Mailjet
-#     if notify_user:
-#         if not shipment.customer:
-#             current_app.logger.error(f'Shipment {shipment.id} has no customer (user_id: {shipment.user_id})')
-#             flash('Status updated but customer not found for email notification.', 'warning')
-#         elif not shipment.customer.email:
-#             current_app.logger.warning(f'Customer {shipment.customer.id} has no email')
-#             flash('Status updated but customer has no email address.', 'warning')
-#         else:
-#             try:
-#                 _send_status_email(shipment, new_status, location, description)
-#                 flash(f'Email notification sent to {shipment.customer.email}.', 'success')
-#             except Exception as e:
-#                 current_app.logger.error(f'Email failed: {e}', exc_info=True)
-#                 flash('Status updated but email notification failed.', 'warning')
+    # Send email via Mailjet
+    if notify_user:
+        if not shipment.customer:
+            current_app.logger.error(f'Shipment {shipment.id} has no customer (user_id: {shipment.user_id})')
+            flash('Status updated but customer not found for email notification.', 'warning')
+        elif not shipment.customer.email:
+            current_app.logger.warning(f'Customer {shipment.customer.id} has no email')
+            flash('Status updated but customer has no email address.', 'warning')
+        else:
+            try:
+                _send_status_email(shipment, new_status, location, description)
+                flash(f'Email notification sent to {shipment.customer.email}.', 'success')
+            except Exception as e:
+                current_app.logger.error(f'Email failed: {e}', exc_info=True)
+                flash('Status updated but email notification failed.', 'warning')
     
-#     flash(f'Shipment status updated to {new_status}.', 'success')
-#     return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+    flash(f'Shipment status updated to {new_status}.', 'success')
+    return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
 
 
 @admin_bp.route('/shipments/<int:shipment_id>/preview-email', methods=['POST'])
@@ -2035,7 +2036,6 @@ def delete_shipment(shipment_id):
     shipment = Shipment.query.get_or_404(shipment_id)
     tracking = shipment.tracking_number
 
-    from app.models import ShipmentPayment, Notification, PackageImage, Package
 
     # Delete package images first (deepest level)
     for package in shipment.packages:

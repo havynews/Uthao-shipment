@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from models import Shipment, ShipmentEvent, Package, Subscription, PLANS, \
     NotificationPreference, CURRENCIES, PaymentRequest, PaymentMethod, SupportTicket, Notification, PackageImage, ShipmentPayment
 from extensions import db, mail, login_manager, migrate
+
 from datetime import datetime, timedelta
 import random
 import string
