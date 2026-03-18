@@ -341,10 +341,21 @@
                     <span class="font-medium">Users</span>
                 </a>
                 
+                <a href="{{ url_for('admin.bulk_email') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint.startswith('admin.bulk_email') %}active{% endif %}">
+                    <i class="fas fa-envelope w-6"></i>
+                    <span class="font-medium">Bulk Email</span>
+                </a>
+
+
                 <a href="{{ url_for('admin.shipments') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 
                   {% if request.endpoint.startswith('admin.shipment') and 'payment' not in request.endpoint %}active{% endif %}">
                     <i class="fas fa-box w-6"></i>
                     <span class="font-medium">Shipments</span>
+                </a>
+
+                <a href="{{ url_for('admin.bulk_update_shipments') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint.startswith('admin.bulk_update_shipments') %}active{% endif %}">
+                    <i class="fas fa-boxes w-6"></i>
+                    <span class="font-medium">Bulk Shipments</span>
                 </a>
 
                 <a href="{{ url_for('admin.plans') }}" class="sidebar-link flex items-center px-6 py-3 text-gray-700 {% if request.endpoint.startswith('admin.plans') %}active{% endif %}">

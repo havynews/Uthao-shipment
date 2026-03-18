@@ -136,6 +136,9 @@ def _seed_default_users():
 
     db.session.commit()
 
+
+
+
 # from flask import Flask
 # from config import Config
 # from models import User, Plan, PLANS

@@ -1,0 +1,163 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Bulk Update Results{% endblock %}
+
+{% block main_content %}
+<div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <nav class="text-sm text-gray-500 mb-2">
+            <a href="{{ url_for('admin.dashboard') }}" class="hover:text-[#f59e0b]">Dashboard</a>
+            <i class="fas fa-chevron-right mx-2 text-xs"></i>
+            <a href="{{ url_for('admin.bulk_update_shipments') }}" class="hover:text-[#f59e0b]">Bulk Update</a>
+            <i class="fas fa-chevron-right mx-2 text-xs"></i>
+            <span>Results</span>
+        </nav>
+        <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Bulk Update Results</h1>
+        <p class="text-gray-500 mt-1">Summary of your recent bulk operation</p>
+    </div>
+
+    <!-- Results Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-6 border border-gray-200 text-center">
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-sync-alt text-blue-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ results.updated }}</p>
+            <p class="text-sm text-gray-500">Shipments Updated</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 border border-gray-200 text-center">
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ results.emails_sent }}</p>
+            <p class="text-sm text-gray-500">Emails Sent</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 border border-gray-200 text-center">
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-times-circle text-red-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ results.emails_failed }}</p>
+            <p class="text-sm text-gray-500">Emails Failed</p>
+        </div>
+        
+        <div class="bg-white rounded-xl p-6 border border-gray-200 text-center">
+            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-exclamation-triangle text-gray-600 text-xl"></i>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">{{ results.failed|length }}</p>
+            <p class="text-sm text-gray-500">Update Failures</p>
+        </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="rounded-xl p-4 mb-6 flex items-center gap-3 
+        {% if results.failed or results.emails_failed %}
+        bg-yellow-50 border border-yellow-200 text-yellow-800
+        {% else %}
+        bg-green-50 border border-green-200 text-green-800
+        {% endif %}
+    ">
+        <i class="fas 
+            {% if results.failed or results.emails_failed %}
+            fa-exclamation-circle text-xl
+            {% else %}
+            fa-check-circle text-xl
+            {% endif %}
+        "></i>
+        <div>
+            <p class="font-semibold">
+                {% if results.failed or results.emails_failed %}
+                Operation completed with some issues
+                {% else %}
+                Operation completed successfully!
+                {% endif %}
+            </p>
+            <p class="text-sm opacity-90">
+                New status applied: <strong>{{ results.new_status }}</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Failed Updates Section -->
+    {% if results.failed %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-red-50 flex items-center gap-3">
+            <i class="fas fa-times-circle text-red-600"></i>
+            <h2 class="text-lg font-semibold text-gray-900">Failed Updates ({{ results.failed|length }})</h2>
+        </div>
+        <div class="divide-y divide-gray-200">
+            {% for item in results.failed %}
+            <div class="px-6 py-4 flex items-center justify-between">
+                <div>
+                    <p class="font-medium text-gray-900">Shipment #{{ item.tracking or item.id }}</p>
+                    <p class="text-sm text-red-600 mt-1">{{ item.error }}</p>
+                </div>
+                <a href="{{ url_for('admin.shipment_detail', shipment_id=item.id) }}" 
+                   class="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                    View
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Email Failures Section -->
+    {% if results.emails_failed > 0 %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-yellow-50 flex items-center gap-3">
+            <i class="fas fa-envelope-open-text text-yellow-600"></i>
+            <h2 class="text-lg font-semibold text-gray-900">Email Failures</h2>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-600 mb-4">
+                {{ results.emails_failed }} email(s) failed to send. The shipment updates were saved, 
+                but customers may not have been notified. Check the email logs for details.
+            </p>
+            <a href="{{ url_for('admin.email_analytics') }}" 
+               class="inline-flex items-center gap-2 px-4 py-2 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706]">
+                <i class="fas fa-chart-line"></i>
+                View Email Analytics
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="flex flex-col sm:flex-row gap-4">
+        <a href="{{ url_for('admin.bulk_update_shipments') }}" 
+           class="flex-1 px-6 py-3 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706] font-semibold text-center flex items-center justify-center gap-2">
+            <i class="fas fa-arrow-left"></i>
+            Back to Bulk Update
+        </a>
+        
+        <a href="{{ url_for('admin.shipments') }}" 
+           class="flex-1 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold text-center flex items-center justify-center gap-2">
+            <i class="fas fa-list"></i>
+            View All Shipments
+        </a>
+        
+        <button onclick="window.print()" 
+                class="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold flex items-center justify-center gap-2">
+            <i class="fas fa-print"></i>
+            Print Report
+        </button>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <h3 class="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+            <i class="fas fa-lightbulb"></i>
+            What's Next?
+        </h3>
+        <ul class="text-sm text-blue-800 space-y-2">
+            <li>• Review any failed updates above and retry them individually if needed</li>
+            <li>• Check <a href="{{ url_for('admin.email_analytics') }}" class="underline">Email Analytics</a> to see delivery status</li>
+            <li>• Failed emails can be resent from the shipment detail page</li>
+            <li>• Consider exporting a report for your records</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -35,5 +35,5 @@ gevent
 gevent-websocket  
 
 gunicorn
-
+mailjet-rest
 cloudinary

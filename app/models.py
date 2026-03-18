@@ -257,7 +257,7 @@ class ShipmentPayment(db.Model):
 
     user = db.relationship('User', backref='shipment_payments')
         
-    shipment = db.relationship('Shipment', backref=db.backref('payment', uselist=False))
+    shipment = db.relationship('Shipment', backref=db.backref('payment', uselist=False, cascade='all, delete-orphan'))
 
 
 class PaymentMethod(db.Model):
@@ -1003,3 +1003,34 @@ class LiveChatMessage(db.Model):
             'created_at':   self.created_at.isoformat(),
             'time_ago':     self.time_ago,
         }
+
+
+
+class EmailLog(db.Model):
+    """Log of all emails sent to users"""
+    __tablename__ = 'email_log'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    shipment_id = db.Column(db.Integer, db.ForeignKey('shipment.id'), nullable=True, index=True)
+    
+    email_type = db.Column(db.String(50), nullable=False)  # 'status_update', 'welcome', etc.
+    subject = db.Column(db.String(200), nullable=False)
+    recipient_email = db.Column(db.String(120), nullable=False)
+    status = db.Column(db.String(20), default='sent')  # sent, failed, bounced
+    
+    # Content summary (not full content for privacy)
+    status_sent = db.Column(db.String(50))  # For status emails
+    included_image = db.Column(db.Boolean, default=False)
+    
+    # Error tracking
+    error_message = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationships
+    user = db.relationship('User', backref='email_logs')
+    shipment = db.relationship('Shipment', backref='email_logs')
+    
+    def __repr__(self):
+        return f'<EmailLog {self.email_type} to {self.recipient_email}>'

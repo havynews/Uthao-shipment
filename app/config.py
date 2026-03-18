@@ -1,6 +1,9 @@
 import os
 from datetime import datetime, timedelta
 
+from dotenv import load_dotenv
+
+load_dotenv()  # Add this line
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'

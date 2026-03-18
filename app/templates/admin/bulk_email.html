@@ -1,0 +1,548 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Bulk Email{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Collapsible Section */
+    .collapsible-header {
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s;
+    }
+    .collapsible-header:hover {
+        background-color: #f9fafb;
+    }
+    .collapsible-icon {
+        transition: transform 0.3s ease;
+    }
+    .collapsible-header.collapsed .collapsible-icon {
+        transform: rotate(-90deg);
+    }
+    .collapsible-content {
+        max-height: 600px;
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+        opacity: 1;
+    }
+    .collapsible-content.collapsed {
+        max-height: 0;
+        opacity: 0;
+    }
+    
+    /* Drag & Drop Zone */
+    .drop-zone {
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 40px 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: #f9fafb;
+        cursor: pointer;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+        border-color: #f97316;
+        background: #fff7ed;
+    }
+    .drop-zone.drag-over {
+        transform: scale(1.02);
+    }
+    .drop-zone-icon {
+        font-size: 48px;
+        color: #9ca3af;
+        margin-bottom: 16px;
+        transition: color 0.3s;
+    }
+    .drop-zone:hover .drop-zone-icon,
+    .drop-zone.drag-over .drop-zone-icon {
+        color: #f97316;
+    }
+    
+    /* Image Preview */
+    .image-preview-container {
+        position: relative;
+        display: inline-block;
+        margin-top: 16px;
+    }
+    .image-preview {
+        max-width: 300px;
+        max-height: 200px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+    }
+    .remove-image-btn {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #ef4444;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    }
+    .remove-image-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Upload Progress */
+    .upload-progress {
+        width: 100%;
+        height: 4px;
+        background: #e5e7eb;
+        border-radius: 2px;
+        margin-top: 12px;
+        overflow: hidden;
+        display: none;
+    }
+    .upload-progress-bar {
+        height: 100%;
+        background: #f97316;
+        width: 0%;
+        transition: width 0.3s;
+    }
+    
+    /* User Selection Styles */
+    .user-list-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .user-checkbox-item {
+        transition: all 0.2s;
+    }
+    .user-checkbox-item:hover {
+        background-color: #f3f4f6;
+        transform: translateX(4px);
+    }
+    .user-checkbox-item.selected {
+        background-color: #fff7ed;
+        border-color: #f97316;
+    }
+    
+    /* Selection Summary */
+    .selection-summary {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        padding: 12px 16px;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Bulk Email</h1>
+        <p class="text-gray-500 mt-1">Send personalized emails to multiple users</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.bulk_email') }}" id="bulkEmailForm" enctype="multipart/form-data">
+        
+        <!-- Step 1: Collapsible User Selection -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+            <div class="collapsible-header px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50" onclick="toggleSection('userSelection')">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[#f59e0b] text-white flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Select Recipients</h2>
+                        <p class="text-sm text-gray-500" id="recipientSummary">0 users selected</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-down collapsible-icon text-gray-400"></i>
+            </div>
+            
+            <div id="userSelection" class="collapsible-content">
+                <!-- Filters -->
+                <div class="p-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="userSearch" placeholder="Search by name or email..." 
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b] focus:border-[#f59e0b]">
+                        <select id="planFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]">
+                            <option value="">All Plans</option>
+                            {% for plan_id, plan in plans.items() %}
+                            <option value="{{ plan_id }}">{{ plan.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" onclick="applyFilters()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-filter mr-2"></i>Filter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- User List -->
+                <div class="user-list-container p-4">
+                    <div class="mb-3 flex items-center gap-3 pb-3 border-b border-gray-100">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" 
+                               class="w-5 h-5 text-[#f59e0b] rounded border-gray-300 focus:ring-[#f59e0b]">
+                        <label for="selectAll" class="text-sm font-semibold text-gray-700 cursor-pointer">Select All Visible</label>
+                        <span class="text-sm text-gray-500 ml-auto" id="visibleCount">Showing {{ users.items|length }} users</span>
+                    </div>
+                    
+                    <div class="space-y-2" id="userList">
+                        {% for user in users.items %}
+                        <label class="user-checkbox-item flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer" data-name="{{ (user.full_name or '').lower() }}" data-email="{{ user.email.lower() }}" data-plan="{{ user.subscription.plan_id if user.subscription else 'free' }}">
+                            <input type="checkbox" name="user_ids" value="{{ user.id }}" 
+                                   class="user-checkbox w-5 h-5 text-[#f59e0b] rounded border-gray-300 focus:ring-[#f59e0b]" 
+                                   onchange="updateSelection(this)">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#d97706] to-purple-600 text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                                {{ (user.full_name or 'U')[:2].upper() }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-gray-900 truncate">{{ user.full_name or 'No Name' }}</div>
+                                <div class="text-sm text-gray-500 truncate">{{ user.email }}</div>
+                            </div>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0
+                                {% if user.subscription %}bg-[#f59e0b] text-white{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {{ plans[user.subscription.plan_id].name if user.subscription and user.subscription.plan_id in plans else 'Free' }}
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Selection Summary -->
+                <div class="selection-summary flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-gray-700" id="selectedCount">0 selected</span>
+                        <button type="button" onclick="clearSelection()" class="text-sm text-red-600 hover:text-red-800 underline">Clear all</button>
+                    </div>
+                    <button type="button" onclick="toggleSection('userSelection')" class="px-4 py-2 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706] transition text-sm font-medium">
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Email Composition with Image Upload -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#f59e0b] text-white flex items-center justify-center font-bold text-sm">2</div>
+                <h2 class="text-lg font-semibold text-gray-900">Compose Email</h2>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <!-- Email Type -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Email Type</label>
+                    <select name="email_type" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b] focus:border-[#f59e0b] bg-white">
+                        <option value="general">📢 General Announcement</option>
+                        <option value="promotional">🎁 Promotional Offer</option>
+                        <option value="system">⚙️ System Update</option>
+                        <option value="billing">💳 Billing Notice</option>
+                        <option value="newsletter">📰 Newsletter</option>
+                    </select>
+                </div>
+                
+                <!-- Subject -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Subject *</label>
+                    <input type="text" name="subject" required 
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b] focus:border-[#f59e0b]"
+                           placeholder="Enter email subject...">
+                </div>
+                
+                <!-- Message -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Message *</label>
+                    <textarea name="message" required rows="8"
+                              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b] focus:border-[#f59e0b] resize-y"
+                              placeholder="Enter your message... Use line breaks for paragraphs."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Tip: The message will be converted to HTML automatically. Line breaks become paragraphs.</p>
+                </div>
+                
+                <!-- Image Upload Section -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Attach Image (Optional)</label>
+                    
+                    <!-- Drag & Drop Zone -->
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('imageInput').click()">
+                        <div class="drop-zone-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <p class="text-lg font-medium text-gray-700 mb-1">Drag & drop an image here</p>
+                        <p class="text-sm text-gray-500 mb-3">or click to browse</p>
+                        <p class="text-xs text-gray-400">Supports: JPG, PNG, GIF, WebP (max 5MB)</p>
+                        <input type="file" id="imageInput" name="image_file" accept="image/*" class="hidden" onchange="handleFileSelect(this.files[0])">
+                    </div>
+                    
+                    <!-- Upload Progress -->
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="upload-progress-bar" id="progressBar"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 hidden" id="uploadStatus">Uploading...</p>
+                    
+                    <!-- Image Preview -->
+                    <div id="imagePreviewContainer" class="hidden">
+                        <div class="image-preview-container">
+                            <img id="imagePreview" class="image-preview" src="" alt="Preview">
+                            <button type="button" class="remove-image-btn" onclick="removeImage()" title="Remove image">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="uploaded_image_url" id="uploadedImageUrl">
+                    </div>
+                    
+                    <!-- Manual URL Input -->
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <p class="text-sm text-gray-500 mb-2">Or paste image URL:</p>
+                        <div class="flex gap-2">
+                            <input type="url" id="manualImageUrl" placeholder="https://..." 
+                                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b] text-sm">
+                            <button type="button" onclick="useManualUrl()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
+                                Use URL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-center sm:text-left">
+                    <p class="text-lg font-semibold text-gray-900" id="finalSummary">No recipients selected</p>
+                    <p class="text-sm text-gray-500" id="finalImageStatus">No image attached</p>
+                </div>
+                <button type="submit" id="sendBtn" disabled
+                        class="px-8 py-3 bg-gray-300 text-gray-500 rounded-lg font-semibold transition cursor-not-allowed flex items-center gap-2"
+                        onclick="return confirmSend()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Send Emails</span>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Collapsible Section
+function toggleSection(sectionId) {
+    const content = document.getElementById(sectionId);
+    const header = content.previousElementSibling;
+    content.classList.toggle('collapsed');
+    header.classList.toggle('collapsed');
+}
+
+// User Selection
+let selectedUsers = new Set();
+
+function updateSelection(checkbox) {
+    const userId = checkbox.value;
+    const label = checkbox.closest('.user-checkbox-item');
+    
+    if (checkbox.checked) {
+        selectedUsers.add(userId);
+        label.classList.add('selected');
+    } else {
+        selectedUsers.delete(userId);
+        label.classList.remove('selected');
+        document.getElementById('selectAll').checked = false;
+    }
+    
+    updateCounts();
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('.user-checkbox').forEach(cb => {
+        cb.checked = selectAll;
+        updateSelection(cb);
+    });
+}
+
+function clearSelection() {
+    selectedUsers.clear();
+    document.querySelectorAll('.user-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.user-checkbox-item').classList.remove('selected');
+    });
+    document.getElementById('selectAll').checked = false;
+    updateCounts();
+}
+
+function updateCounts() {
+    const count = selectedUsers.size;
+    document.getElementById('selectedCount').textContent = `${count} selected`;
+    document.getElementById('recipientSummary').textContent = `${count} user${count !== 1 ? 's' : ''} selected`;
+    document.getElementById('finalSummary').textContent = count > 0 ? 
+        `Ready to send to ${count} recipient${count !== 1 ? 's' : ''}` : 'No recipients selected';
+    
+    // Enable/disable send button
+    const sendBtn = document.getElementById('sendBtn');
+    const hasSubject = document.querySelector('input[name="subject"]').value.trim() !== '';
+    const hasMessage = document.querySelector('textarea[name="message"]').value.trim() !== '';
+    
+    if (count > 0 && hasSubject && hasMessage) {
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        sendBtn.classList.add('bg-[#f97316]', 'text-white', 'hover:bg-[#d97706]');
+    } else {
+        sendBtn.disabled = true;
+        sendBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        sendBtn.classList.remove('bg-[#f97316]', 'text-white', 'hover:bg-[#d97706]');
+    }
+}
+
+// Filter Users
+function applyFilters() {
+    const search = document.getElementById('userSearch').value.toLowerCase();
+    const plan = document.getElementById('planFilter').value;
+    let visible = 0;
+    
+    document.querySelectorAll('.user-checkbox-item').forEach(item => {
+        const name = item.dataset.name;
+        const email = item.dataset.email;
+        const userPlan = item.dataset.plan;
+        
+        const matchesSearch = !search || name.includes(search) || email.includes(search);
+        const matchesPlan = !plan || userPlan === plan;
+        
+        if (matchesSearch && matchesPlan) {
+            item.style.display = 'flex';
+            visible++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('visibleCount').textContent = `Showing ${visible} users`;
+}
+
+// Drag & Drop
+const dropZone = document.getElementById('dropZone');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+});
+
+dropZone.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length) handleFileSelect(files[0]);
+}
+
+// Image Upload
+function handleFileSelect(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        alert('Please select a valid image file');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+    }
+    
+    // Show progress
+    document.getElementById('uploadProgress').style.display = 'block';
+    document.getElementById('uploadStatus').classList.remove('hidden');
+    document.getElementById('dropZone').style.display = 'none';
+    
+    // Simulate progress
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const interval = setInterval(() => {
+        progress += 10;
+        progressBar.style.width = progress + '%';
+        if (progress >= 90) clearInterval(interval);
+    }, 100);
+    
+    // Upload to server
+    const formData = new FormData();
+    formData.append('image_file', file);
+    
+    fetch('{{ url_for("admin.upload_bulk_email_image") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(interval);
+        progressBar.style.width = '100%';
+        
+        if (data.success) {
+            showImagePreview(data.url);
+            document.getElementById('uploadStatus').textContent = 'Upload complete!';
+            document.getElementById('uploadStatus').classList.add('text-green-600');
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        document.getElementById('uploadStatus').textContent = 'Upload failed: ' + error.message;
+        document.getElementById('uploadStatus').classList.add('text-red-600');
+        document.getElementById('dropZone').style.display = 'block';
+        document.getElementById('uploadProgress').style.display = 'none';
+    });
+}
+
+function showImagePreview(url) {
+    document.getElementById('imagePreview').src = url;
+    document.getElementById('uploadedImageUrl').value = url;
+    document.getElementById('imagePreviewContainer').classList.remove('hidden');
+    document.getElementById('finalImageStatus').textContent = 'Image attached';
+    document.getElementById('finalImageStatus').classList.add('text-green-600');
+}
+
+function removeImage() {
+    document.getElementById('imagePreviewContainer').classList.add('hidden');
+    document.getElementById('uploadedImageUrl').value = '';
+    document.getElementById('dropZone').style.display = 'block';
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadStatus').classList.add('hidden');
+    document.getElementById('finalImageStatus').textContent = 'No image attached';
+    document.getElementById('finalImageStatus').classList.remove('text-green-600');
+}
+
+function useManualUrl() {
+    const url = document.getElementById('manualImageUrl').value.trim();
+    if (url) {
+        showImagePreview(url);
+        document.getElementById('dropZone').style.display = 'none';
+        document.getElementById('uploadProgress').style.display = 'none';
+        document.getElementById('uploadStatus').classList.add('hidden');
+    }
+}
+
+// Form Validation
+document.querySelector('input[name="subject"]').addEventListener('input', updateCounts);
+document.querySelector('textarea[name="message"]').addEventListener('input', updateCounts);
+
+function confirmSend() {
+    const count = selectedUsers.size;
+    const subject = document.querySelector('input[name="subject"]').value;
+    return confirm(`Send "${subject}" to ${count} user${count !== 1 ? 's' : ''}?`);
+}
+
+// Initialize
+updateCounts();
+</script>
+{% endblock %}

@@ -20,6 +20,11 @@
         Shipments
       </a>
 
+      <a href="{{ url_for('admin.bulk_email') }}" class="sidebar-item {{ 'active' if 'admin.shipments' in request.endpoint }}">
+        <i class="fas fa-envelope-bulk"></i>
+        Bulk Email
+      </a>
+
       <a href="{{ url_for('admin.plans') }}" class="sidebar-item {{ 'active' if 'admin.plans' in request.endpoint }}">
           <i class="fas fa-box"></i>
           Plans

@@ -12,7 +12,7 @@ from functools import wraps
 from datetime import datetime, timedelta, date
 from sqlalchemy import func
 import json
-
+import os
 from models import (
     User, Shipment, ShipmentEvent, Package, Subscription, 
     PaymentRequest, PaymentMethod, SupportTicket, TicketReply, ShipmentPayment,
@@ -22,7 +22,20 @@ from models import (
 from extensions import db, mail, login_manager, migrate
 
 from notification import create_notification
-
+from sqlalchemy.orm import joinedload  # Add this import at the top
+from sqlalchemy.orm import joinedload
+import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+import cloudinary
+import cloudinary.api
+import requests
+from io import BytesIO
+from sqlalchemy.orm import joinedload
+import requests
+import base64
 
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -30,6 +43,22 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 # ────────────────────────────────────────────
 # Decorators
 # ────────────────────────────────────────────
+
+
+# Configure Cloudinary (add to your app initialization)
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+)
+
+
+smtp_server = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+smtp_port = int(os.environ.get('MAIL_PORT', 587))
+smtp_username = os.environ.get('MAIL_USERNAME')
+smtp_password = os.environ.get('MAIL_PASSWORD')
+sender_email = os.environ.get('SENDER_EMAIL', smtp_username)
+sender_name = os.environ.get('SENDER_NAME', 'UTHAO Logistics')
 
 def admin_required(f):
     @wraps(f)
@@ -70,6 +99,24 @@ ALLOWED_TYPES = {
 }
 
 ALLOWED_PRIORITIES = {'low', 'normal', 'high', 'urgent'}
+
+
+@admin_bp.app_template_global()
+def get_status_color(status):
+    """Return color code for shipment status."""
+    colors = {
+        'Delivered': '#22c55e',
+        'Out for Delivery': '#8b5cf6',
+        'In Transit': '#f97316',
+        'Picked Up': '#3b82f6',
+        'Arrived at Hub': '#d97706',
+        'Customs Clearance': '#f59e0b',
+        'On Hold': '#6b7280',
+        'Cancelled': '#ef4444',
+        'Booking Created': '#2563eb',
+        'Pending Payment': '#eab308',
+    }
+    return colors.get(status, '#6b7280')
 
 
 # Add this before your routes
@@ -547,59 +594,1463 @@ def shipments():
         search=search
     )
 
+# @admin_bp.route('/shipments/<int:shipment_id>')
+# @login_required
+# @admin_required
+# def shipment_detail(shipment_id):
+#     """View shipment details."""
+#     shipment = Shipment.query.options(
+#         joinedload(Shipment.customer),
+#         joinedload(Shipment.packages),
+#         joinedload(Shipment.events)
+#     ).get_or_404(shipment_id)
+#     return render_template('admin/shipment_detail.html', shipment=shipment)
+
+# @admin_bp.route('/shipments/<int:shipment_id>/update-status', methods=['POST'])
+# @login_required
+# @admin_required
+# def update_shipment_status(shipment_id):
+#     """Update shipment status and notify user."""
+#     shipment = Shipment.query.get_or_404(shipment_id)
+    
+#     new_status = request.form.get('status')
+#     location = request.form.get('location', '').strip()
+#     description = request.form.get('description', '').strip()
+    
+#     if not new_status:
+#         flash('Status is required.', 'error')
+#         return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+    
+#     old_status = shipment.status
+#     shipment.status = new_status
+    
+#     # Add event
+#     event = ShipmentEvent(
+#         shipment_id=shipment.id,
+#         status=new_status,
+#         location=location,
+#         description=description or f'Status updated to {new_status}',
+#         timestamp=datetime.utcnow()
+#     )
+#     db.session.add(event)
+    
+#     # Create notification for user
+#     notification = Notification(
+#         user_id=shipment.user_id,
+#         title=f'Shipment {new_status}',
+#         message=f'Your shipment {shipment.tracking_number} is now {new_status}.',
+#         notification_type=f'shipment_{new_status.lower().replace(" ", "_")}',
+#         related_shipment_id=shipment.id,
+#         link=f'/tracking?q={shipment.tracking_number}',
+#         priority='high' if new_status == 'Delivered' else 'normal'
+#     )
+#     db.session.add(notification)
+    
+#     db.session.commit()
+    
+#     flash(f'Shipment status updated to {new_status}.', 'success')
+#     return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+
+
+# @admin_bp.route('/shipments/<int:shipment_id>/update-status', methods=['POST'])
+# @login_required
+# @admin_required
+# def update_shipment_status(shipment_id):
+#     """Update shipment status and notify user."""
+#     # Eager load the customer relationship to ensure it's available
+#     shipment = Shipment.query.options(
+#         joinedload(Shipment.customer)
+#     ).get_or_404(shipment_id)
+    
+#     new_status = request.form.get('status')
+#     location = request.form.get('location', '').strip()
+#     description = request.form.get('description', '').strip()
+#     notify_user = request.form.get('notify_user') == 'on'
+
+#     # Debug prints
+#     print(f'Form data: {dict(request.form)}')
+#     print(f'notify_user raw: {request.form.get("notify_user")}')
+#     print(f'notify_user bool: {notify_user}')
+#     print(f'shipment.user_id: {shipment.user_id}')
+#     print(f'shipment.customer: {shipment.customer}')
+#     if shipment.customer:
+#         print(f'shipment.customer.email: {shipment.customer.email}')
+#     else:
+#         print('CUSTOMER IS NONE - attempting to load manually...')
+#         # Fallback: manually load the user if relationship failed
+#         customer = User.query.get(shipment.user_id)
+#         print(f'Manually loaded customer: {customer}')
+#         if customer:
+#             shipment.customer = customer  # Attach for email function
+
+#     if not new_status:
+#         flash('Status is required.', 'error')
+#         return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+    
+#     old_status = shipment.status
+#     shipment.status = new_status
+
+#     # Update ETA if provided
+#     new_eta = request.form.get('estimated_delivery')
+#     if new_eta:
+#         from datetime import datetime
+#         shipment.estimated_delivery = datetime.strptime(new_eta, '%Y-%m-%d')
+    
+#     # Add tracking event
+#     event = ShipmentEvent(
+#         shipment_id=shipment.id,
+#         status=new_status,
+#         location=location,
+#         description=description or f'Status updated to {new_status}',
+#         timestamp=datetime.utcnow()
+#     )
+#     db.session.add(event)
+    
+#     # In-app notification
+#     notification = Notification(
+#         user_id=shipment.user_id,
+#         title=f'Shipment {new_status}',
+#         message=f'Your shipment {shipment.tracking_number} is now {new_status}.',
+#         notification_type=f'shipment_{new_status.lower().replace(" ", "_")}',
+#         related_shipment_id=shipment.id,
+#         link=f'/tracking?q={shipment.tracking_number}',
+#         priority='high' if new_status == 'Delivered' else 'normal'
+#     )
+#     db.session.add(notification)
+#     db.session.commit()
+
+#     # Send email via Mailjet
+#     if notify_user:
+#         if not shipment.customer:
+#             current_app.logger.error(f'Shipment {shipment.id} has no customer (user_id: {shipment.user_id})')
+#             flash('Status updated but customer not found for email notification.', 'warning')
+#         elif not shipment.customer.email:
+#             current_app.logger.warning(f'Customer {shipment.customer.id} has no email')
+#             flash('Status updated but customer has no email address.', 'warning')
+#         else:
+#             try:
+#                 _send_status_email(shipment, new_status, location, description)
+#                 flash(f'Email notification sent to {shipment.customer.email}.', 'success')
+#             except Exception as e:
+#                 current_app.logger.error(f'Email failed: {e}', exc_info=True)
+#                 flash('Status updated but email notification failed.', 'warning')
+    
+#     flash(f'Shipment status updated to {new_status}.', 'success')
+#     return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+
+
+@admin_bp.route('/shipments/<int:shipment_id>/preview-email', methods=['POST'])
+@login_required
+@admin_required
+def preview_email(shipment_id):
+    """Preview email before sending."""
+    
+    shipment = Shipment.query.options(
+        joinedload(Shipment.customer),
+        joinedload(Shipment.packages).joinedload(Package.images)
+    ).get_or_404(shipment_id)
+    
+    new_status = request.form.get('status', 'In Transit')
+    location = request.form.get('location', '').strip()
+    description = request.form.get('description', '').strip()
+    selected_image_id = request.form.get('selected_image_id')
+    
+    customer = shipment.customer or User.query.get(shipment.user_id)
+    
+    # Get image URL if selected
+    image_url = None
+    if selected_image_id:
+        for pkg in shipment.packages:
+            for img in pkg.images:
+                if str(img.id) == selected_image_id:
+                    image_url = img.image_url
+                    break
+    
+    # Generate email content
+    base_url = os.environ.get('APP_BASE_URL', 'https://uthao-shipment.onrender.com')
+    tracking_path = os.environ.get('TRACKING_URL_PATH', '/tracking/details/')
+    tracking_url = f"{base_url.rstrip('/')}{tracking_path}{shipment.tracking_number}"
+    
+    status_config = {
+        'Delivered': {'color': '#22c55e', 'emoji': '✅'},
+        'Out for Delivery': {'color': '#8b5cf6', 'emoji': '🚚'},
+        'In Transit': {'color': '#f97316', 'emoji': '📦'},
+        'Picked Up': {'color': '#3b82f6', 'emoji': '📋'},
+        'Arrived at Hub': {'color': '#d97706', 'emoji': '🏭'},
+        'Customs Clearance': {'color': '#f59e0b', 'emoji': '🛃'},
+        'On Hold': {'color': '#6b7280', 'emoji': '⏸️'},
+        'Cancelled': {'color': '#ef4444', 'emoji': '❌'},
+    }
+    config = status_config.get(new_status, {'color': '#f97316', 'emoji': '📦'})
+    
+    preview_data = {
+        'subject': f'{config["emoji"]} Shipment {shipment.tracking_number} — {new_status}',
+        'tracking_number': shipment.tracking_number,  # <-- ADD THIS
+        'to': customer.email if customer else 'No email',
+        'to_name': customer.full_name if customer else 'Unknown',
+        'tracking_url': tracking_url,
+        'status': new_status,
+        'color': config['color'],
+        'emoji': config['emoji'],
+        'image_url': image_url,
+        'location': location,
+        'description': description,
+        'has_image': bool(image_url)
+    }
+    
+    return jsonify(preview_data)
+
+
+def log_email(user_id, shipment_id, email_type, subject, recipient_email, 
+              status='sent', status_sent=None, included_image=False, 
+              error_message=None):
+    """Log email to database."""
+    try:
+        log = EmailLog(
+            user_id=user_id,
+            shipment_id=shipment_id,
+            email_type=email_type,
+            subject=subject,
+            recipient_email=recipient_email,
+            status=status,
+            status_sent=status_sent,
+            included_image=included_image,
+            error_message=error_message
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        current_app.logger.error(f'Failed to log email: {e}')
+        db.session.rollback()
+
+def send_smtp_email_with_retry(to_email, to_name, subject, html_body, text_body, 
+                                image_url=None, image_cid=None, max_retries=2):
+    """Send email via SMTP with retry logic."""
+    
+    if not smtp_username or not smtp_password:
+        raise ValueError('SMTP credentials not configured')
+    
+    # Create message
+    msg = MIMEMultipart('related')
+    msg['Subject'] = subject
+    msg['From'] = f'{sender_name} <{sender_email}>'
+    msg['To'] = f'{to_name} <{to_email}>' if to_name else to_email
+    
+    # Anti-spam headers
+    msg['X-Mailer'] = 'UTHAO Logistics System v1.0'
+    msg['X-Priority'] = '3'
+    msg['Precedence'] = 'bulk'
+    msg['Auto-Submitted'] = 'auto-generated'
+    
+    # List-Unsubscribe header (improves deliverability)
+    msg['List-Unsubscribe'] = f'<mailto:unsubscribe@uthao.com?subject=unsubscribe-{to_email}>'
+    
+    # Create alternative part for text/html
+    msg_alternative = MIMEMultipart('alternative')
+    msg.attach(msg_alternative)
+    
+    # Attach plain text first (important for spam filters)
+    msg_alternative.attach(MIMEText(text_body, 'plain', 'utf-8'))
+    msg_alternative.attach(MIMEText(html_body, 'html', 'utf-8'))
+    
+    # Attach image if provided
+    if image_url and image_cid:
+        image_data = download_image_for_attachment(image_url)
+        if image_data:
+            # Detect image type
+            image_type = 'jpeg'
+            if '.png' in image_url.lower():
+                image_type = 'png'
+            elif '.gif' in image_url.lower():
+                image_type = 'gif'
+            elif '.webp' in image_url.lower():
+                image_type = 'webp'
+            
+            image = MIMEImage(image_data, _subtype=image_type)
+            image.add_header('Content-ID', f'<{image_cid}>')
+            image.add_header('Content-Disposition', 'inline', filename=f'package.{image_type}')
+            msg.attach(image)
+    
+    # Send with retry
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+                server.starttls()
+                server.login(smtp_username, smtp_password)
+                server.send_message(msg)
+            
+            current_app.logger.info(f'SMTP email sent to {to_email} (attempt {attempt + 1})')
+            return True, None
+            
+        except Exception as e:
+            last_error = str(e)
+            current_app.logger.warning(f'SMTP attempt {attempt + 1} failed: {e}')
+            if attempt < max_retries:
+                import time
+                time.sleep(2 ** attempt)  # Exponential backoff
+    
+    return False, last_error
+
+
+def get_cloudinary_image(image_public_id, width=600):
+    """Get image URL from Cloudinary or download for email attachment."""
+    try:
+        if not image_public_id:
+            return None
+            
+        # Generate optimized URL
+        url = cloudinary.CloudinaryImage(image_public_id).build_url(
+            width=width,
+            crop='scale',
+            quality='auto',
+            fetch_format='auto'
+        )
+        return url
+    except Exception as e:
+        current_app.logger.error(f'Cloudinary error: {e}')
+        return None
+
+def download_image_for_attachment(image_url):
+    """Download image from URL for email attachment."""
+    try:
+        response = requests.get(image_url, timeout=10)
+        if response.status_code == 200:
+            return response.content
+        return None
+    except Exception as e:
+        current_app.logger.error(f'Image download error: {e}')
+        return None
+
+def send_smtp_email(to_email, to_name, subject, html_body, text_body, 
+                    image_url=None, image_cid=None):
+    """Send email via SMTP with optional embedded image."""
+    
+    if not smtp_username or not smtp_password:
+        current_app.logger.error('SMTP credentials not configured')
+        raise ValueError('SMTP credentials not configured')
+    
+    # Create message
+    msg = MIMEMultipart('related')
+    msg['Subject'] = subject
+    msg['From'] = f'{sender_name} <{sender_email}>'
+    msg['To'] = f'{to_name} <{to_email}>' if to_name else to_email
+    
+    # Add headers to improve deliverability
+    msg['X-Mailer'] = 'UTHAO Logistics System'
+    msg['X-Priority'] = '3'
+    
+    # Create alternative part for text/html
+    msg_alternative = MIMEMultipart('alternative')
+    msg.attach(msg_alternative)
+    
+    # Attach plain text
+    msg_alternative.attach(MIMEText(text_body, 'plain', 'utf-8'))
+    
+    # Attach HTML
+    msg_alternative.attach(MIMEText(html_body, 'html', 'utf-8'))
+    
+    # Attach image if provided
+    if image_url and image_cid:
+        image_data = download_image_for_attachment(image_url)
+        if image_data:
+            image = MIMEImage(image_data)
+            image.add_header('Content-ID', f'<{image_cid}>')
+            image.add_header('Content-Disposition', 'inline', filename='package.jpg')
+            msg.attach(image)
+            current_app.logger.info(f'Image attached: {image_cid}')
+    
+    # Send email
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        
+        current_app.logger.info(f'SMTP email sent to {to_email}')
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f'SMTP error: {e}')
+        raise
+
 @admin_bp.route('/shipments/<int:shipment_id>')
 @login_required
 @admin_required
 def shipment_detail(shipment_id):
     """View shipment details."""
-    shipment = Shipment.query.get_or_404(shipment_id)
-    return render_template('admin/shipment_detail.html', shipment=shipment)
+    shipment = Shipment.query.options(
+        joinedload(Shipment.customer),
+        joinedload(Shipment.packages).joinedload(Package.images),
+        joinedload(Shipment.events)
+    ).get_or_404(shipment_id)
+    
+    # Collect all images from all packages for the template
+    all_images = []
+    for pkg in shipment.packages:
+        for img in pkg.images:
+            all_images.append({
+                'id': img.id,
+                'url': img.image_url,
+                'package_id': pkg.id,
+                'package_index': shipment.packages.index(pkg) + 1
+            })
+    
+    return render_template('admin/shipment_detail.html', 
+                         shipment=shipment, 
+                         available_images=all_images)
 
-@admin_bp.route('/shipments/<int:shipment_id>/update-status', methods=['POST'])
+
+@admin_bp.route('/shipments/bulk-update', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def update_shipment_status(shipment_id):
-    """Update shipment status and notify user."""
-    shipment = Shipment.query.get_or_404(shipment_id)
+def bulk_update_shipments():
+    """
+    Enhanced bulk shipment update with:
+    - Status updates with optional images
+    - Email notifications with preview
+    - Progress tracking
+    - CSV export of results
+    """
     
-    new_status = request.form.get('status')
+    if request.method == 'POST':
+        action = request.form.get('bulk_action', 'update')
+        
+        # Handle different actions
+        if action == 'preview_email':
+            return preview_bulk_email()
+        elif action == 'update':
+            return process_bulk_update()
+        elif action == 'delete':
+            return process_bulk_delete()
+        
+        flash('Invalid action specified.', 'error')
+        return redirect(url_for('admin.bulk_update_shipments'))
+    
+    # GET request - show bulk update interface
+    # Get filter parameters
+    status_filter = request.args.get('status', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_from', '').strip()
+    search = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    
+    # Build query
+    query = Shipment.query.options(
+        joinedload(Shipment.customer),
+        joinedload(Shipment.packages).joinedload(Package.images),
+        joinedload(Shipment.events)
+    )
+    
+    # Apply filters
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    if search:
+        query = query.filter(
+            db.or_(
+                Shipment.tracking_number.ilike(f'%{search}%'),
+                Shipment.origin.ilike(f'%{search}%'),
+                Shipment.destination.ilike(f'%{search}%'),
+                Shipment.customer.has(User.email.ilike(f'%{search}%'))
+            )
+        )
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, '%Y-%m-%d')
+            query = query.filter(Shipment.created_at >= from_date)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, '%Y-%m-%d')
+            query = query.filter(Shipment.created_at <= to_date + timedelta(days=1))
+        except ValueError:
+            pass
+    
+    # Get paginated results
+    shipments = query.order_by(Shipment.created_at.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    
+    # Get all status options for dropdown
+    all_statuses = db.session.query(Shipment.status).distinct().all()
+    status_options = [s[0] for s in all_statuses if s[0]]
+    
+    # Add common statuses if not present
+    common_statuses = ['Booking Created', 'Picked Up', 'In Transit', 'Arrived at Hub', 
+                       'Customs Clearance', 'Out for Delivery', 'Delivered', 
+                       'Delivery Attempted', 'On Hold', 'Cancelled']
+    for status in common_statuses:
+        if status not in status_options:
+            status_options.append(status)
+    
+    # Get statistics
+    stats = {
+        'total': Shipment.query.count(),
+        'active': Shipment.query.filter(~Shipment.status.in_(['Delivered', 'Cancelled'])).count(),
+        'delivered': Shipment.query.filter_by(status='Delivered').count(),
+        'pending_payment': Shipment.query.filter_by(status='Pending Payment').count()
+    }
+    
+    return render_template('admin/bulk_update_shipments.html',
+                         shipments=shipments,
+                         status_options=sorted(status_options),
+                         status_filter=status_filter,
+                         date_from=date_from,
+                         date_to=date_to,
+                         search=search,
+                         stats=stats)
+
+
+def preview_bulk_email():
+    """Preview email for bulk update before sending."""
+    shipment_ids = request.form.getlist('shipment_ids')
+    new_status = request.form.get('new_status', 'In Transit')
     location = request.form.get('location', '').strip()
     description = request.form.get('description', '').strip()
+    include_image = request.form.get('include_image') == 'on'
+    image_url = request.form.get('image_url', '').strip()
+    
+    if not shipment_ids:
+        return jsonify({'error': 'No shipments selected'}), 400
+    
+    # Get first shipment as sample
+    sample_shipment = Shipment.query.options(
+        joinedload(Shipment.customer)
+    ).get(shipment_ids[0])
+    
+    if not sample_shipment or not sample_shipment.customer:
+        return jsonify({'error': 'Sample shipment has no customer'}), 400
+    
+    customer = sample_shipment.customer
+    
+    # Build preview
+    base_url = os.environ.get('APP_BASE_URL', 'https://uthao.com')
+    tracking_url = f"{base_url}/tracking/details/{sample_shipment.tracking_number}"
+    
+    status_config = {
+        'Delivered': {'color': '#22c55e', 'emoji': '✅'},
+        'Out for Delivery': {'color': '#8b5cf6', 'emoji': '🚚'},
+        'In Transit': {'color': '#f97316', 'emoji': '📦'},
+        'Picked Up': {'color': '#3b82f6', 'emoji': '📋'},
+        'Arrived at Hub': {'color': '#d97706', 'emoji': '🏭'},
+        'Customs Clearance': {'color': '#f59e0b', 'emoji': '🛃'},
+        'On Hold': {'color': '#6b7280', 'emoji': '⏸️'},
+        'Cancelled': {'color': '#ef4444', 'emoji': '❌'},
+    }
+    config = status_config.get(new_status, {'color': '#f97316', 'emoji': '📦'})
+    
+    # Build HTML preview
+    image_html = f'<img src="{image_url}" style="max-width:100%;border-radius:8px;margin:16px 0;">' if include_image and image_url else ''
+    
+    html_preview = f"""
+    <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        <div style="background:{config['color']};padding:24px;text-align:center;color:#fff;">
+            <h2 style="margin:0;">Shipment Update</h2>
+            <p style="margin:8px 0 0;">Status: {new_status}</p>
+        </div>
+        <div style="padding:24px;">
+            <p>Hi <strong>{customer.full_name or 'there'}</strong>,</p>
+            <p>Your shipment <strong>#{sample_shipment.tracking_number}</strong> has been updated.</p>
+            <div style="background:#f9fafb;border:2px solid {config['color']};border-radius:8px;padding:16px;margin:16px 0;">
+                <p style="margin:0 0 8px;font-size:12px;color:#666;text-transform:uppercase;">New Status</p>
+                <span style="display:inline-block;background:{config['color']};color:#fff;padding:6px 16px;border-radius:20px;font-weight:bold;">
+                    {new_status}
+                </span>
+                {f"<p style='margin:12px 0 0;color:#666;'>📍 {location}</p>" if location else ""}
+                {f"<p style='margin:8px 0 0;color:#666;font-style:italic;'>💬 {description}</p>" if description else ""}
+            </div>
+            {image_html}
+            <p style="text-align:center;margin-top:24px;">
+                <a href="{tracking_url}" style="display:inline-block;background:{config['color']};color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">
+                    Track Shipment
+                </a>
+            </p>
+        </div>
+    </div>
+    """
+    
+    return jsonify({
+        'success': True,
+        'preview_html': html_preview,
+        'recipient_count': len(shipment_ids),
+        'sample_tracking': sample_shipment.tracking_number
+    })
+
+
+def process_bulk_update():
+    """Process the actual bulk update."""
+    shipment_ids = request.form.getlist('shipment_ids')
+    new_status = request.form.get('new_status')
+    location = request.form.get('location', '').strip()
+    description = request.form.get('description', '').strip()
+    notify_customers = request.form.get('notify_customers') == 'on'
+    include_image = request.form.get('include_image') == 'on'
+    image_url = request.form.get('image_url', '').strip()
+    
+    if not shipment_ids:
+        flash('Please select at least one shipment.', 'error')
+        return redirect(url_for('admin.bulk_update_shipments'))
     
     if not new_status:
-        flash('Status is required.', 'error')
-        return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+        flash('Please select a new status.', 'error')
+        return redirect(url_for('admin.bulk_update_shipments'))
     
-    old_status = shipment.status
-    shipment.status = new_status
+    # Process updates
+    updated_count = 0
+    email_sent_count = 0
+    email_failed_count = 0
+    failed_shipments = []
     
-    # Add event
-    event = ShipmentEvent(
-        shipment_id=shipment.id,
-        status=new_status,
-        location=location,
-        description=description or f'Status updated to {new_status}',
-        timestamp=datetime.utcnow()
-    )
-    db.session.add(event)
+    # Get all shipments with related data
+    shipments = Shipment.query.options(
+        joinedload(Shipment.customer),
+        joinedload(Shipment.packages).joinedload(Package.images)
+    ).filter(Shipment.id.in_(shipment_ids)).all()
     
-    # Create notification for user
-    notification = Notification(
-        user_id=shipment.user_id,
-        title=f'Shipment {new_status}',
-        message=f'Your shipment {shipment.tracking_number} is now {new_status}.',
-        notification_type=f'shipment_{new_status.lower().replace(" ", "_")}',
-        related_shipment_id=shipment.id,
-        link=f'/tracking?q={shipment.tracking_number}',
-        priority='high' if new_status == 'Delivered' else 'normal'
-    )
-    db.session.add(notification)
+    for shipment in shipments:
+        try:
+            old_status = shipment.status
+            
+            # Skip if status hasn't changed
+            if old_status == new_status:
+                continue
+            
+            # Update status
+            shipment.status = new_status
+            
+            # Add tracking event
+            event = ShipmentEvent(
+                shipment_id=shipment.id,
+                status=new_status,
+                location=location,
+                description=description or f'Bulk update to {new_status}',
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(event)
+            
+            # Create in-app notification
+            notification = Notification(
+                user_id=shipment.user_id,
+                title=f'Shipment {new_status}',
+                message=f'Your shipment {shipment.tracking_number} is now {new_status}.',
+                notification_type=f'shipment_{new_status.lower().replace(" ", "_")}',
+                related_shipment_id=shipment.id,
+                link=f'/tracking?q={shipment.tracking_number}',
+                priority='high' if new_status == 'Delivered' else 'normal'
+            )
+            db.session.add(notification)
+            
+            db.session.commit()
+            updated_count += 1
+            
+            # Send email if requested
+            if notify_customers and shipment.customer and shipment.customer.email:
+                try:
+                    # Find image if needed
+                    email_image_url = None
+                    email_image_cid = None
+                    
+                    if include_image:
+                        if image_url:
+                            # Use uploaded image
+                            email_image_url = image_url
+                            email_image_cid = 'bulk-image'
+                        elif shipment.packages:
+                            # Use first package image
+                            for pkg in shipment.packages:
+                                if pkg.images:
+                                    email_image_url = pkg.images[0].image_url
+                                    email_image_cid = f'pkg-img-{pkg.images[0].id}'
+                                    break
+                    
+                    _send_status_email_smtp(
+                        shipment=shipment,
+                        customer=shipment.customer,
+                        new_status=new_status,
+                        location=location,
+                        description=description,
+                        image_url=email_image_url,
+                        image_cid=email_image_cid
+                    )
+                    
+                    # Log success
+                    log_email(
+                        user_id=shipment.user_id,
+                        shipment_id=shipment.id,
+                        email_type='bulk_status_update',
+                        subject=f'Shipment {shipment.tracking_number} — {new_status}',
+                        recipient_email=shipment.customer.email,
+                        status='sent',
+                        status_sent=new_status,
+                        included_image=bool(email_image_url)
+                    )
+                    
+                    email_sent_count += 1
+                    
+                except Exception as e:
+                    current_app.logger.error(f'Email failed for {shipment.tracking_number}: {e}')
+                    email_failed_count += 1
+                    
+                    log_email(
+                        user_id=shipment.user_id,
+                        shipment_id=shipment.id,
+                        email_type='bulk_status_update',
+                        subject=f'Shipment {shipment.tracking_number} — {new_status}',
+                        recipient_email=shipment.customer.email,
+                        status='failed',
+                        status_sent=new_status,
+                        error_message=str(e)
+                    )
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Bulk update failed for shipment {shipment.id}: {e}')
+            failed_shipments.append({
+                'id': shipment.id,
+                'tracking': shipment.tracking_number,
+                'error': str(e)
+            })
     
-    db.session.commit()
+    # Build result message
+    messages = [f'Updated {updated_count} shipments.']
     
-    flash(f'Shipment status updated to {new_status}.', 'success')
-    return redirect(url_for('admin.shipment_detail', shipment_id=shipment.id))
+    if notify_customers:
+        messages.append(f'Emails sent: {email_sent_count}')
+        if email_failed_count > 0:
+            messages.append(f'Failed emails: {email_failed_count}')
+    
+    if failed_shipments:
+        messages.append(f'Failed updates: {len(failed_shipments)}')
+    
+    flash(' '.join(messages), 
+          'success' if not failed_shipments and email_failed_count == 0 else 'warning')
+    
+    # Store results in session for detailed view
+    session['bulk_update_results'] = {
+        'updated': updated_count,
+        'emails_sent': email_sent_count,
+        'emails_failed': email_failed_count,
+        'failed': failed_shipments,
+        'new_status': new_status
+    }
+    
+    return redirect(url_for('admin.bulk_update_results'))
 
+
+def process_bulk_delete():
+    """Process bulk deletion of shipments."""
+    shipment_ids = request.form.getlist('shipment_ids')
+    confirm_text = request.form.get('confirm_text', '').strip()
+    
+    if not shipment_ids:
+        flash('Please select shipments to delete.', 'error')
+        return redirect(url_for('admin.bulk_update_shipments'))
+    
+    # Require confirmation
+    if confirm_text != 'DELETE':
+        flash('Please type DELETE to confirm bulk deletion.', 'error')
+        return redirect(url_for('admin.bulk_update_shipments'))
+    
+    deleted_count = 0
+    failed_deletions = []
+    
+    for shipment_id in shipment_ids:
+        try:
+            shipment = Shipment.query.get(shipment_id)
+            if not shipment:
+                continue
+            
+            tracking = shipment.tracking_number
+            
+            # Delete related records
+            from app.models import ShipmentPayment, Notification, PackageImage, Package
+            
+            for package in shipment.packages:
+                PackageImage.query.filter_by(package_id=package.id).delete()
+            
+            Package.query.filter_by(shipment_id=shipment_id).delete()
+            ShipmentPayment.query.filter_by(shipment_id=shipment_id).delete()
+            Notification.query.filter_by(related_shipment_id=shipment_id).delete()
+            ShipmentEvent.query.filter_by(shipment_id=shipment_id).delete()
+            
+            db.session.delete(shipment)
+            db.session.commit()
+            
+            deleted_count += 1
+            current_app.logger.info(f'Bulk deleted shipment: {tracking}')
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Failed to delete shipment {shipment_id}: {e}')
+            failed_deletions.append({'id': shipment_id, 'error': str(e)})
+    
+    flash(f'Deleted {deleted_count} shipments.' + 
+          (f' Failed: {len(failed_deletions)}' if failed_deletions else ''),
+          'success' if not failed_deletions else 'warning')
+    
+    return redirect(url_for('admin.bulk_update_shipments'))
+
+
+@admin_bp.route('/shipments/bulk-update/results')
+@login_required
+@admin_required
+def bulk_update_results():
+    """Show detailed results of bulk update operation."""
+    results = session.get('bulk_update_results', {})
+    
+    if not results:
+        flash('No recent bulk update found.', 'error')
+        return redirect(url_for('admin.bulk_update_shipments'))
+    
+    # Clear from session after displaying
+    session.pop('bulk_update_results', None)
+    
+    return render_template('admin/bulk_update_results.html', results=results)
+
+
+def _send_status_email_smtp(shipment, customer, new_status, location, description, 
+                            image_url=None, image_cid=None):
+    """Send shipment status update email via SMTP with optional image."""
+    
+    # Get URLs from environment
+    base_url = os.environ.get('APP_BASE_URL', 'https://uthao.com')
+    tracking_path = os.environ.get('TRACKING_URL_PATH', '/tracking/details/')
+    tracking_url = f"{base_url.rstrip('/')}{tracking_path}{shipment.tracking_number}"
+    
+    # Status colors and emojis
+    status_config = {
+        'Delivered': {'color': '#22c55e', 'emoji': '✅'},
+        'Out for Delivery': {'color': '#8b5cf6', 'emoji': '🚚'},
+        'In Transit': {'color': '#f97316', 'emoji': '📦'},
+        'Picked Up': {'color': '#3b82f6', 'emoji': '📋'},
+        'Arrived at Hub': {'color': '#d97706', 'emoji': '🏭'},
+        'Customs Clearance': {'color': '#f59e0b', 'emoji': '🛃'},
+        'On Hold': {'color': '#6b7280', 'emoji': '⏸️'},
+        'Cancelled': {'color': '#ef4444', 'emoji': '❌'},
+    }
+    config = status_config.get(new_status, {'color': '#f97316', 'emoji': '📦'})
+    color = config['color']
+    emoji = config['emoji']
+
+    # Build location and ETA strings
+    location_html = f"<p style='margin:12px 0 0;color:#6b7280;font-size:14px;'>📍 <strong>Location:</strong> {location}</p>" if location else ""
+    eta_html = f"<p style='margin:8px 0 0;color:#6b7280;font-size:14px;'>📅 <strong>Est. Delivery:</strong> {shipment.estimated_delivery.strftime('%d %b %Y')}</p>" if shipment.estimated_delivery else ""
+    desc_html = f"<p style='margin:12px 0 0;color:#6b7280;font-size:14px;font-style:italic;'>💬 {description}</p>" if description else ""
+
+    # Image HTML if included
+    image_html = ""
+    if image_url and image_cid:
+        image_html = f"""
+        <tr>
+            <td style="padding:0 24px 20px;">
+                <p style="margin:0 0 10px;font-size:13px;color:#6b7280;">📷 Package Photo:</p>
+                <img src="cid:{image_cid}" alt="Package" style="max-width:100%;height:auto;border-radius:8px;border:1px solid #e5e7eb;max-height:400px;object-fit:cover;">
+            </td>
+        </tr>
+        """
+
+    # PLAIN TEXT version
+    text_body = f"""{emoji} Shipment Update - {new_status}
+
+        Hi {customer.full_name or 'there'},
+
+        Your shipment {shipment.tracking_number} has been updated.
+
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        NEW STATUS: {new_status}
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        {f"📍 Location: {location}" if location else ""}
+        {f"📅 Est. Delivery: {shipment.estimated_delivery.strftime('%d %b %Y')}" if shipment.estimated_delivery else ""}
+        From: {shipment.origin}
+        To: {shipment.destination}
+
+        {f"Note: {description}" if description else ""}
+
+        {f"📷 Package photo included in this email." if image_url else ""}
+
+        Track your shipment:
+        {tracking_url}
+
+        Need help? Contact support@uthao.com
+
+        ---
+        UTHAO Logistics
+        {base_url}
+    """
+
+    # HTML version
+    html_body = f"""<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Shipment Update - {shipment.tracking_number}</title>
+        </head>
+        <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td align="center" style="padding:20px 10px;">
+                        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+                            
+                            <!-- Header -->
+                            <tr>
+                                <td style="background:{color};padding:32px 24px;text-align:center;">
+                                    <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:-0.5px;">{emoji} Shipment Update</h1>
+                                    <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">Your shipment status has changed</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Body -->
+                            <tr>
+                                <td style="padding:28px 24px 20px;">
+                                    <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                                        Hi <strong>{customer.full_name or 'there'}</strong>,
+                                    </p>
+                                    
+                                    <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+                                        Your shipment <strong style="font-family:monospace;background:#f3f4f6;padding:3px 10px;border-radius:6px;font-size:14px;">{shipment.tracking_number}</strong> has been updated to:
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <!-- Status Box -->
+                            <tr>
+                                <td style="padding:0 24px 20px;">
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f9fafb;border:2px solid {color};border-radius:12px;">
+                                        <tr>
+                                            <td style="padding:20px;">
+                                                <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Current Status</p>
+                                                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                                    <tr>
+                                                        <td style="background:{color};color:#ffffff;padding:8px 20px;border-radius:20px;font-size:16px;font-weight:700;">
+                                                            {new_status}
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                                {f"<p style='margin:12px 0 0;color:#6b7280;font-size:14px;'>📍 <strong>Location:</strong> {location}</p>" if location else ""}
+                                                {f"<p style='margin:8px 0 0;color:#6b7280;font-size:14px;'>📅 <strong>Est. Delivery:</strong> {shipment.estimated_delivery.strftime('%d %b %Y')}</p>" if shipment.estimated_delivery else ""}
+                                                {f"<p style='margin:12px 0 0;color:#6b7280;font-size:14px;font-style:italic;'>💬 {description}</p>" if description else ""}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <!-- Package Image (if included) -->
+                            {image_html}
+
+                            <!-- Route -->
+                            <tr>
+                                <td style="padding:0 24px 24px;">
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fff7ed;border:1px solid #ffedd5;border-radius:10px;">
+                                        <tr>
+                                            <td style="padding:16px 20px;">
+                                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                                    <tr>
+                                                        <td style="width:40%;">
+                                                            <p style="margin:0;font-size:11px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">From</p>
+                                                            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#111827;line-height:1.4;">{shipment.origin}</p>
+                                                        </td>
+                                                        <td style="width:20%;text-align:center;vertical-align:middle;">
+                                                            <div style="color:#f97316;font-size:24px;">→</div>
+                                                        </td>
+                                                        <td style="width:40%;text-align:right;">
+                                                            <p style="margin:0;font-size:11px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">To</p>
+                                                            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#111827;line-height:1.4;">{shipment.destination}</p>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+
+                            <!-- CTA Button -->
+                            <tr>
+                                <td style="padding:0 24px 28px;text-align:center;">
+                                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
+                                        <tr>
+                                            <td style="background:{color};border-radius:8px;text-align:center;mso-padding-alt:12px 28px;">
+                                                <a href="{tracking_url}" 
+                                                style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px;">
+                                                    Track Your Shipment
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;">
+                                        Or visit: <a href="{tracking_url}" style="color:#6b7280;text-decoration:underline;">{tracking_url}</a>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <!-- Footer -->
+                            <tr>
+                                <td style="padding:24px;border-top:1px solid #f3f4f6;background:#f9fafb;text-align:center;">
+                                    <p style="margin:0 0 8px;color:#9ca3af;font-size:13px;">
+                                        Need help? Contact <a href="mailto:support@uthao.com" style="color:#f97316;text-decoration:none;">support@uthao.com</a>
+                                    </p>
+                                    <p style="margin:0;color:#9ca3af;font-size:12px;">
+                                        © {datetime.utcnow().year} UTHAO Logistics · <a href="{base_url}" style="color:#9ca3af;text-decoration:underline;">{base_url.replace('https://', '')}</a>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>"""
+
+    # Send via SMTP
+    send_smtp_email(
+        to_email=customer.email,
+        to_name=customer.full_name,
+        subject=f'{emoji} Shipment {shipment.tracking_number} — {new_status}',
+        html_body=html_body,
+        text_body=text_body,
+        image_url=image_url,
+        image_cid=image_cid
+    )
+
+
+
+def _send_status_email(shipment, new_status, location, description):
+    """Send shipment status update email via Mailjet."""
+    import os
+    from mailjet_rest import Client
+
+    api_key    = os.environ.get('MAILJET_API_KEY')
+    api_secret = os.environ.get('MAILJET_API_SECRET')
+
+    print(f'--- Mailjet email attempt ---')
+    print(f'API key set: {bool(api_key)}')
+    print(f'API secret set: {bool(api_secret)}')
+    print(f'Sending to: {shipment.customer.email}')
+    print(f'From: {os.environ.get("MAIL_DEFAULT_SENDER")}')
+
+    if not api_key or not api_secret:
+        print('Mailjet credentials not set — skipping email.')
+        return
+
+    # Status colour for the email banner
+    status_colors = {
+        'Delivered':          '#22c55e',
+        'Out for Delivery':   '#8b5cf6',
+        'In Transit':         '#f97316',
+        'Picked Up':          '#3b82f6',
+        'Customs Clearance':  '#f59e0b',
+        'On Hold':            '#6b7280',
+        'Cancelled':          '#ef4444',
+    }
+    color = status_colors.get(new_status, '#f97316')
+
+    eta_line = ''
+    if shipment.estimated_delivery:
+        eta_line = f"<p style='margin:8px 0;color:#6b7280;font-size:14px;'>📅 Estimated Delivery: <strong>{shipment.estimated_delivery.strftime('%d %b %Y')}</strong></p>"
+
+    location_line = ''
+    if location:
+        location_line = f"<p style='margin:8px 0;color:#6b7280;font-size:14px;'>📍 Current Location: <strong>{location}</strong></p>"
+
+    html_body = f"""
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;">
+      
+      <!-- Header -->
+      <div style="background:{color};padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;">
+          Shipment Update
+        </h1>
+        <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">
+          Your shipment status has changed
+        </p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
+        
+        <p style="margin:0 0 20px;color:#374151;font-size:15px;">
+          Hi <strong>{shipment.customer.full_name or 'there'}</strong>,
+        </p>
+
+        <p style="margin:0 0 20px;color:#374151;font-size:15px;">
+          Your shipment <strong style="font-family:monospace;background:#f3f4f6;padding:2px 8px;border-radius:4px;">{shipment.tracking_number}</strong> has been updated.
+        </p>
+
+        <!-- Status badge -->
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+          <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">New Status</p>
+          <div style="display:inline-block;background:{color};color:#ffffff;padding:6px 16px;border-radius:20px;font-size:14px;font-weight:700;">
+            {new_status}
+          </div>
+          {location_line}
+          {eta_line}
+          {f"<p style='margin:8px 0 0;color:#6b7280;font-size:14px;'>💬 {description}</p>" if description else ''}
+        </div>
+
+        <!-- Route -->
+        <div style="display:flex;justify-content:space-between;background:#fff7ed;border:1px solid #ffedd5;border-radius:10px;padding:14px 20px;margin-bottom:24px;">
+          <div>
+            <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;margin-bottom:2px;">From</div>
+            <div style="font-size:14px;font-weight:700;color:#111827;">{shipment.origin}</div>
+          </div>
+          <div style="color:#f97316;font-size:18px;align-self:center;">→</div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;margin-bottom:2px;">To</div>
+            <div style="font-size:14px;font-weight:700;color:#111827;">{shipment.destination}</div>
+          </div>
+        </div>
+
+        <p style="margin:0 0 24px;color:#6b7280;font-size:13px;line-height:1.6;">
+          You can track your shipment in real time using the button below.
+        </p>
+
+        <!-- CTA -->
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="https://uthao.com/tracking/details/{shipment.tracking_number}"
+             style="display:inline-block;background:{color};color:#ffffff;padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;text-decoration:none;">
+            Track Shipment
+          </a>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #f3f4f6;margin:20px 0;">
+        <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+          UTHAO Logistics · If you have questions, contact our support team.
+        </p>
+      </div>
+    </div>
+    """
+
+    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+
+    data = {
+        'Messages': [{
+            'From': {
+                'Email': os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@uthao.com'),
+                'Name':  'UTHAO Logistics'
+            },
+            'To': [{
+                'Email': shipment.customer.email,
+                'Name':  shipment.customer.full_name or shipment.customer.email
+            }],
+            'Subject': f'Shipment {shipment.tracking_number} — {new_status}',
+            'HTMLPart': html_body,
+        }]
+    }
+
+    try:
+        result = mailjet.send.create(data=data)
+        if result.status_code == 200:
+            current_app.logger.info(f'Status email sent to {shipment.customer.email}')
+        else:
+            current_app.logger.error(f'Mailjet error {result.status_code}: {result.json()}')
+    except Exception as e:
+        current_app.logger.error(f'Mailjet exception: {e}')
+
+
+@admin_bp.route('/bulk-email', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def bulk_email():
+    """Send bulk emails to multiple users with Cloudinary image upload."""
+
+    if request.method == 'POST':
+        # Check if this is an AJAX image upload request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        has_image_only = request.files.get('image_file') and not request.form.get('subject')
+        
+        # Handle AJAX image upload separately
+        if is_ajax or (request.files.get('image_file') and has_image_only):
+            return handle_image_upload()
+        
+        # Regular form submission - send emails
+        user_ids = request.form.getlist('user_ids')
+        subject = request.form.get('subject', '').strip()
+        message = request.form.get('message', '').strip()
+        email_type = request.form.get('email_type', 'general')
+        image_url = request.form.get('uploaded_image_url', '').strip()
+        
+        if not user_ids:
+            flash('Please select at least one user.', 'error')
+            return redirect(url_for('admin.bulk_email'))
+        
+        if not subject or not message:
+            flash('Subject and message are required.', 'error')
+            return redirect(url_for('admin.bulk_email'))
+
+
+        users = User.query.filter(User.id.in_(user_ids)).all()
+        sent_count = 0
+        failed_count = 0
+        
+        for user in users:
+            if not user.email:
+                continue
+                
+            try:
+                html_body = build_bulk_email_html(user, subject, message, image_url)
+                text_body = f"Hi {user.full_name or 'there'},\n\n{message}\n\n---\nUTHAO Logistics"
+                
+                send_smtp_email(
+                    to_email=user.email,
+                    to_name=user.full_name,
+                    subject=subject,
+                    html_body=html_body,
+                    text_body=text_body,
+                    image_url=image_url if image_url else None,
+                    image_cid='bulk-email-image' if image_url else None
+                )
+                
+                log_email(
+                    user_id=user.id,
+                    shipment_id=None,
+                    email_type=email_type,
+                    subject=subject,
+                    recipient_email=user.email,
+                    status='sent',
+                    included_image=bool(image_url)
+                )
+                
+                sent_count += 1
+                
+            except Exception as e:
+                current_app.logger.error(f'Bulk email failed for {user.email}: {e}')
+                log_email(
+                    user_id=user.id,
+                    shipment_id=None,
+                    email_type=email_type,
+                    subject=subject,
+                    recipient_email=user.email,
+                    status='failed',
+                    error_message=str(e)
+                )
+                failed_count += 1
+        
+        flash(f'Emails sent: {sent_count}, Failed: {failed_count}', 
+              'success' if failed_count == 0 else 'warning')
+        return redirect(url_for('admin.bulk_email'))
+    
+    # GET request
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('q', '').strip()
+    plan_filter = request.args.get('plan', '').strip()
+    
+    query = User.query.filter_by(is_active=True)
+    
+    if search:
+        query = query.filter(
+            db.or_(
+                User.email.ilike(f'%{search}%'),
+                User.full_name.ilike(f'%{search}%')
+            )
+        )
+    
+    if plan_filter:
+        query = query.join(Subscription).filter(Subscription.plan_id == plan_filter)
+    
+    users = query.order_by(User.id.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    
+    return render_template('admin/bulk_email.html', 
+                         users=users, 
+                         plans=PLANS,
+                         search=search,
+                         plan_filter=plan_filter,
+                         cloudinary_cloud=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+                         cloudinary_preset=os.environ.get('CLOUDINARY_UPLOAD_PRESET', 'bulk_emails'))
+
+
+
+@admin_bp.route('/bulk-email/upload-image', methods=['POST'])
+@login_required
+@admin_required
+def upload_bulk_email_image():
+    """Dedicated endpoint for image uploads."""
+    return handle_image_upload()
+
+
+def handle_image_upload():
+    """Handle Cloudinary image upload via AJAX."""
+    try:
+        if 'image_file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['image_file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Upload to Cloudinary
+        import cloudinary.uploader
+        
+        upload_result = cloudinary.uploader.upload(
+            file,
+            folder='bulk_emails',
+            resource_type='auto',
+            transformation=[
+                {'width': 800, 'crop': 'limit'},
+                {'quality': 'auto:good'}
+            ]
+        )
+        
+        return jsonify({
+            'success': True,
+            'url': upload_result['secure_url'],
+            'public_id': upload_result['public_id'],
+            'thumbnail': cloudinary.CloudinaryImage(upload_result['public_id']).build_url(
+                width=200, crop='fill'
+            )
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Image upload failed: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
+def build_bulk_email_html(user, subject, message, image_url=None):
+    """Build HTML email template."""
+    message_html = message.replace('\n', '<br>')
+    
+    image_section = f'''
+    <tr>
+        <td style="padding:0 24px 24px;">
+            <img src="{image_url}" alt="Email Image" 
+                 style="max-width:100%;height:auto;border-radius:8px;border:1px solid #e5e7eb;">
+        </td>
+    </tr>
+    ''' if image_url else ''
+    
+    return f"""<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{subject}</title>
+    </head>
+    <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+                <td align="center" style="padding:20px 10px;">
+                    <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                        <tr>
+                            <td style="background:linear-gradient(135deg, #f97316 0%, #ea580c 100%);padding:32px 24px;text-align:center;">
+                                <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:800;">UTHAO Logistics</h1>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:28px 24px 20px;">
+                                <p style="margin:0 0 20px;color:#374151;font-size:16px;line-height:1.6;">
+                                    Hi <strong>{user.full_name or 'there'}</strong>,
+                                </p>
+                                <div style="color:#374151;font-size:15px;line-height:1.6;">
+                                    {message_html}
+                                </div>
+                            </td>
+                        </tr>
+                        {image_section}
+                        <tr>
+                            <td style="padding:24px;border-top:1px solid #f3f4f6;background:#f9fafb;text-align:center;">
+                                <p style="margin:0 0 8px;color:#9ca3af;font-size:13px;">
+                                    Need help? Contact <a href="mailto:support@uthao.com" style="color:#f97316;text-decoration:none;">support@uthao.com</a>
+                                </p>
+                                <p style="margin:0;color:#9ca3af;font-size:12px;">
+                                    © {datetime.utcnow().year} UTHAO Logistics
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>"""
+
+
+# Hi there! Thanks for choosing UTHAO. We're excited to help with your shipping needs. Track your packages easily at our website. Questions? Reply to this email.
+
+
+@admin_bp.route('/email-analytics')
+@login_required
+@admin_required
+def email_analytics():
+    """View email sending statistics."""
+    
+    from datetime import datetime, timedelta
+    
+    # Date range
+    days = request.args.get('days', 30, type=int)
+    since = datetime.utcnow() - timedelta(days=days)
+    
+    # Stats
+    total_sent = EmailLog.query.filter(EmailLog.created_at >= since).count()
+    successful = EmailLog.query.filter(
+        EmailLog.created_at >= since,
+        EmailLog.status == 'sent'
+    ).count()
+    failed = EmailLog.query.filter(
+        EmailLog.created_at >= since,
+        EmailLog.status == 'failed'
+    ).count()
+    
+    # By type
+    by_type = db.session.query(
+        EmailLog.email_type,
+        db.func.count(EmailLog.id)
+    ).filter(EmailLog.created_at >= since).group_by(EmailLog.email_type).all()
+    
+    # Recent emails
+    recent_emails = EmailLog.query.order_by(
+        EmailLog.created_at.desc()
+    ).limit(50).all()
+    
+    # Top recipients (for monitoring)
+    top_recipients = db.session.query(
+        EmailLog.recipient_email,
+        db.func.count(EmailLog.id)
+    ).filter(EmailLog.created_at >= since).group_by(
+        EmailLog.recipient_email
+    ).order_by(db.func.count(EmailLog.id).desc()).limit(10).all()
+    
+    return render_template('admin/email_analytics.html',
+                         stats={
+                             'total': total_sent,
+                             'successful': successful,
+                             'failed': failed,
+                             'success_rate': (successful / total_sent * 100) if total_sent > 0 else 0
+                         },
+                         by_type=dict(by_type),
+                         recent_emails=recent_emails,
+                         top_recipients=top_recipients,
+                         days=days)
+
+
+
+@admin_bp.route('/shipments/<int:shipment_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_shipment(shipment_id):
+    shipment = Shipment.query.get_or_404(shipment_id)
+    tracking = shipment.tracking_number
+
+    from app.models import ShipmentPayment, Notification, PackageImage, Package
+
+    # Delete package images first (deepest level)
+    for package in shipment.packages:
+        PackageImage.query.filter_by(package_id=package.id).delete()
+
+    # Delete everything else linked to shipment
+    Package.query.filter_by(shipment_id=shipment_id).delete()
+    ShipmentPayment.query.filter_by(shipment_id=shipment_id).delete()
+    Notification.query.filter_by(related_shipment_id=shipment_id).delete()
+
+    db.session.delete(shipment)
+    db.session.commit()
+
+    flash(f'Shipment {tracking} has been permanently deleted.', 'success')
+    return redirect(url_for('admin.shipments'))
 # ────────────────────────────────────────────
 # Payment Management
 # ────────────────────────────────────────────
@@ -781,6 +2232,7 @@ def reply_ticket(ticket_id):
     
     flash('Reply sent successfully.', 'success')
     return redirect(url_for('admin.ticket_detail', ticket_id=ticket.id))
+
 
 # ────────────────────────────────────────────
 # Settings & Configuration

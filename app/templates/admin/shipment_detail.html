@@ -1,4 +1,4 @@
-<!-- shipment_detail --> 
+<!-- shipment_detail.html -->
 {% extends "admin/base_admin.html" %}
 {% macro status_class(s) %}{% if 'Created' in s or 'Booking' in s %}sp-booking{% elif 'Transit' in s or 'Picked' in s %}sp-transit{% elif 'Customs' in s or 'Hold' in s or 'Attempted' in s %}sp-customs{% elif 'Delivery' in s and 'Attempted' not in s %}sp-delivery{% elif s == 'Delivered' %}sp-delivered{% elif s == 'Cancelled' %}sp-cancelled{% else %}sp-default{% endif %}{% endmacro %}
 {% block title %}Shipment {{ shipment.tracking_number }}{% endblock %}
@@ -312,454 +312,763 @@
     padding: 2px 6px; border-radius: 4px; transition: background .15s;
   }
   .quick-edit-btn:hover { background: var(--orange-lt); }
+
+  /* ── Image Selector Styles ── */
+  .image-selector-container {
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 12px;
+    background: var(--surface2);
+  }
+  .image-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .image-option {
+    position: relative;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  .image-option:hover {
+    border-color: var(--orange);
+  }
+  .image-option.selected {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.2);
+  }
+  .image-option input[type="radio"] {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1;
+  }
+  .image-option img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+  }
+  .image-option .pkg-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 10px;
+    padding: 4px;
+    text-align: center;
+  }
 </style>
 {% endblock %}
 
 {% block main_content %}
-<div class="sd-wrap">
-  <div class="sd-toasts" id="toastContainer"></div>
+  <div class="sd-wrap">
+    <div class="sd-toasts" id="toastContainer"></div>
 
-  <!-- Breadcrumb -->
-  <div class="sd-bc">
-    <a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i></a>
-    <span class="sep"><i class="fas fa-chevron-right"></i></span>
-    <a href="{{ url_for('admin.shipments') }}">Shipments</a>
-    <span class="sep"><i class="fas fa-chevron-right"></i></span>
-    <span>{{ shipment.tracking_number }}</span>
-  </div>
-
-  <!-- Header -->
-  <div class="sd-header">
-    <div class="sd-header-left">
-      <h1>
-        <span style="font-family:'Courier New',monospace;font-size:18px;background:var(--surface3);padding:3px 10px;border-radius:6px;">{{ shipment.tracking_number }}</span>
-        <span class="status-pill {{ status_class(shipment.status) }}">{{ shipment.status }}</span>
-      </h1>
-      <p>
-        Created {{ shipment.created_at.strftime('%d %b %Y, %H:%M') }} UTC
-        &nbsp;·&nbsp;
-        {{ shipment.service_level or 'Standard' }} Service
-        {% if shipment.estimated_delivery %}
-          &nbsp;·&nbsp; ETA {{ shipment.estimated_delivery.strftime('%d %b %Y') }}
-        {% endif %}
-      </p>
+    <!-- Breadcrumb -->
+    <div class="sd-bc">
+      <a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i></a>
+      <span class="sep"><i class="fas fa-chevron-right"></i></span>
+      <a href="{{ url_for('admin.shipments') }}">Shipments</a>
+      <span class="sep"><i class="fas fa-chevron-right"></i></span>
+      <span>{{ shipment.tracking_number }}</span>
     </div>
-    <div class="sd-header-actions">
-      <a href="{{ url_for('admin.shipments') }}" class="btn btn-ghost btn-sm">
-        <i class="fas fa-arrow-left"></i> Back
-      </a>
-      <button class="btn btn-ghost btn-sm" onclick="window.print()">
-        <i class="fas fa-print"></i> Print
-      </button>
-      <a href="{{ url_for('admin.user_detail', user_id=shipment.user_id) }}" class="btn btn-ghost btn-sm">
-        <i class="fas fa-user"></i> View Customer
-      </a>
-    </div>
-  </div>
 
-  <!-- Stats strip -->
-  <div class="sd-stats">
-    <div class="sd-stat accent">
-      <div class="sd-stat-lbl">Shipment Cost</div>
-      <div class="sd-stat-val">${{ '%.2f'|format(shipment.cost or 0) }}</div>
-      <div class="sd-stat-sub">{{ shipment.service_level or 'Standard' }}</div>
-    </div>
-    <div class="sd-stat">
-      <div class="sd-stat-lbl">Total Weight</div>
-      <div class="sd-stat-val">{{ shipment.weight or 0 }} <span style="font-size:13px;font-weight:500;color:var(--text3);">kg</span></div>
-      <div class="sd-stat-sub">{{ shipment.packages|length }} package{{ 's' if shipment.packages|length != 1 }}</div>
-    </div>
-    <div class="sd-stat">
-      <div class="sd-stat-lbl">Events Logged</div>
-      <div class="sd-stat-val">{{ shipment.events|length }}</div>
-      <div class="sd-stat-sub">Tracking updates</div>
-    </div>
-    <div class="sd-stat">
-      <div class="sd-stat-lbl">Est. Delivery</div>
-      <div class="sd-stat-val" style="font-size:15px;">
-        {{ shipment.estimated_delivery.strftime('%d %b') if shipment.estimated_delivery else '—' }}
-      </div>
-      <div class="sd-stat-sub">{{ shipment.estimated_delivery.strftime('%Y') if shipment.estimated_delivery else 'Not set' }}</div>
-    </div>
-  </div>
-
-  <!-- Main grid -->
-  <div class="sd-grid">
-
-    <!-- LEFT COLUMN -->
-    <div>
-
-      <!-- Route card -->
-      <div class="sd-card">
-        <div class="route-banner">
-          <div class="route-city">
-            <div class="city-name">{{ shipment.origin.split(',')[0] if ',' in shipment.origin else shipment.origin }}</div>
-            <div class="city-sub"><i class="fas fa-map-marker-alt" style="color:var(--orange);margin-right:4px;"></i>{{ shipment.origin }}</div>
-          </div>
-          <div class="route-arrow">
-            <i class="fas fa-long-arrow-alt-right"></i>
-            <span class="svc">{{ shipment.service_level or 'STD' }}</span>
-          </div>
-          <div class="route-city" style="text-align:right;">
-            <div class="city-name">{{ shipment.destination.split(',')[0] if ',' in shipment.destination else shipment.destination }}</div>
-            <div class="city-sub">{{ shipment.destination }}&nbsp;<i class="fas fa-map-marker-alt" style="color:var(--green);margin-left:4px;"></i></div>
-          </div>
-        </div>
-        <div class="sd-card-body">
-          <div class="info-grid">
-            <div class="info-item">
-              <div class="lbl">Sender</div>
-              <div class="val">{{ shipment.sender_name or '—' }}</div>
-            </div>
-            <div class="info-item">
-              <div class="lbl">Sender Phone</div>
-              <div class="val">{{ shipment.sender_phone or '—' }}</div>
-            </div>
-            <div class="info-item">
-              <div class="lbl">Commodity</div>
-              <div class="val">{{ shipment.commodity or 'General Cargo' }}</div>
-            </div>
-            <div class="info-item">
-              <div class="lbl">Dimensions</div>
-              <div class="val">{{ shipment.dimensions or '—' }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Receiver -->
-      <div class="sd-card">
-        <div class="sd-card-head"><h3><i class="fas fa-user-check"></i> Receiver Details</h3></div>
-        <div class="sd-card-body" style="padding:14px 20px;">
-          <div class="receiver-row">
-            <div class="receiver-icon"><i class="fas fa-user"></i></div>
-            <div class="receiver-info">
-              <div class="rname">{{ shipment.receiver_name or 'Not provided' }}</div>
-              <div class="rsub">Recipient Name</div>
-            </div>
-          </div>
-          {% if shipment.receiver_company %}
-          <div class="receiver-row">
-            <div class="receiver-icon"><i class="fas fa-building"></i></div>
-            <div class="receiver-info">
-              <div class="rname">{{ shipment.receiver_company }}</div>
-              <div class="rsub">Company</div>
-            </div>
-          </div>
+    <!-- Header -->
+    <div class="sd-header">
+      <div class="sd-header-left">
+        <h1>
+          <span style="font-family:'Courier New',monospace;font-size:18px;background:var(--surface3);padding:3px 10px;border-radius:6px;">{{ shipment.tracking_number }}</span>
+          <span class="status-pill {{ status_class(shipment.status) }}">{{ shipment.status }}</span>
+        </h1>
+        <p>
+          Created {{ shipment.created_at.strftime('%d %b %Y, %H:%M') }} UTC
+          &nbsp;·&nbsp;
+          {{ shipment.service_level or 'Standard' }} Service
+          {% if shipment.estimated_delivery %}
+            &nbsp;·&nbsp; ETA {{ shipment.estimated_delivery.strftime('%d %b %Y') }}
           {% endif %}
-          <div class="receiver-row">
-            <div class="receiver-icon"><i class="fas fa-phone"></i></div>
-            <div class="receiver-info">
-              <div class="rname">{{ shipment.receiver_phone or 'Not provided' }}</div>
-              <div class="rsub">Phone Number</div>
+        </p>
+      </div>
+      <div class="sd-header-actions">
+        <a href="{{ url_for('admin.shipments') }}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-arrow-left"></i> Back
+        </a>
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">
+          <i class="fas fa-print"></i> Print
+        </button>
+        <a href="{{ url_for('admin.user_detail', user_id=shipment.user_id) }}" class="btn btn-ghost btn-sm">
+          <i class="fas fa-user"></i> View Customer
+        </a>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="sd-stats">
+      <div class="sd-stat accent">
+        <div class="sd-stat-lbl">Shipment Cost</div>
+        <div class="sd-stat-val">${{ '%.2f'|format(shipment.cost or 0) }}</div>
+        <div class="sd-stat-sub">{{ shipment.service_level or 'Standard' }}</div>
+      </div>
+      <div class="sd-stat">
+        <div class="sd-stat-lbl">Total Weight</div>
+        <div class="sd-stat-val">{{ shipment.weight or 0 }} <span style="font-size:13px;font-weight:500;color:var(--text3);">kg</span></div>
+        <div class="sd-stat-sub">{{ shipment.packages|length }} package{{ 's' if shipment.packages|length != 1 }}</div>
+      </div>
+      <div class="sd-stat">
+        <div class="sd-stat-lbl">Events Logged</div>
+        <div class="sd-stat-val">{{ shipment.events|length }}</div>
+        <div class="sd-stat-sub">Tracking updates</div>
+      </div>
+      <div class="sd-stat">
+        <div class="sd-stat-lbl">Est. Delivery</div>
+        <div class="sd-stat-val" style="font-size:15px;">
+          {{ shipment.estimated_delivery.strftime('%d %b') if shipment.estimated_delivery else '—' }}
+        </div>
+        <div class="sd-stat-sub">{{ shipment.estimated_delivery.strftime('%Y') if shipment.estimated_delivery else 'Not set' }}</div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="sd-grid">
+
+      <!-- LEFT COLUMN -->
+      <div>
+
+        <!-- Route card -->
+        <div class="sd-card">
+          <div class="route-banner">
+            <div class="route-city">
+              <div class="city-name">{{ shipment.origin.split(',')[0] if ',' in shipment.origin else shipment.origin }}</div>
+              <div class="city-sub"><i class="fas fa-map-marker-alt" style="color:var(--orange);margin-right:4px;"></i>{{ shipment.origin }}</div>
+            </div>
+            <div class="route-arrow">
+              <i class="fas fa-long-arrow-alt-right"></i>
+              <span class="svc">{{ shipment.service_level or 'STD' }}</span>
+            </div>
+            <div class="route-city" style="text-align:right;">
+              <div class="city-name">{{ shipment.destination.split(',')[0] if ',' in shipment.destination else shipment.destination }}</div>
+              <div class="city-sub">{{ shipment.destination }}&nbsp;<i class="fas fa-map-marker-alt" style="color:var(--green);margin-left:4px;"></i></div>
             </div>
           </div>
-          <div class="receiver-row">
-            <div class="receiver-icon"><i class="fas fa-map-pin"></i></div>
-            <div class="receiver-info">
-              <div class="rname">{{ shipment.destination }}</div>
-              <div class="rsub">Delivery Address</div>
+          <div class="sd-card-body">
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="lbl">Sender</div>
+                <div class="val">{{ shipment.sender_name or '—' }}</div>
+              </div>
+              <div class="info-item">
+                <div class="lbl">Sender Phone</div>
+                <div class="val">{{ shipment.sender_phone or '—' }}</div>
+              </div>
+              <div class="info-item">
+                <div class="lbl">Commodity</div>
+                <div class="val">{{ shipment.commodity or 'General Cargo' }}</div>
+              </div>
+              <div class="info-item">
+                <div class="lbl">Dimensions</div>
+                <div class="val">{{ shipment.dimensions or '—' }}</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Packages -->
-      <div class="sd-card">
-        <div class="sd-card-head">
-          <h3><i class="fas fa-boxes"></i> Packages ({{ shipment.packages|length }})</h3>
-        </div>
-        <div class="sd-card-body">
-          {% if shipment.packages %}
-            {% for pkg in shipment.packages %}
-            <div class="pkg-card">
-              <div class="pkg-head">
-                <div class="pkg-title">
-                  <i class="fas fa-box" style="color:var(--orange);"></i>
-                  Package #{{ loop.index }}
-                  {% if pkg.description %}<span style="font-weight:400;color:var(--text3);font-size:12px;">— {{ pkg.description }}</span>{% endif %}
-                </div>
-                <div class="pkg-tags">
-                  {% if pkg.fragile %}<span class="pkg-tag fragile"><i class="fas fa-exclamation-triangle"></i> Fragile</span>{% endif %}
-                  {% if pkg.stackable %}<span class="pkg-tag stackable"><i class="fas fa-layer-group"></i> Stackable</span>{% endif %}
-                </div>
+        <!-- Receiver -->
+        <div class="sd-card">
+          <div class="sd-card-head"><h3><i class="fas fa-user-check"></i> Receiver Details</h3></div>
+          <div class="sd-card-body" style="padding:14px 20px;">
+            <div class="receiver-row">
+              <div class="receiver-icon"><i class="fas fa-user"></i></div>
+              <div class="receiver-info">
+                <div class="rname">{{ shipment.receiver_name or 'Not provided' }}</div>
+                <div class="rsub">Recipient Name</div>
               </div>
-              <div class="pkg-specs">
-                <div class="pkg-spec"><div class="lbl">Length</div><div class="val">{{ pkg.length or '—' }} cm</div></div>
-                <div class="pkg-spec"><div class="lbl">Width</div><div class="val">{{ pkg.width or '—' }} cm</div></div>
-                <div class="pkg-spec"><div class="lbl">Height</div><div class="val">{{ pkg.height or '—' }} cm</div></div>
-                <div class="pkg-spec"><div class="lbl">Weight</div><div class="val">{{ pkg.weight or '—' }} kg</div></div>
-              </div>
-              {% if pkg.length and pkg.width and pkg.height %}
-              <div style="margin-top:8px;font-size:12px;color:var(--text4);">
-                <i class="fas fa-cube" style="margin-right:4px;"></i>
-                Volume: {{ '%.4f'|format(pkg.volume_cbm) }} CBM
-              </div>
-              {% endif %}
             </div>
-            {% endfor %}
-          {% else %}
-            <div style="text-align:center;padding:20px;color:var(--text4);font-size:14px;">
-              <i class="fas fa-box-open" style="font-size:28px;margin-bottom:8px;display:block;"></i>
-              No package details recorded.
+            {% if shipment.receiver_company %}
+            <div class="receiver-row">
+              <div class="receiver-icon"><i class="fas fa-building"></i></div>
+              <div class="receiver-info">
+                <div class="rname">{{ shipment.receiver_company }}</div>
+                <div class="rsub">Company</div>
+              </div>
             </div>
-          {% endif %}
+            {% endif %}
+            <div class="receiver-row">
+              <div class="receiver-icon"><i class="fas fa-phone"></i></div>
+              <div class="receiver-info">
+                <div class="rname">{{ shipment.receiver_phone or 'Not provided' }}</div>
+                <div class="rsub">Phone Number</div>
+              </div>
+            </div>
+            <div class="receiver-row">
+              <div class="receiver-icon"><i class="fas fa-map-pin"></i></div>
+              <div class="receiver-info">
+                <div class="rname">{{ shipment.destination }}</div>
+                <div class="rsub">Delivery Address</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Tracking Timeline -->
-      <div class="sd-card">
-        <div class="sd-card-head">
-          <h3><i class="fas fa-route"></i> Tracking Timeline</h3>
-          <span style="font-size:12px;color:var(--text3);">{{ shipment.events|length }} event{{ 's' if shipment.events|length != 1 }}</span>
-        </div>
-        <div class="sd-card-body">
-          {% if shipment.events %}
-          <div class="timeline">
-            {% for event in shipment.events %}
-            <div class="tl-item {% if loop.first %}latest{% endif %} {% if event.status == 'Delivered' %}delivered{% endif %}">
-              <div class="tl-dot"></div>
-              <div class="tl-status">{{ event.status }}</div>
-              {% if event.description %}
-              <div class="tl-desc">{{ event.description }}</div>
-              {% endif %}
-              <div class="tl-meta">
-                {% if event.location %}
-                <span class="tl-loc"><i class="fas fa-map-marker-alt"></i>{{ event.location }}</span>
+        <!-- Packages -->
+        <div class="sd-card">
+          <div class="sd-card-head">
+            <h3><i class="fas fa-boxes"></i> Packages ({{ shipment.packages|length }})</h3>
+          </div>
+          <div class="sd-card-body">
+            {% if shipment.packages %}
+              {% for pkg in shipment.packages %}
+              <div class="pkg-card">
+                <div class="pkg-head">
+                  <div class="pkg-title">
+                    <i class="fas fa-box" style="color:var(--orange);"></i>
+                    Package #{{ loop.index }}
+                    {% if pkg.description %}<span style="font-weight:400;color:var(--text3);font-size:12px;">— {{ pkg.description }}</span>{% endif %}
+                  </div>
+                  <div class="pkg-tags">
+                    {% if pkg.fragile %}<span class="pkg-tag fragile"><i class="fas fa-exclamation-triangle"></i> Fragile</span>{% endif %}
+                    {% if pkg.stackable %}<span class="pkg-tag stackable"><i class="fas fa-layer-group"></i> Stackable</span>{% endif %}
+                  </div>
+                </div>
+                <div class="pkg-specs">
+                  <div class="pkg-spec"><div class="lbl">Length</div><div class="val">{{ pkg.length or '—' }} cm</div></div>
+                  <div class="pkg-spec"><div class="lbl">Width</div><div class="val">{{ pkg.width or '—' }} cm</div></div>
+                  <div class="pkg-spec"><div class="lbl">Height</div><div class="val">{{ pkg.height or '—' }} cm</div></div>
+                  <div class="pkg-spec"><div class="lbl">Weight</div><div class="val">{{ pkg.weight or '—' }} kg</div></div>
+                </div>
+                {% if pkg.length and pkg.width and pkg.height %}
+                <div style="margin-top:8px;font-size:12px;color:var(--text4);">
+                  <i class="fas fa-cube" style="margin-right:4px;"></i>
+                  Volume: {{ '%.4f'|format(pkg.volume_cbm) }} CBM
+                </div>
                 {% endif %}
-                <span class="tl-time">{{ event.timestamp.strftime('%d %b %Y, %H:%M') }} UTC</span>
               </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div style="text-align:center;padding:20px;color:var(--text4);">
-            <i class="fas fa-map-marked-alt" style="font-size:28px;margin-bottom:8px;display:block;"></i>
-            No tracking events yet.
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-    </div><!-- /left col -->
-
-    <!-- RIGHT COLUMN -->
-    <div>
-
-      <!-- ★ Update Status Form ★ -->
-      <div class="sd-card" style="border-color:var(--orange-mid);">
-        <div class="sd-card-head" style="background:var(--orange-lt);border-bottom-color:var(--orange-mid);">
-          <h3><i class="fas fa-edit"></i> Update Shipment Status</h3>
-        </div>
-        <div class="sd-card-body">
-          <form method="POST" action="{{ url_for('admin.update_shipment_status', shipment_id=shipment.id) }}" class="status-form">
-
-            <div class="sf-field">
-              <label>New Status <span style="color:var(--red)">*</span></label>
-              <select name="status" class="status-select" id="statusSelect" required onchange="onStatusChange(this)">
-                <option value="">— Select status —</option>
-                {% for s in [
-                  'Booking Created', 'Picked Up', 'In Transit',
-                  'Arrived at Hub', 'Customs Clearance',
-                  'Out for Delivery', 'Delivered',
-                  'Delivery Attempted', 'On Hold', 'Cancelled'
-                ] %}
-                <option value="{{ s }}" {% if shipment.status == s %}selected{% endif %}>
-                  {{ s }}
-                </option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="sf-field">
-              <label>Current Location</label>
-              <input type="text" name="location" id="locationField"
-                     placeholder="e.g. Lagos Hub, Nigeria"
-                     value="{{ shipment.events[0].location if shipment.events else '' }}">
-            </div>
-
-            <div class="sf-field">
-              <label>Update Description</label>
-              <textarea name="description" id="descField"
-                        placeholder="Add details about this status update…"></textarea>
-            </div>
-
-            <div class="sf-field">
-              <label>Estimated Delivery <span style="color:var(--text4);font-weight:400;">(optional update)</span></label>
-              <input type="date" name="estimated_delivery"
-                     value="{{ shipment.estimated_delivery.strftime('%Y-%m-%d') if shipment.estimated_delivery else '' }}">
-            </div>
-
-            <!-- Notify user toggle -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border);">
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text);">Notify Customer</div>
-                <div style="font-size:11px;color:var(--text3);">Send in-app notification on update</div>
+              {% endfor %}
+            {% else %}
+              <div style="text-align:center;padding:20px;color:var(--text4);font-size:14px;">
+                <i class="fas fa-box-open" style="font-size:28px;margin-bottom:8px;display:block;"></i>
+                No package details recorded.
               </div>
-              <label style="position:relative;width:38px;height:21px;flex-shrink:0;">
-                <input type="checkbox" name="notify_user" checked style="opacity:0;width:0;height:0;">
-                <span style="position:absolute;inset:0;background:var(--orange);border-radius:21px;cursor:pointer;"></span>
-                <span style="position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:20px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-              </label>
-            </div>
-
-            <!-- Preview -->
-            <div id="statusPreview" style="display:none;padding:10px 12px;background:var(--orange-lt);border:1px solid var(--orange-mid);border-radius:var(--r-sm);font-size:12px;color:var(--text2);">
-              <i class="fas fa-bell" style="color:var(--orange);margin-right:6px;"></i>
-              Customer will be notified: <strong id="previewStatusText">—</strong>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-full">
-              <i class="fas fa-check-circle"></i> Apply Status Update
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Customer -->
-      <div class="sd-card">
-        <div class="sd-card-head"><h3><i class="fas fa-user"></i> Customer</h3></div>
-        <div class="sd-card-body">
-          <div class="cust-row">
-            <div class="cust-avatar">
-              {% if shipment.customer and shipment.customer.avatar_url %}
-                <img src="{{ shipment.customer.avatar_url }}" alt="">
-              {% else %}
-                {{ (shipment.customer.full_name or shipment.customer.email or 'U')[0].upper() if shipment.customer else 'U' }}
-              {% endif %}
-            </div>
-            <div>
-              <div class="cust-name">{{ shipment.customer.full_name if shipment.customer else 'Unknown' }}</div>
-              <div class="cust-email">{{ shipment.customer.email if shipment.customer else '—' }}</div>
-            </div>
+            {% endif %}
           </div>
-          {% if shipment.customer %}
-          <div class="info-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="info-item">
-              <div class="lbl">Plan</div>
-              <div class="val">{{ shipment.customer.active_plan.name }}</div>
+        </div>
+
+        <!-- Tracking Timeline -->
+        <div class="sd-card">
+          <div class="sd-card-head">
+            <h3><i class="fas fa-route"></i> Tracking Timeline</h3>
+            <span style="font-size:12px;color:var(--text3);">{{ shipment.events|length }} event{{ 's' if shipment.events|length != 1 }}</span>
+          </div>
+          <div class="sd-card-body">
+            {% if shipment.events %}
+            <div class="timeline">
+              {% for event in shipment.events %}
+              <div class="tl-item {% if loop.first %}latest{% endif %} {% if event.status == 'Delivered' %}delivered{% endif %}">
+                <div class="tl-dot"></div>
+                <div class="tl-status">{{ event.status }}</div>
+                {% if event.description %}
+                <div class="tl-desc">{{ event.description }}</div>
+                {% endif %}
+                <div class="tl-meta">
+                  {% if event.location %}
+                  <span class="tl-loc"><i class="fas fa-map-marker-alt"></i>{{ event.location }}</span>
+                  {% endif %}
+                  <span class="tl-time">{{ event.timestamp.strftime('%d %b %Y, %H:%M') }} UTC</span>
+                </div>
+              </div>
+              {% endfor %}
             </div>
-            <div class="info-item">
-              <div class="lbl">Currency</div>
-              <div class="val">{{ shipment.customer.currency }}</div>
-            </div>
-            {% if shipment.customer.phone %}
-            <div class="info-item" style="grid-column:span 2;">
-              <div class="lbl">Phone</div>
-              <div class="val">{{ shipment.customer.phone }}</div>
+            {% else %}
+            <div style="text-align:center;padding:20px;color:var(--text4);">
+              <i class="fas fa-map-marked-alt" style="font-size:28px;margin-bottom:8px;display:block;"></i>
+              No tracking events yet.
             </div>
             {% endif %}
           </div>
-          <hr class="sd-divider">
-          <div style="display:flex;gap:8px;">
-            <a href="{{ url_for('admin.user_detail', user_id=shipment.customer.id) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
-              <i class="fas fa-eye"></i> View Profile
-            </a>
-            <a href="{{ url_for('admin.edit_user', user_id=shipment.customer.id) }}?tab=notify" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
-              <i class="fas fa-bell"></i> Notify
-            </a>
-          </div>
-          {% endif %}
         </div>
-      </div>
 
-      <!-- Shipment cost -->
-      <div class="sd-card">
-        <div class="sd-card-head"><h3><i class="fas fa-receipt"></i> Pricing</h3></div>
-        <div class="sd-card-body">
-          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
-            <span>Service Level</span><span style="color:var(--text);font-weight:600;">{{ shipment.service_level or 'Standard' }}</span>
+      </div><!-- /left col -->
+
+      <!-- RIGHT COLUMN -->
+      <div>
+
+        <!-- ★ Update Status Form ★ -->
+        <div class="sd-card" style="border-color:var(--orange-mid);">
+          <div class="sd-card-head" style="background:var(--orange-lt);border-bottom-color:var(--orange-mid);">
+            <h3><i class="fas fa-edit"></i> Update Shipment Status</h3>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
-            <span>Weight</span><span style="color:var(--text);font-weight:600;">{{ shipment.weight or 0 }} kg</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
-            <span>Packages</span><span style="color:var(--text);font-weight:600;">{{ shipment.packages|length }}</span>
-          </div>
-          <div class="cost-highlight">
-            <span class="cost-lbl">Total Cost</span>
-            <span class="cost-val">${{ '%.2f'|format(shipment.cost or 0) }}</span>
+          <div class="sd-card-body">
+            <form method="POST" action="{{ url_for('admin.update_shipment_status', shipment_id=shipment.id) }}" class="status-form">
+
+              <div class="sf-field">
+                <label>New Status <span style="color:var(--red)">*</span></label>
+                <select name="status" class="status-select" id="statusSelect" required onchange="onStatusChange(this)">
+                  <option value="">— Select status —</option>
+                  {% for s in [
+                    'Booking Created', 'Picked Up', 'In Transit',
+                    'Arrived at Hub', 'Customs Clearance',
+                    'Out for Delivery', 'Delivered',
+                    'Delivery Attempted', 'On Hold', 'Cancelled'
+                  ] %}
+                  <option value="{{ s }}" {% if shipment.status == s %}selected{% endif %}>
+                    {{ s }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="sf-field">
+                <label>Current Location</label>
+                <input type="text" name="location" id="locationField"
+                      placeholder="e.g. Lagos Hub, Nigeria"
+                      value="{{ shipment.events[0].location if shipment.events else '' }}">
+              </div>
+
+              <div class="sf-field">
+                <label>Update Description</label>
+                <textarea name="description" id="descField"
+                          placeholder="Add details about this status update…"></textarea>
+              </div>
+
+              <div class="sf-field">
+                <label>Estimated Delivery <span style="color:var(--text4);font-weight:400;">(optional update)</span></label>
+                <input type="date" name="estimated_delivery"
+                      value="{{ shipment.estimated_delivery.strftime('%Y-%m-%d') if shipment.estimated_delivery else '' }}">
+              </div>
+
+              <!-- Image Selection (only if images exist) -->
+              {% if available_images %}
+              <div class="sf-field image-selector-container">
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;">
+                  <input type="checkbox" name="include_image" value="on" id="includeImageCheck" 
+                         onchange="toggleImageSelector()">
+                  <span style="font-size:13px;font-weight:600;color:var(--text);">Include package photo in email</span>
+                </label>
+                
+                <div id="imageSelector" style="display:none;">
+                  <p style="margin:0 0 10px;font-size:12px;color:var(--text3);">Select a photo to attach:</p>
+                  <div class="image-selector-grid">
+                    {% for img in available_images %}
+                    <label class="image-option" onclick="selectImage(this)">
+                      <input type="radio" name="selected_image_id" value="{{ img.id }}" 
+                             {% if loop.first %}checked{% endif %}>
+                      <img src="{{ img.url }}" alt="Package {{ img.package_index }}">
+                      <span class="pkg-label">Pkg #{{ img.package_index }}</span>
+                    </label>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Notify user toggle -->
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--border);">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--text);">Notify Customer</div>
+                  <div style="font-size:11px;color:var(--text3);">Send email notification on update</div>
+                </div>
+                <label id="notifyToggle" onclick="toggleNotify()" style="position:relative;width:38px;height:21px;flex-shrink:0;cursor:pointer;">
+                  <input type="checkbox" name="notify_user" value="on" checked id="notifyCheckbox" style="opacity:0;width:0;height:0;">
+                  <span id="notifyTrack" style="position:absolute;inset:0;background:var(--orange);border-radius:21px;transition:background .2s;"></span>
+                  <span id="notifyThumb" style="position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:20px;transition:transform .2s,left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+                </label>
+              </div>
+              
+              <!-- Preview -->
+              <div id="statusPreview" style="display:none;padding:10px 12px;background:var(--orange-lt);border:1px solid var(--orange-mid);border-radius:var(--r-sm);font-size:12px;color:var(--text2);">
+                <i class="fas fa-bell" style="color:var(--orange);margin-right:6px;"></i>
+                Customer will be notified: <strong id="previewStatusText">—</strong>
+              </div>
+
+              <!-- Action Buttons -->
+              <div style="display:flex;gap:10px;margin-top:16px;">
+                <button type="button" class="btn btn-ghost btn-sm" style="flex:1;" onclick="previewEmail()">
+                  <i class="fas fa-eye"></i> Preview Email
+                </button>
+                <button type="submit" class="btn btn-primary btn-full" style="flex:2;">
+                  <i class="fas fa-check-circle"></i> Apply & Send
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
 
-      <!-- Danger zone -->
-      <div class="danger-zone">
-        <h4><i class="fas fa-exclamation-triangle"></i> Danger Zone</h4>
-        <p>These actions cannot be undone. Proceed carefully.</p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <form method="POST"
-                action="{{ url_for('admin.update_shipment_status', shipment_id=shipment.id) }}"
-                onsubmit="return confirm('Cancel this shipment? This will notify the customer.')">
-            <input type="hidden" name="status" value="Cancelled">
-            <input type="hidden" name="description" value="Shipment cancelled by administrator.">
-            <input type="hidden" name="notify_user" value="on">
-            <button type="submit" class="btn btn-danger btn-full btn-sm">
-              <i class="fas fa-ban"></i> Cancel Shipment
-            </button>
-          </form>
-          <form method="POST"
-                action="#"
-                onsubmit="return confirm('Permanently delete this shipment and all its data?')">
-            <button type="submit" class="btn btn-danger btn-full btn-sm">
+        <!-- Customer -->
+        <div class="sd-card">
+          <div class="sd-card-head"><h3><i class="fas fa-user"></i> Customer</h3></div>
+          <div class="sd-card-body">
+            <div class="cust-row">
+              <div class="cust-avatar">
+                {% if shipment.customer and shipment.customer.avatar_url %}
+                  <img src="{{ shipment.customer.avatar_url }}" alt="">
+                {% else %}
+                  {{ (shipment.customer.full_name or shipment.customer.email or 'U')[0].upper() if shipment.customer else 'U' }}
+                {% endif %}
+              </div>
+              <div>
+                <div class="cust-name">{{ shipment.customer.full_name if shipment.customer else 'Unknown' }}</div>
+                <div class="cust-email">{{ shipment.customer.email if shipment.customer else '—' }}</div>
+              </div>
+            </div>
+            {% if shipment.customer %}
+            <div class="info-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="info-item">
+                <div class="lbl">Plan</div>
+                <div class="val">{{ shipment.customer.active_plan.name }}</div>
+              </div>
+              <div class="info-item">
+                <div class="lbl">Currency</div>
+                <div class="val">{{ shipment.customer.currency }}</div>
+              </div>
+              {% if shipment.customer.phone %}
+              <div class="info-item" style="grid-column:span 2;">
+                <div class="lbl">Phone</div>
+                <div class="val">{{ shipment.customer.phone }}</div>
+              </div>
+              {% endif %}
+            </div>
+            <hr class="sd-divider">
+            <div style="display:flex;gap:8px;">
+              <a href="{{ url_for('admin.user_detail', user_id=shipment.customer.id) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
+                <i class="fas fa-eye"></i> View Profile
+              </a>
+              <a href="{{ url_for('admin.edit_user', user_id=shipment.customer.id) }}?tab=notify" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
+                <i class="fas fa-bell"></i> Notify
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Shipment cost -->
+        <div class="sd-card">
+          <div class="sd-card-head"><h3><i class="fas fa-receipt"></i> Pricing</h3></div>
+          <div class="sd-card-body">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
+              <span>Service Level</span><span style="color:var(--text);font-weight:600;">{{ shipment.service_level or 'Standard' }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
+              <span>Weight</span><span style="color:var(--text);font-weight:600;">{{ shipment.weight or 0 }} kg</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text3);padding:4px 0;">
+              <span>Packages</span><span style="color:var(--text);font-weight:600;">{{ shipment.packages|length }}</span>
+            </div>
+            <div class="cost-highlight">
+              <span class="cost-lbl">Total Cost</span>
+              <span class="cost-val">${{ '%.2f'|format(shipment.cost or 0) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="danger-zone">
+          <h4><i class="fas fa-exclamation-triangle"></i> Danger Zone</h4>
+          <p>These actions cannot be undone. Proceed carefully.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <form method="POST"
+                  action="{{ url_for('admin.update_shipment_status', shipment_id=shipment.id) }}"
+                  onsubmit="return confirm('Cancel this shipment? This will notify the customer.')">
+              <input type="hidden" name="status" value="Cancelled">
+              <input type="hidden" name="description" value="Shipment cancelled by administrator.">
+              <input type="hidden" name="notify_user" value="on">
+              <button type="submit" class="btn btn-danger btn-full btn-sm">
+                <i class="fas fa-ban"></i> Cancel Shipment
+              </button>
+            </form>
+
+            <button type="button" class="btn btn-danger btn-full btn-sm" 
+                    onclick="openDeleteModal('{{ shipment.tracking_number }}', '{{ shipment.id }}')">
               <i class="fas fa-trash"></i> Delete Shipment
             </button>
-          </form>
+          </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);">
+          <div style="background:#fff;border-radius:16px;padding:32px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.2);animation:modalIn .2s ease;">
+            
+            <!-- Icon -->
+            <div style="width:56px;height:56px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+              <i class="fas fa-trash" style="font-size:22px;color:var(--red);"></i>
+            </div>
+
+            <!-- Text -->
+            <h3 style="text-align:center;font-size:18px;font-weight:800;color:var(--text);margin:0 0 8px;">Delete Shipment?</h3>
+            <p style="text-align:center;font-size:14px;color:var(--text3);margin:0 0 6px;line-height:1.5;">
+              You are about to permanently delete
+            </p>
+            <div style="text-align:center;margin-bottom:16px;">
+              <span id="deleteTrackingNum" style="font-family:'Courier New',monospace;font-size:14px;font-weight:700;background:var(--surface3);padding:4px 12px;border-radius:6px;color:var(--text);"></span>
+            </div>
+            <p style="text-align:center;font-size:13px;color:var(--text3);margin:0 0 24px;line-height:1.5;">
+              This will remove all packages, events, images and payment records linked to this shipment. <strong style="color:var(--red);">This cannot be undone.</strong>
+            </p>
+
+            <!-- Type to confirm -->
+            <div style="margin-bottom:20px;">
+              <label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">
+                Type <strong id="confirmWord" style="color:var(--red);"></strong> to confirm
+              </label>
+              <input type="text" id="deleteConfirmInput"
+                    placeholder="Type tracking number here"
+                    oninput="checkDeleteInput()"
+                    style="width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:14px;outline:none;font-family:monospace;transition:border-color .15s;">
+            </div>
+
+            <!-- Buttons -->
+            <div style="display:flex;gap:10px;">
+              <button onclick="closeDeleteModal()" 
+                      style="flex:1;padding:11px;border-radius:8px;border:1.5px solid var(--border2);background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);font-family:inherit;transition:all .15s;"
+                      onmouseover="this.style.borderColor='var(--orange)';this.style.color='var(--orange)'"
+                      onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+                Cancel
+              </button>
+              <form id="deleteShipmentForm" method="POST" action="" style="flex:1;">
+                <button type="submit" id="deleteConfirmBtn" disabled
+                        style="width:100%;padding:11px;border-radius:8px;border:none;background:#d1d5db;color:#fff;font-size:14px;font-weight:600;cursor:not-allowed;font-family:inherit;transition:all .15s;">
+                  <i class="fas fa-trash"></i> Delete
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /right col -->
+    </div><!-- /grid -->
+  </div><!-- /wrap -->
+
+  <!-- Email Preview Modal (outside main grid for proper z-index) -->
+  <div id="emailPreviewModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);padding:20px;overflow:auto;">
+    <div style="max-width:700px;margin:20px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
+      <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:18px;font-weight:700;">Email Preview</h3>
+        <button onclick="closePreview()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">&times;</button>
+      </div>
+      <div style="padding:24px;">
+        <div style="margin-bottom:16px;padding:12px;background:#f9fafb;border-radius:8px;">
+          <p style="margin:0 0 4px;font-size:12px;color:#6b7280;">To:</p>
+          <p id="previewTo" style="margin:0;font-size:14px;font-weight:600;"></p>
+        </div>
+        <div style="margin-bottom:16px;padding:12px;background:#f9fafb;border-radius:8px;">
+          <p style="margin:0 0 4px;font-size:12px;color:#6b7280;">Subject:</p>
+          <p id="previewSubject" style="margin:0;font-size:14px;font-weight:600;"></p>
+        </div>
+        <div id="previewFrame" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          <!-- Email content will be rendered here -->
         </div>
       </div>
+    </div>
+  </div>
 
-    </div><!-- /right col -->
-  </div><!-- /grid -->
-</div><!-- /wrap -->
-
-<script>
-/* ── Status pill class helper (mirrors Jinja macro below) ── */
-function onStatusChange(sel) {
-  const val = sel.value;
-  const preview = document.getElementById('statusPreview');
-  const previewText = document.getElementById('previewStatusText');
-
-  if (val) {
-    preview.style.display = 'block';
-    previewText.textContent = val;
-
-    // Auto-fill description suggestion
-    const suggestions = {
-      'Picked Up':          'Package has been collected from sender.',
-      'In Transit':         'Shipment is on its way to the destination.',
-      'Arrived at Hub':     'Shipment arrived at sorting/transit hub.',
-      'Customs Clearance':  'Shipment is undergoing customs inspection.',
-      'Out for Delivery':   'Package is out for final delivery.',
-      'Delivered':          'Package successfully delivered to recipient.',
-      'Delivery Attempted': 'Delivery attempted — recipient unavailable.',
-      'On Hold':            'Shipment placed on hold pending further action.',
-      'Cancelled':          'Shipment has been cancelled.',
-    };
-    const desc = document.getElementById('descField');
-    if (desc && !desc.value && suggestions[val]) {
-      desc.value = suggestions[val];
+  <style>
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(.95) translateY(8px); }
+      to   { opacity:1; transform:scale(1)  translateY(0);    }
     }
-  } else {
-    preview.style.display = 'none';
-  }
-}
+  </style>
 
-/* ── Toast ── */
-function showToast(msg, type) {
-  const t = document.createElement('div');
-  t.className = 'sd-toast ' + (type || 'success');
-  const icons = { success: 'check-circle', error: 'times-circle' };
-  t.innerHTML = '<i class="fas fa-' + (icons[type] || 'check-circle') + '"></i> ' + msg;
-  document.getElementById('toastContainer').appendChild(t);
-  setTimeout(() => t.remove(), 4000);
-}
+  <script>
+    // Delete Modal Functions
+    let _trackingToDelete = '';
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}{% for cat, msg in messages %}
-document.addEventListener('DOMContentLoaded', () =>
-  showToast('{{ msg | e }}', '{{ cat if cat in ["success","error"] else "success" }}')
-);
-{% endfor %}{% endif %}
-{% endwith %}
-</script>
+    function openDeleteModal(tracking, shipmentId) {
+      _trackingToDelete = tracking;
+      document.getElementById('deleteTrackingNum').textContent = tracking;
+      document.getElementById('confirmWord').textContent = tracking;
+      document.getElementById('deleteConfirmInput').value = '';
+      document.getElementById('deleteConfirmBtn').disabled = true;
+      document.getElementById('deleteConfirmBtn').style.background = '#d1d5db';
+      document.getElementById('deleteConfirmBtn').style.cursor = 'not-allowed';
+      document.getElementById('deleteShipmentForm').action = `/admin/shipments/${shipmentId}/delete`;
+      
+      const modal = document.getElementById('deleteModal');
+      modal.style.display = 'flex';
+      setTimeout(() => document.getElementById('deleteConfirmInput').focus(), 100);
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    function checkDeleteInput() {
+      const input = document.getElementById('deleteConfirmInput').value.trim().toUpperCase();
+      const btn = document.getElementById('deleteConfirmBtn');
+      const confirmInput = document.getElementById('deleteConfirmInput');
+      const match = input === _trackingToDelete.toUpperCase();
+      
+      btn.disabled = !match;
+      btn.style.background = match ? 'var(--red)' : '#d1d5db';
+      btn.style.cursor = match ? 'pointer' : 'not-allowed';
+      confirmInput.style.borderColor = input.length === 0 ? 'var(--border2)' : match ? 'var(--green)' : 'var(--red)';
+    }
+
+    // Close on backdrop click
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+      if (e.target === this) closeDeleteModal();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeDeleteModal();
+    });
+
+    // Toggle Notify
+    function toggleNotify() {
+      const cb = document.getElementById('notifyCheckbox');
+      const track = document.getElementById('notifyTrack');
+      const thumb = document.getElementById('notifyThumb');
+      
+      setTimeout(() => {
+        const isOn = cb.checked;
+        track.style.background = isOn ? 'var(--orange)' : '#d1d5db';
+        thumb.style.left = isOn ? '20px' : '3px';
+      }, 0);
+    }
+
+    // Toggle Image Selector
+    function toggleImageSelector() {
+      const checkbox = document.getElementById('includeImageCheck');
+      const selector = document.getElementById('imageSelector');
+      selector.style.display = checkbox.checked ? 'block' : 'none';
+    }
+
+    // Select Image
+    function selectImage(label) {
+      // Remove selected class from all
+      document.querySelectorAll('.image-option').forEach(l => {
+        l.classList.remove('selected');
+      });
+      // Add to clicked
+      label.classList.add('selected');
+    }
+
+    // Email Preview
+    async function previewEmail() {
+      const form = document.querySelector('.status-form');
+      const formData = new FormData(form);
+      
+      try {
+        const response = await fetch('{{ url_for("admin.preview_email", shipment_id=shipment.id) }}', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+        
+        document.getElementById('previewTo').textContent = `${data.to_name} <${data.to}>`;
+        document.getElementById('previewSubject').textContent = data.subject;
+        
+        // Build preview HTML
+        const previewHtml = `
+          <div style="background:${data.color};padding:20px;text-align:center;color:#fff;">
+            <h2 style="margin:0;">${data.emoji} Shipment Update</h2>
+            <p style="margin:8px 0 0;">Status: ${data.status}</p>
+          </div>
+          <div style="padding:20px;">
+            <p>Hi <strong>${data.to_name}</strong>,</p>
+            <p>Your shipment <strong>${data.tracking_number}</strong> has been updated to: <strong>${data.status}</strong></p>
+            ${data.location ? `<p>📍 Location: ${data.location}</p>` : ''}
+            ${data.description ? `<p>💬 ${data.description}</p>` : ''}
+            ${data.has_image ? `
+              <div style="margin:16px 0;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+                <p style="margin:0 0 12px;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">📷 Package Photo</p>
+                <img src="${data.image_url}" style="max-width:100%;max-height:300px;border-radius:8px;display:block;" alt="Package photo">
+              </div>
+            ` : ''}
+            <p style="margin-top:20px;">
+              <a href="${data.tracking_url}" style="display:inline-block;padding:12px 24px;background:${data.color};color:#fff;text-decoration:none;border-radius:6px;">
+                Track Shipment
+              </a>
+            </p>
+          </div>
+
+        `;
+        
+        document.getElementById('previewFrame').innerHTML = previewHtml;
+        document.getElementById('emailPreviewModal').style.display = 'block';
+        
+      } catch (e) {
+        alert('Failed to load preview: ' + e.message);
+      }
+    }
+
+    function closePreview() {
+      document.getElementById('emailPreviewModal').style.display = 'none';
+    }
+
+    // Close preview on backdrop click
+    document.getElementById('emailPreviewModal').addEventListener('click', function(e) {
+      if (e.target === this) closePreview();
+    });
+
+    // Close preview on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('emailPreviewModal');
+        if (modal.style.display === 'block') closePreview();
+      }
+    });
+
+    // Status Change Handler
+    function onStatusChange(sel) {
+      const val = sel.value;
+      const preview = document.getElementById('statusPreview');
+      const previewText = document.getElementById('previewStatusText');
+
+      if (val) {
+        preview.style.display = 'block';
+        previewText.textContent = val;
+
+        // Auto-fill description suggestion
+        const suggestions = {
+          'Picked Up':          'Package has been collected from sender.',
+          'In Transit':         'Shipment is on its way to the destination.',
+          'Arrived at Hub':     'Shipment arrived at sorting/transit hub.',
+          'Customs Clearance':  'Shipment is undergoing customs inspection.',
+          'Out for Delivery':   'Package is out for final delivery.',
+          'Delivered':          'Package successfully delivered to recipient.',
+          'Delivery Attempted': 'Delivery attempted — recipient unavailable.',
+          'On Hold':            'Shipment placed on hold pending further action.',
+          'Cancelled':          'Shipment has been cancelled.',
+        };
+        const desc = document.getElementById('descField');
+        if (desc && !desc.value && suggestions[val]) {
+          desc.value = suggestions[val];
+        }
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
+    // Toast Notifications
+    function showToast(msg, type) {
+      const t = document.createElement('div');
+      t.className = 'sd-toast ' + (type || 'success');
+      const icons = { success: 'check-circle', error: 'times-circle', warning: 'exclamation-triangle' };
+      t.innerHTML = '<i class="fas fa-' + (icons[type] || 'check-circle') + '"></i> ' + msg;
+      document.getElementById('toastContainer').appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    }
+
+    // Flash messages on load
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+        document.addEventListener('DOMContentLoaded', () =>
+          showToast('{{ msg | e }}', '{{ cat if cat in ["success","error","warning"] else "success" }}')
+        );
+      {% endfor %}
+    {% endif %}
+    {% endwith %}
+  </script>
 {% endblock %}

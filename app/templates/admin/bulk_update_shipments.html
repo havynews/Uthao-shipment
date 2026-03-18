@@ -1,0 +1,582 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Bulk Update Shipments{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Selection table */
+    .shipment-select-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .shipment-select-table th {
+        background: #f9fafb;
+        padding: 12px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .shipment-select-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .shipment-select-table tr:hover td {
+        background: #f9fafb;
+    }
+    .shipment-select-table tr.selected td {
+        background: #fff7ed;
+    }
+    
+    /* Status badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    /* Bulk action panel */
+    .bulk-action-panel {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 2px solid #f97316;
+        padding: 20px;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    }
+    
+    /* Progress tracking */
+    .progress-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .progress-card {
+        background: white;
+        padding: 32px;
+        border-radius: 16px;
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+    }
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 20px 0;
+    }
+    .progress-fill {
+        height: 100%;
+        background: #f97316;
+        width: 0%;
+        transition: width 0.3s;
+    }
+    
+    /* Filter chips */
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: #f3f4f6;
+        border-radius: 20px;
+        font-size: 13px;
+        color: #374151;
+    }
+    .filter-chip.active {
+        background: #f97316;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Bulk Update Shipments</h1>
+        <p class="text-gray-500 mt-1">Update multiple shipments at once with notifications</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+            <p class="text-sm text-gray-500">Total</p>
+            <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+            <p class="text-sm text-gray-500">Active</p>
+            <p class="text-2xl font-bold text-[#f97316]">{{ stats.active }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+            <p class="text-sm text-gray-500">Delivered</p>
+            <p class="text-2xl font-bold text-green-600">{{ stats.delivered }}</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-200">
+            <p class="text-sm text-gray-500">Pending Payment</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ stats.pending_payment }}</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <form method="GET" class="flex flex-col lg:flex-row gap-3">
+            <div class="flex-1">
+                <input type="text" name="q" value="{{ search }}" placeholder="Search tracking, origin, destination..." 
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]">
+            </div>
+            <select name="status" class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]">
+                <option value="">All Statuses</option>
+                {% for status in status_options %}
+                <option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>
+                    {{ status }}
+                </option>
+                {% endfor %}
+            </select>
+            <input type="date" name="date_from" value="{{ date_from }}" 
+                   class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]"
+                   placeholder="From">
+            <input type="date" name="date_to" value="{{ date_to }}" 
+                   class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]"
+                   placeholder="To">
+            <button type="submit" class="px-6 py-2.5 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706] font-medium">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+            {% if search or status_filter or date_from or date_to %}
+            <a href="{{ url_for('admin.bulk_update_shipments') }}" class="px-4 py-2.5 text-gray-600 hover:text-gray-800">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Bulk Update Form -->
+    <form method="POST" id="bulkUpdateForm" action="{{ url_for('admin.bulk_update_shipments') }}">
+        <input type="hidden" name="bulk_action" id="bulkAction" value="update">
+        
+        <!-- Selection Summary -->
+        <div class="bg-[#fff7ed] border border-[#f59e0b] rounded-xl p-4 mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-check-square text-[#f59e0b] text-xl"></i>
+                <span class="font-medium text-gray-900"><span id="selectCount">0</span> shipments selected</span>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="selectAllVisible()" class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Select All Visible
+                </button>
+                <button type="button" onclick="clearSelection()" class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Shipments Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <table class="shipment-select-table">
+                    <thead class="sticky top-0 z-10">
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="masterCheckbox" onchange="toggleAll(this)">
+                            </th>
+                            <th>Tracking #</th>
+                            <th>Current Status</th>
+                            <th>Route</th>
+                            <th>Customer</th>
+                            <th>Last Update</th>
+                            <th>Packages</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shipment in shipments.items %}
+                        <tr data-id="{{ shipment.id }}" onclick="toggleRow(this)">
+                            <td onclick="event.stopPropagation()">
+                                <input type="checkbox" name="shipment_ids" value="{{ shipment.id }}" 
+                                       class="row-checkbox" onchange="updateCount()">
+                            </td>
+                            <td>
+                                <span class="font-mono font-semibold text-gray-900">{{ shipment.tracking_number }}</span>
+                            </td>
+                            <td>
+                                <span class="status-badge" style="background: {{ get_status_color(shipment.status) }}20; color: {{ get_status_color(shipment.status) }}">
+                                    {{ shipment.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-sm">
+                                    <span class="font-medium">{{ shipment.origin|truncate(15) }}</span>
+                                    <i class="fas fa-arrow-right mx-1 text-gray-400 text-xs"></i>
+                                    <span class="font-medium">{{ shipment.destination|truncate(15) }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if shipment.customer %}
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#d97706] to-purple-600 text-white flex items-center justify-center text-xs font-bold">
+                                        {{ (shipment.customer.full_name or 'U')[:2].upper() }}
+                                    </div>
+                                    <div class="text-sm">
+                                        <p class="font-medium text-gray-900">{{ shipment.customer.full_name or 'Unknown' }}</p>
+                                        <p class="text-gray-500 text-xs">{{ shipment.customer.email }}</p>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-gray-400 text-sm">No customer</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-sm text-gray-500">
+                                {% if shipment.events %}
+                                {{ shipment.events[0].timestamp.strftime('%d %b %H:%M') }}
+                                {% else %}
+                                {{ shipment.created_at.strftime('%d %b %Y') }}
+                                {% endif %}
+                            </td>
+                            <td class="text-sm text-gray-500">
+                                {{ shipment.packages|length }} pkg{{ 's' if shipment.packages|length != 1 }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-12 text-gray-500">
+                                <i class="fas fa-box-open text-4xl mb-3 text-gray-300"></i>
+                                <p>No shipments found matching your criteria</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if shipments.pages > 1 %}
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+                <span class="text-sm text-gray-500">Page {{ shipments.page }} of {{ shipments.pages }}</span>
+                <div class="flex gap-2">
+                    {% if shipments.has_prev %}
+                    <a href="{{ url_for('admin.bulk_update_shipments', page=shipments.prev_num, q=search, status=status_filter, date_from=date_from, date_to=date_to) }}" 
+                       class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% endif %}
+                    {% if shipments.has_next %}
+                    <a href="{{ url_for('admin.bulk_update_shipments', page=shipments.next_num, q=search, status=status_filter, date_from=date_from, date_to=date_to) }}" 
+                       class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bulk Action Panel -->
+        <div class="bulk-action-panel rounded-t-xl">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Status Update -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">New Status</label>
+                    <select name="new_status" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]">
+                        <option value="">-- Select New Status --</option>
+                        {% for status in status_options %}
+                        <option value="{{ status }}">{{ status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Location -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Location (Optional)</label>
+                    <input type="text" name="location" placeholder="e.g., Lagos Hub, Nigeria" 
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]">
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Update Note</label>
+                    <input type="text" name="description" placeholder="Description for this update..." 
+                           class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f59e0b]">
+                </div>
+            </div>
+
+            <!-- Email Options -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <input type="checkbox" name="notify_customers" id="notifyCustomers" value="on" checked 
+                           class="w-5 h-5 text-[#f59e0b] rounded focus:ring-[#f59e0b]">
+                    <label for="notifyCustomers" class="font-semibold text-gray-900">Send email notifications to customers</label>
+                </div>
+                
+                <div id="emailOptions" class="pl-8 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" name="include_image" id="includeImage" value="on"
+                               class="w-4 h-4 text-[#f59e0b] rounded focus:ring-[#f59e0b]">
+                        <label for="includeImage" class="text-sm text-gray-700">Include image in emails</label>
+                    </div>
+                    
+                    <div id="imageUploadSection" class="hidden">
+                        <div class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-[#f59e0b] transition"
+                             onclick="document.getElementById('imageInput').click()">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                            <p class="text-sm text-gray-600">Drop image here or click to upload</p>
+                            <input type="file" id="imageInput" name="image_file" accept="image/*" class="hidden" onchange="uploadImage(this)">
+                        </div>
+                        <div id="imagePreview" class="hidden mt-3">
+                            <img src="" alt="Preview" class="max-h-32 rounded-lg border">
+                            <input type="hidden" name="image_url" id="imageUrl">
+                            <button type="button" onclick="removeImage()" class="text-red-600 text-sm mt-2 hover:underline">Remove image</button>
+                        </div>
+                    </div>
+                    
+                    <button type="button" onclick="previewEmail()" 
+                            class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                        <i class="fas fa-eye mr-2"></i>Preview Email
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col lg:flex-row gap-4">
+                <button type="submit" onclick="setAction('update')" 
+                        class="flex-1 px-6 py-3 bg-[#f59e0b] text-white rounded-lg hover:bg-[#d97706] font-semibold transition flex items-center justify-center gap-2">
+                    <i class="fas fa-sync-alt"></i>
+                    Update Selected Shipments
+                </button>
+                
+                <button type="button" onclick="confirmDelete()" 
+                        class="px-6 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-semibold transition flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i>
+                    Delete Selected
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Email Preview Modal -->
+<div id="previewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 class="text-lg font-semibold">Email Preview</h3>
+            <button onclick="closePreview()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh]" id="previewContent">
+            <!-- Preview loads here -->
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <p class="text-sm text-gray-600" id="previewInfo"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Delete Shipments?</h3>
+            <p class="text-sm text-gray-500 mt-2">This will permanently delete <span id="deleteCount">0</span> shipments and all related data.</p>
+        </div>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Type DELETE to confirm:</label>
+            <input type="text" id="deleteConfirm" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                Cancel
+            </button>
+            <button onclick="submitDelete()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                Delete Permanently
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Selection management
+function updateCount() {
+    const checked = document.querySelectorAll('.row-checkbox:checked').length;
+    document.getElementById('selectCount').textContent = checked;
+    
+    // Update row styling
+    document.querySelectorAll('.shipment-select-table tr').forEach(row => {
+        const checkbox = row.querySelector('.row-checkbox');
+        if (checkbox) {
+            row.classList.toggle('selected', checkbox.checked);
+        }
+    });
+}
+
+function toggleAll(master) {
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+        cb.checked = master.checked;
+    });
+    updateCount();
+}
+
+function toggleRow(row) {
+    const checkbox = row.querySelector('.row-checkbox');
+    checkbox.checked = !checkbox.checked;
+    updateCount();
+    
+    // Update master checkbox
+    const allChecked = document.querySelectorAll('.row-checkbox:checked').length;
+    const total = document.querySelectorAll('.row-checkbox').length;
+    document.getElementById('masterCheckbox').checked = allChecked === total;
+}
+
+function selectAllVisible() {
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = true);
+    document.getElementById('masterCheckbox').checked = true;
+    updateCount();
+}
+
+function clearSelection() {
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('masterCheckbox').checked = false;
+    updateCount();
+}
+
+// Action setting
+function setAction(action) {
+    document.getElementById('bulkAction').value = action;
+}
+
+// Email options toggle
+document.getElementById('notifyCustomers').addEventListener('change', function() {
+    document.getElementById('emailOptions').style.display = this.checked ? 'block' : 'none';
+});
+
+document.getElementById('includeImage').addEventListener('change', function() {
+    document.getElementById('imageUploadSection').classList.toggle('hidden', !this.checked);
+});
+
+// Image upload
+function uploadImage(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('image_file', file);
+    
+    // Show loading state
+    const dropZone = input.closest('.drop-zone');
+    dropZone.innerHTML = '<i class="fas fa-spinner fa-spin text-2xl text-[#f59e0b]"></i><p class="text-sm text-gray-600 mt-2">Uploading...</p>';
+    
+    fetch('{{ url_for("admin.upload_bulk_email_image") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('imageUrl').value = data.url;
+            document.getElementById('imagePreview').querySelector('img').src = data.url;
+            document.getElementById('imagePreview').classList.remove('hidden');
+            dropZone.classList.add('hidden');
+        } else {
+            alert('Upload failed: ' + data.error);
+            resetDropZone();
+        }
+    })
+    .catch(err => {
+        alert('Upload error: ' + err);
+        resetDropZone();
+    });
+}
+
+function resetDropZone() {
+    const dropZone = document.querySelector('.drop-zone');
+    dropZone.innerHTML = '<i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i><p class="text-sm text-gray-600">Drop image here or click to upload</p>';
+    dropZone.classList.remove('hidden');
+}
+
+function removeImage() {
+    document.getElementById('imagePreview').classList.add('hidden');
+    document.getElementById('imageUrl').value = '';
+    document.getElementById('imageInput').value = '';
+    resetDropZone();
+}
+
+// Email preview
+function previewEmail() {
+    const form = document.getElementById('bulkUpdateForm');
+    const formData = new FormData(form);
+    formData.set('bulk_action', 'preview_email');
+    
+    fetch('{{ url_for("admin.bulk_update_shipments") }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        document.getElementById('previewContent').innerHTML = data.preview_html;
+        document.getElementById('previewInfo').textContent = 
+            `Preview for ${data.sample_tracking} • Will send to ${data.recipient_count} recipients`;
+        document.getElementById('previewModal').classList.remove('hidden');
+        document.getElementById('previewModal').classList.add('flex');
+    })
+    .catch(err => alert('Preview failed: ' + err));
+}
+
+function closePreview() {
+    document.getElementById('previewModal').classList.add('hidden');
+    document.getElementById('previewModal').classList.remove('flex');
+}
+
+// Delete confirmation
+function confirmDelete() {
+    const count = document.querySelectorAll('.row-checkbox:checked').length;
+    if (count === 0) {
+        alert('Please select shipments to delete');
+        return;
+    }
+    document.getElementById('deleteCount').textContent = count;
+    document.getElementById('deleteModal').classList.remove('hidden');
+    document.getElementById('deleteModal').classList.add('flex');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    document.getElementById('deleteModal').classList.remove('flex');
+    document.getElementById('deleteConfirm').value = '';
+}
+
+function submitDelete() {
+    const confirmText = document.getElementById('deleteConfirm').value;
+    if (confirmText !== 'DELETE') {
+        alert('Please type DELETE to confirm');
+        return;
+    }
+    setAction('delete');
+    document.getElementById('bulkUpdateForm').submit();
+}
+
+// Initialize
+updateCount();
+</script>
+{% endblock %}

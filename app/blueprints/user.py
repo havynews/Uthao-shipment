@@ -16,6 +16,16 @@ from extensions import db, mail, login_manager, migrate
 from datetime import datetime, timedelta
 import random
 import string
+from sqlalchemy.orm import joinedload
+import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+import cloudinary
+import cloudinary.api
+import requests
+from io import BytesIO
 
 
 
@@ -1309,54 +1319,66 @@ def archive_notification(notification_id):
     return jsonify({'success': True})
 
 
+# @user_bp.route('/notifications/stream')
+# @login_required
+# def notification_stream():
+#     """Server-Sent Events endpoint for real-time notifications."""
+#     def event_stream():
+#         from flask import stream_with_context
+        
+#         last_check = datetime.utcnow()
+        
+#         while True:
+#             # Check for new notifications
+#             new_notifications = Notification.query.filter(
+#                 Notification.user_id == current_user.id,
+#                 Notification.created_at > last_check,
+#                 Notification.is_archived == False
+#             ).all()
+            
+#             if new_notifications:
+#                 for notif in new_notifications:
+#                     data = {
+#                         'id': notif.id,
+#                         'title': notif.title,
+#                         'message': notif.message,
+#                         'type': notif.notification_type,
+#                         'icon': notif.icon,
+#                         'color': notif.color,
+#                         'time_ago': notif.time_ago,
+#                         'link': notif.link
+#                     }
+#                     yield f"data: {json.dumps(data)}\n\n"
+                
+#                 last_check = datetime.utcnow()
+            
+#             # Send heartbeat every 30 seconds
+#             yield f":heartbeat\n\n"
+#             import time
+#             time.sleep(30)
+    
+#     from flask import Response
+#     return Response(
+#         stream_with_context(event_stream()),
+#         mimetype='text/event-stream',
+#         headers={
+#             'Cache-Control': 'no-cache',
+#             'X-Accel-Buffering': 'no'
+#         }
+#     )
+
 @user_bp.route('/notifications/stream')
 @login_required
 def notification_stream():
-    """Server-Sent Events endpoint for real-time notifications."""
-    def event_stream():
-        from flask import stream_with_context
-        
-        last_check = datetime.utcnow()
-        
-        while True:
-            # Check for new notifications
-            new_notifications = Notification.query.filter(
-                Notification.user_id == current_user.id,
-                Notification.created_at > last_check,
-                Notification.is_archived == False
-            ).all()
-            
-            if new_notifications:
-                for notif in new_notifications:
-                    data = {
-                        'id': notif.id,
-                        'title': notif.title,
-                        'message': notif.message,
-                        'type': notif.notification_type,
-                        'icon': notif.icon,
-                        'color': notif.color,
-                        'time_ago': notif.time_ago,
-                        'link': notif.link
-                    }
-                    yield f"data: {json.dumps(data)}\n\n"
-                
-                last_check = datetime.utcnow()
-            
-            # Send heartbeat every 30 seconds
-            yield f":heartbeat\n\n"
-            import time
-            time.sleep(30)
+    """Replaced with polling — SSE breaks PostgreSQL connections."""
+    def empty_stream():
+        yield ": keep-alive\n\n"
     
-    from flask import Response
     return Response(
-        stream_with_context(event_stream()),
+        empty_stream(),
         mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no'
-        }
+        headers={'Cache-Control': 'no-cache'}
     )
-
 
 # ────────────────────────────────────────────
 # Helper: Create Notification
