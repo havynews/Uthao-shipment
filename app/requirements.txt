@@ -33,7 +33,7 @@ python-engineio
 
 gevent
 gevent-websocket  
-
+pillow
 gunicorn
 mailjet-rest
 cloudinary
